@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "feature/**"
+
+  pull_request:
+    branches:
+      - dev
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  feature_ci:
+    name: Feature CI
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check source
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npx @biomejs/biome lint . && npx htmlhint "**/*.html" && npx stylelint "**/*.css"
+
+      - name: Formatter Check
+        run: npx @biomejs/biome format .
+
+      - name: Dependency Vulnerability Check
+        run: npm audit --audit-level=high
+
+      - name: Build
+        run: npm run build --if-present
+
+  dev_main_ci:
+    name: PR CI
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check PR source
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build --if-present
