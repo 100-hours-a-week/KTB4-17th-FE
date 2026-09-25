@@ -1,0 +1,17 @@
+{
+  "name": "ktb4-17th-fe",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "biome ci . && htmlhint \"src/**/*.html\" && stylelint \"src/**/*.css\"",
+    "typecheck": "node --check src/app.js && node --check scripts/build.mjs",
+    "build": "node scripts/build.mjs"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.8",
+    "htmlhint": "^1.8.0",
+    "stylelint": "^16.26.1",
+    "stylelint-config-standard": "^39.0.1"
+  }
+}
