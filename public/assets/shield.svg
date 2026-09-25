@@ -1,0 +1,8 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Signal/Icon/Shield">
+<g id="Pixel glyph">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M4 6H8V4H12V6H16V14H14V16H12V18H8V16H6V14H4V6ZM6 8V12H8V14H12V12H14V8H12V6H8V8H6ZM7 10H9V12H11V10H13V12H11V14H9V12H7V10Z" fill="#352A48"/>
+<path d="M8 6H4V14H6V16H8V18H12V16H14V14H16V6H12M8 6V4H12V6M8 6H12M8 6V8H6V12H8V14H12V12H14V8H12V6M9 12V10H7V12H9ZM9 12H11M9 12V14H11V12M11 12V10H13V12H11Z" stroke="black"/>
+</g>
+</g>
+</svg>
