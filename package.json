@@ -4,9 +4,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "lint": "biome ci . && htmlhint \"src/**/*.html\" && stylelint \"src/**/*.css\"",
-    "typecheck": "node --check src/app.js && node --check scripts/build.mjs",
-    "build": "node scripts/build.mjs"
+    "lint:biome": "biome ci --indent-style=space --indent-width=2 .",
+    "lint:html": "htmlhint \"**/*.html\"",
+    "lint:css": "stylelint \"**/*.css\"",
+    "typecheck": "node --check src/app.js",
+    "build": "rm -rf dist && mkdir -p dist && cp -R src/. dist/"
+  },
+  "stylelint": {
+    "extends": [
+      "stylelint-config-standard"
+    ]
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.8",

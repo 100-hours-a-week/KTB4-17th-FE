@@ -45,15 +45,15 @@ jobs:
       #   run: npx @biomejs/biome format .
       - name: Biome Check
         # 기존 : run: npm exec --offline -- biome ci .
-        run: ./node_modules/.bin/biome ci .
+        run: npm run lint:biome
 
       - name: HTML Lint
         # 기존 : run: npm exec --offline -- htmlhint "**/*.html"
-        run: ./node_modules/.bin/htmlhint "**/*.html"
+        run: npm run lint:html
 
       - name: CSS Lint
         # 기존 : run: npm exec --offline -- stylelint "**/*.css"
-        run: ./node_modules/.bin/stylelint "**/*.css"
+        run: npm run lint:css
 
       - name: Type Check
         run: npm run typecheck
