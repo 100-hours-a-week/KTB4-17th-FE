@@ -1,0 +1,67 @@
+name: Frontend CD
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: ap-northeast-2
+  S3_BUCKET: ${{ secrets.FRONTEND_S3_BUCKET }}
+  CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+  FRONTEND_BUILD_DIR: ${{ vars.FRONTEND_BUILD_DIR || 'dist' }}
+
+jobs:
+  frontend_deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check source
+        uses: actions/checkout@v7
+        # checkout은 코드를 가져오는 action이며 비밀번호 탐지 기능은 제공하지 않습니다.
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js # JavaScript 빌드에 필요
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: AWS OIDC Authentication # GitHub Actions에서 AWS로 접근할 때 인증
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Frontend Build
+        run: |
+          npm ci
+          npm run build
+
+      # CI 검사는 frontend-ci.yml에서 실행합니다.
+      # - name: Biome Check
+      #   run: npm run lint:biome
+      # - name: HTML Lint
+      #   run: npm run lint:html
+      # - name: CSS Lint
+      #   run: npm run lint:css
+      # - name: Type Check
+      #   run: npm run typecheck
+      # - name: Test
+      #   run: npm test
+      # - name: Dependency Vulnerability Check
+      #   run: npm audit --audit-level=high
+
+      - name: Upload to S3 # 이전 버전 정리는 S3 수명 주기 정책에서 관리
+        run: aws s3 sync "$FRONTEND_BUILD_DIR" "s3://$S3_BUCKET"
+
+      - name: CloudFront Cache # 변경 파일을 새로 가져오도록 캐시 무효화
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
+            --paths "/*"
