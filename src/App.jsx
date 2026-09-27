@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { connectAiPracticeSocket } from "./aiPracticeSocket.js";
 import { backend, beginKakaoLogin, DEMO_MODE } from "./api.js";
 import {
   asset,
@@ -31,6 +32,36 @@ const tabItems = [
   ["CHAT", "/chats", "nav-chat.svg"],
   ["MY", "/my", "nav-person.svg"],
 ];
+// Chat APIs currently serialize LocalDateTime without an offset; those values are KST.
+const CHAT_TIME_ZONE = "Asia/Seoul";
+const CHAT_IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+const CHAT_CLOCK_FORMATTER = new Intl.DateTimeFormat("ko-KR", {
+  timeZone: CHAT_TIME_ZONE,
+  hour: "numeric",
+  minute: "2-digit",
+  hourCycle: "h12",
+});
+const CHAT_DATE_FORMATTER = new Intl.DateTimeFormat("ko-KR", {
+  timeZone: CHAT_TIME_ZONE,
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+});
+const CHAT_ACTIVITY_DATE_FORMATTER = new Intl.DateTimeFormat("ko-KR", {
+  timeZone: CHAT_TIME_ZONE,
+  month: "numeric",
+  day: "numeric",
+});
+const CHAT_DATE_PARTS_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  timeZone: CHAT_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
 
 function initialState() {
   try {
@@ -65,6 +96,37 @@ function dateAge(value) {
   )
     years--;
   return years;
+}
+
+function profilePhotoUrls(person) {
+  const photos = Array.isArray(person?.photos)
+    ? person.photos.filter((photo) => typeof photo === "string" && photo)
+    : [];
+  if (photos.length) return photos;
+  return person?.photo ? [person.photo] : [];
+}
+
+function mapRecommendationItem(item) {
+  const candidate = item?.candidate;
+  const id = candidate?.memberId;
+  if (id == null) return null;
+  const photos = (Array.isArray(candidate.images) ? candidate.images : [])
+    .filter((image) => typeof image?.imageUrl === "string" && image.imageUrl)
+    .sort((first, second) => first.displayOrder - second.displayOrder)
+    .map((image) => image.imageUrl);
+  return {
+    id,
+    nickname: candidate.nickname || "닉네임 정보 없음",
+    age: Number.isFinite(candidate.age) ? candidate.age : null,
+    job: candidate.job || "",
+    region: candidate.region || "",
+    mbti: candidate.mbti || "",
+    verified: candidate.verified === true,
+    activity: candidate.activity || "",
+    photos,
+    photo: photos[0] || "",
+    bio: candidate.bio || "",
+  };
 }
 
 function isHangulSyllable(character) {
@@ -504,9 +566,99 @@ function PersonAvatar({ person, size = "medium" }) {
   );
 }
 
-function Login({ onLogin }) {
+function ProfilePhoto({ person, index = 0, className = "" }) {
+  const source = profilePhotoUrls(person)[index] || "";
+  const [failedSources, setFailedSources] = useState(() => new Set());
+
+  if (!source || failedSources.has(source)) {
+    return (
+      <div
+        className={`${className} recommendation-placeholder`}
+        role="img"
+        aria-label={`${person?.nickname || "프로필"}님의 사진이 없어요`}
+      >
+        <span aria-hidden="true">♥</span>
+      </div>
+    );
+  }
+
   return (
-    <div className="login-page">
+    <img
+      className={className}
+      src={source}
+      alt={`${person?.nickname || "프로필"}님의 프로필 사진`}
+      onError={() =>
+        setFailedSources((previous) => new Set(previous).add(source))
+      }
+    />
+  );
+}
+
+function PhotoSegments({ person, index, onSelect, className = "" }) {
+  const photos = profilePhotoUrls(person);
+  if (!photos.length) return null;
+
+  return (
+    <nav className={`photo-steps ${className}`} aria-label="프로필 사진">
+      {photos.map((photo, photoIndex) => (
+        <button
+          key={`${person.id}-${photo}`}
+          type="button"
+          className={photoIndex === index ? "active" : ""}
+          aria-label={`사진 ${photoIndex + 1} 보기`}
+          aria-pressed={photoIndex === index}
+          onClick={() => onSelect(photoIndex)}
+        />
+      ))}
+    </nav>
+  );
+}
+
+function Login({ onLogin, onLocalTestLogin }) {
+  const localTestAuthEnabled = import.meta.env.DEV && !DEMO_MODE;
+  const [testAccounts, setTestAccounts] = useState([]);
+  const [testTargetMemberId, setTestTargetMemberId] = useState(null);
+  const [testAccountsLoading, setTestAccountsLoading] = useState(
+    localTestAuthEnabled,
+  );
+  const [testLoginPending, setTestLoginPending] = useState(false);
+  const [testLoginError, setTestLoginError] = useState("");
+
+  useEffect(() => {
+    if (!localTestAuthEnabled) return undefined;
+    let active = true;
+    backend
+      .localTestAccounts()
+      .then((result) => {
+        if (!active) return;
+        setTestAccounts(Array.isArray(result?.accounts) ? result.accounts : []);
+        setTestTargetMemberId(result?.practiceTargetMemberId || null);
+      })
+      .catch((error) => {
+        if (active) setTestLoginError(error?.code || "TEST_AUTH_UNAVAILABLE");
+      })
+      .finally(() => {
+        if (active) setTestAccountsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [localTestAuthEnabled]);
+
+  async function startPractice(account) {
+    setTestLoginPending(true);
+    setTestLoginError("");
+    try {
+      await onLocalTestLogin(account.memberId, testTargetMemberId);
+    } catch (error) {
+      setTestLoginError(error?.code || "TEST_LOGIN_FAILED");
+    } finally {
+      setTestLoginPending(false);
+    }
+  }
+
+  return (
+    <div className={`login-page${localTestAuthEnabled ? " local-test-login-page" : ""}`}>
       <div className="login-top-space" aria-hidden="true" />
       <div className="login-illustration">
         <img src={asset("logo-login.png")} alt="*23#" />
@@ -524,6 +676,38 @@ function Login({ onLogin }) {
       >
         <img src={asset("kakao_login_kr_large.svg")} alt="" aria-hidden="true" />
       </button>
+      {localTestAuthEnabled && (
+        <section className="local-test-login-card" aria-labelledby="local-test-login-title">
+          <h2 id="local-test-login-title">개발용 테스트 계정</h2>
+          <p>카카오 로그인과 온보딩 없이 AI 연습 대화를 바로 확인해요.</p>
+          {testAccountsLoading ? (
+            <div className="local-test-login-status" role="status">
+              테스트 계정을 확인하고 있어요…
+            </div>
+          ) : testAccounts.length ? (
+            testAccounts.map((account) => (
+              <button
+                className="local-test-login-button"
+                key={account.memberId}
+                type="button"
+                disabled={testLoginPending || !testTargetMemberId}
+                onClick={() => startPractice(account)}
+              >
+                {testLoginPending ? "로그인 중…" : "테스트 계정으로 연습 시작"}
+              </button>
+            ))
+          ) : (
+            <div className="local-test-login-status" role="status">
+              활성 테스트 계정이 없어요. 테스트 사용자 900001을 준비해주세요.
+            </div>
+          )}
+          {testLoginError && (
+            <div className="local-test-login-error" role="alert">
+              테스트 로그인을 처리하지 못했어요 ({testLoginError})
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }
@@ -1161,14 +1345,37 @@ function Onboarding({ data, setData, navigate, toast }) {
   );
 }
 
-function Home({ data, setData, navigate, toast }) {
-  const person = demoRecommendations.find(
+function Home({
+  data,
+  setData,
+  navigate,
+  toast,
+  recommendations,
+  recommendationStatus,
+  recommendationError,
+  onRetryRecommendations,
+}) {
+  const [photoSelection, setPhotoSelection] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const person = recommendations.find(
     (item) => !data.passedIds.includes(item.id),
   );
+  const photoIndex =
+    person && photoSelection?.personId === person.id
+      ? photoSelection.index
+      : 0;
   const liked = person && data.sentLikes.includes(person.id);
+  const allRecommendationsPassed =
+    recommendations.length > 0 && !person;
+
   function pass() {
     if (person)
-      setData((old) => ({ ...old, passedIds: [...old.passedIds, person.id] }));
+      setData((old) => ({
+        ...old,
+        passedIds: old.passedIds.includes(person.id)
+          ? old.passedIds
+          : [...old.passedIds, person.id],
+      }));
   }
   async function like() {
     if (!person || liked) return;
@@ -1185,58 +1392,102 @@ function Home({ data, setData, navigate, toast }) {
   return (
     <>
       <header className="home-header">
-        <strong>*23#</strong>
-        <button onClick={() => navigate("/preferences")}>선호 설정</button>
-        <button aria-label="알림" onClick={() => navigate("/notifications")}>
-          <Icon name="bell.svg" />
+        <img className="home-brand-logo" src={asset("logo-login.png")} alt="*23#" />
+        <span className="home-mode-label">AI 분석모드</span>
+        <span className="home-header-spacer" />
+        <button
+          className="home-menu-button"
+          type="button"
+          aria-label="메뉴 열기"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          ≡
         </button>
+        {menuOpen && (
+          <nav className="home-menu" aria-label="홈 메뉴">
+            <button type="button" onClick={() => navigate("/preferences")}>
+              선호 설정
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/notifications")}
+            >
+              알림
+            </button>
+          </nav>
+        )}
       </header>
       <main className="main-scroll home-main">
-        {!person ? (
+        {recommendationStatus === "loading" ? (
           <EmptyState
             icon="✦"
-            title="추천을 모두 봤어요"
-            description="새로운 인연이 준비되면 이곳에서 만날 수 있어요."
+            title="추천을 불러오고 있어요"
+            description="잠시만 기다려주세요."
+          />
+        ) : recommendationError ? (
+          <EmptyState
+            icon="!"
+            title="추천을 불러오지 못했어요"
+            description="네트워크를 확인한 뒤 다시 시도해주세요."
             action={
+              <PixelButton secondary onClick={onRetryRecommendations}>
+                다시 불러오기
+              </PixelButton>
+            }
+          />
+        ) : !person ? (
+          <EmptyState
+            icon="✦"
+            title={
+              allRecommendationsPassed
+                ? "추천을 모두 봤어요"
+                : "새로운 추천을 준비하고 있어요"
+            }
+            description={
+              allRecommendationsPassed
+                ? "지나친 프로필을 다시 확인할 수 있어요."
+                : "새로운 인연이 준비되면 이곳에서 만날 수 있어요."
+            }
+            action={allRecommendationsPassed ? (
               <PixelButton
                 secondary
                 onClick={() => setData((old) => ({ ...old, passedIds: [] }))}
               >
                 다시 보기
               </PixelButton>
-            }
+            ) : null}
           />
         ) : (
           <article className="recommendation-card">
-            {person.photo ? (
-              <img
-                className="recommendation-photo"
-                src={person.photo}
-                alt={`${person.nickname}님의 프로필 사진`}
-              />
-            ) : (
-              <div className="recommendation-placeholder">
-                <span>♥</span>
-              </div>
-            )}
-            <div className="photo-steps">
-              <span className="active" />
-              <span />
-              <span />
-              <span />
-              <span />
-            </div>
+            <ProfilePhoto
+              className="recommendation-photo"
+              person={person}
+              index={photoIndex}
+            />
+            <PhotoSegments
+              person={person}
+              index={photoIndex}
+              onSelect={(index) =>
+                setPhotoSelection({ personId: person.id, index })
+              }
+            />
             <div className="recommendation-gradient" />
             <div className="recommendation-info">
-              <span className="online-badge">{person.activity}</span>
+              {person.activity && (
+                <span className="online-badge">{person.activity}</span>
+              )}
               <h1>
-                {person.nickname}, {person.age}{" "}
-                {person.verified && <Icon name="shield.svg" />}
+                {person.nickname}
+                {person.age != null && `, ${person.age}`}
+                {person.verified && <Icon name="detail-shield.svg" />}
               </h1>
-              <p>{person.job}</p>
-              <p>
-                {person.region} / {person.mbti}
-              </p>
+              {person.job && <p>{person.job}</p>}
+              {(person.region || person.mbti) && (
+                <p>
+                  {[person.region, person.mbti].filter(Boolean).join(" / ")}
+                </p>
+              )}
               <div className="recommendation-actions">
                 {[
                   ["패스", "action-pass.svg", pass, false],
@@ -1255,6 +1506,7 @@ function Home({ data, setData, navigate, toast }) {
                   [liked ? "보냄" : "좋아요", "action-like.svg", like, liked],
                 ].map(([label, icon, action, disabled]) => (
                   <button
+                    type="button"
                     key={label}
                     className="card-action"
                     onClick={action}
@@ -1275,18 +1527,27 @@ function Home({ data, setData, navigate, toast }) {
             </div>
             <button
               className="card-detail-link"
+              type="button"
               onClick={() => navigate(`/profiles/${person.id}`)}
               aria-label={`${person.nickname} 프로필 자세히 보기`}
             />
           </article>
         )}
-        <p className="home-tip">프로필을 탭하면 더 자세히 볼 수 있어요.</p>
+        {person && (
+          <p className="home-tip">프로필을 탭하면 더 자세히 볼 수 있어요.</p>
+        )}
       </main>
     </>
   );
 }
 
 function ProfileDetail({ person, navigate, data, setData, toast }) {
+  const [photoSelection, setPhotoSelection] = useState(null);
+  const photoIndex =
+    person && photoSelection?.personId === person.id
+      ? photoSelection.index
+      : 0;
+
   if (!person)
     return (
       <EmptyState
@@ -1308,33 +1569,57 @@ function ProfileDetail({ person, navigate, data, setData, toast }) {
     toast("좋아요를 보냈어요");
   }
   return (
-    <>
-      <ScreenHeader title="프로필" onBack={() => navigate("/home")} />
-      <main className="main-scroll detail-main">
-        <div className="detail-photo">
-          {person.photo ? (
-            <img src={person.photo} alt="프로필 사진" />
-          ) : (
-            <div className="recommendation-placeholder">♥</div>
+    <main className="main-scroll profile-detail-main">
+      <div className="detail-photo">
+        <ProfilePhoto
+          className="detail-photo-image"
+          person={person}
+          index={photoIndex}
+        />
+        <button
+          className="detail-back-button"
+          type="button"
+          aria-label="추천으로 돌아가기"
+          onClick={() => navigate("/home")}
+        >
+          ‹
+        </button>
+        <PhotoSegments
+          className="detail-photo-steps"
+          person={person}
+          index={photoIndex}
+          onSelect={(index) =>
+            setPhotoSelection({ personId: person.id, index })
+          }
+        />
+      </div>
+      <section className="detail-content">
+          {person.activity && (
+            <span className="online-badge">{person.activity}</span>
           )}
-        </div>
-        <section className="detail-content">
-          <span className="online-badge">{person.activity}</span>
           <h1>
-            {person.nickname}, {person.age}{" "}
-            {person.verified && <Icon name="shield.svg" />}
+            {person.nickname}
+            {person.age != null && `, ${person.age}`}
+            {person.verified && <Icon name="detail-shield.svg" />}
           </h1>
-          <p>
-            {person.job} · {person.region} · {person.mbti}
-          </p>
-          <h2>안녕하세요!</h2>
-          <p className="bio">{person.bio}</p>
-          <h2>함께 알아가요</h2>
-          <div className="detail-tags">
-            <span>편안한 대화</span>
-            <span>서로 존중</span>
-            <span>새로운 인연</span>
-          </div>
+          {person.job && (
+            <div className="profile-detail-row">
+              <Icon name="detail-work.svg" />
+              <span>{person.job}</span>
+            </div>
+          )}
+          {person.region && (
+            <div className="profile-detail-row">
+              <Icon name="detail-location.svg" />
+              <span>{person.region}</span>
+            </div>
+          )}
+          {person.bio && (
+            <div className="profile-detail-bio">
+              <p>안녕하세요!</p>
+              <p>{person.bio}</p>
+            </div>
+          )}
           <div className="detail-actions">
             <PixelButton
               secondary
@@ -1346,9 +1631,8 @@ function ProfileDetail({ person, navigate, data, setData, toast }) {
               {liked ? "좋아요 보냄" : "좋아요"}
             </PixelButton>
           </div>
-        </section>
-      </main>
-    </>
+      </section>
+    </main>
   );
 }
 
@@ -1471,39 +1755,131 @@ function Likes({ data, setData, navigate, toast }) {
 }
 
 function formatChatActivity(value) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
+  const date = parseChatDate(value);
+  if (!date) return "";
 
-  const now = new Date();
-  const isToday = date.toDateString() === now.toDateString();
-  if (isToday)
-    return new Intl.DateTimeFormat("ko-KR", {
-      hour: "numeric",
-      minute: "2-digit",
-    }).format(date);
+  const dateKey = chatDateKey(date);
+  const todayKey = chatDateKey(new Date());
+  if (dateKey === todayKey) return CHAT_CLOCK_FORMATTER.format(date);
 
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-  if (date.toDateString() === yesterday.toDateString()) return "어제";
+  const [year, month, day] = todayKey.split("-").map(Number);
+  const yesterday = new Date(Date.UTC(year, month - 1, day - 1));
+  if (dateKey === yesterday.toISOString().slice(0, 10)) return "어제";
 
-  if (date.getFullYear() === now.getFullYear())
-    return new Intl.DateTimeFormat("ko-KR", {
-      month: "numeric",
-      day: "numeric",
-    }).format(date);
+  return dateKey.startsWith(`${todayKey.slice(0, 4)}-`)
+    ? CHAT_ACTIVITY_DATE_FORMATTER.format(date)
+    : CHAT_DATE_FORMATTER.format(date);
+}
 
-  return new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-  }).format(date);
+function formatChatMessageTime(value) {
+  const date = parseChatDate(value);
+  return date ? CHAT_CLOCK_FORMATTER.format(date) : "";
+}
+
+function parseChatDate(value) {
+  if (!value) return null;
+
+  const source = String(value).trim();
+  const localDateTime = source.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?)?$/,
+  );
+  let date;
+  if (localDateTime) {
+    const [, year, month, day, hour = "0", minute = "0", second = "0", fraction = ""] =
+      localDateTime;
+    const milliseconds = Number(`${fraction}000`.slice(0, 3));
+    date = new Date(
+      Date.UTC(
+        Number(year),
+        Number(month) - 1,
+        Number(day),
+        Number(hour) - 9,
+        Number(minute),
+        Number(second),
+        milliseconds,
+      ),
+    );
+  } else {
+    date = new Date(source);
+  }
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function chatDateKey(date) {
+  const parts = Object.fromEntries(
+    CHAT_DATE_PARTS_FORMATTER.formatToParts(date).map(({ type, value }) => [
+      type,
+      value,
+    ]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
 function chatListErrorMessage(error) {
   if (error?.code === "AUTH_REQUIRED")
     return "로그인이 만료됐어요. 다시 로그인한 뒤 이용해주세요.";
   return "채팅 목록을 불러오지 못했어요. 잠시 후 다시 시도해주세요.";
+}
+
+function chatSendErrorMessage(error) {
+  if (error?.code === "AUTH_REQUIRED")
+    return "로그인이 만료됐어요. 다시 로그인한 뒤 이용해주세요.";
+  if (error?.code === "FILE_TOO_LARGE")
+    return "사진은 10MB 이하로 첨부할 수 있어요.";
+  if (error?.code === "FILE_TYPE_NOT_ALLOWED")
+    return "JPG, PNG, WebP 이미지만 첨부할 수 있어요.";
+  if (
+    [
+      "FILE_UPLOAD_FAILED",
+      "FILE_UPLOAD_NOT_COMPLETE",
+      "FILE_INVALID_CONTENT",
+    ].includes(error?.code)
+  )
+    return "사진 업로드에 실패했어요. 잠시 후 다시 시도해주세요.";
+  return "메시지를 보내지 못했어요. 잠시 후 다시 시도해주세요.";
+}
+
+function getChatImageAccessUrl(cache, roomId, fileId) {
+  const key = `${roomId}:${fileId}`;
+  const cached = cache.get(key);
+  if (cached?.url && cached.expiresAt > Date.now() + 30_000)
+    return Promise.resolve(cached.url);
+  if (cached?.pending) return cached.pending;
+
+  const pending = backend
+    .chatImageAccessUrl(roomId, fileId)
+    .then((result) => {
+      const url = result?.accessUrl || "";
+      const expiration = Date.parse(result?.expiresAt || "");
+      cache.set(key, {
+        url,
+        expiresAt: Number.isFinite(expiration)
+          ? expiration
+          : Date.now() + 4 * 60_000,
+      });
+      return url;
+    })
+    .catch(() => {
+      cache.delete(key);
+      return "";
+    });
+  cache.set(key, { pending, expiresAt: 0 });
+  return pending;
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))}KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
 }
 
 function mapChatRoom(item) {
@@ -1520,7 +1896,29 @@ function mapChatRoom(item) {
     last: previewText,
     time: formatChatActivity(item.activityAt),
     chatNotification: item.chatNotification,
+    unread: Number(item.unreadCount) || 0,
   };
+}
+
+function mapChatMessage(item) {
+  const image = item.messageType === "IMAGE" || item.type === "IMAGE";
+  return {
+    id: item.messageId ?? item.id,
+    mine: Boolean(item.mine),
+    type: image ? "IMAGE" : "TEXT",
+    imageFileId: item.imageFileId ?? null,
+    imageUrl: item.imageUrl || "",
+    text: image ? "" : item.textContent || item.text || "",
+    time: formatChatMessageTime(item.createdAt) || "방금",
+  };
+}
+
+function mergeChatMessages(current, incoming) {
+  const messagesById = new Map();
+  for (const message of [...current, ...incoming]) {
+    messagesById.set(String(message.id), message);
+  }
+  return [...messagesById.values()].sort((a, b) => Number(a.id) - Number(b.id));
 }
 
 function ChatList({ data, setData, navigate, previewMode = false, toast }) {
@@ -1632,7 +2030,7 @@ function ChatList({ data, setData, navigate, previewMode = false, toast }) {
   return (
     <>
       <header className="simple-topbar">
-        <h1>채팅</h1>
+        <img className="chat-brand-logo" src={asset("logo-login.png")} alt="*23#" />
       </header>
       <main ref={mainRef} className="main-scroll chat-list-main">
         {loading ? (
@@ -1663,8 +2061,8 @@ function ChatList({ data, setData, navigate, previewMode = false, toast }) {
                   aria-label={`${room.name}, ${room.last}, ${room.time}`}
                 >
                   <img
-                    className="chat-room-avatar"
-                    src={room.image || asset("chat-avatar-placeholder.svg")}
+                    className={`chat-room-avatar ${room.image ? "has-photo" : ""}`}
+                    src={room.image || asset("chat-avatar-heart-terminal.svg")}
                     alt=""
                   />
                   <span className="chat-room-copy">
@@ -1682,9 +2080,9 @@ function ChatList({ data, setData, navigate, previewMode = false, toast }) {
                   </span>
                   <span className="chat-room-meta">
                     {room.time && <small>{room.time}</small>}
-                    {isDemoMode && room.unread > 0 && (
+                    {room.unread > 0 && (
                       <b aria-label={`읽지 않은 메시지 ${room.unread}개`}>
-                        {room.unread}
+                        {room.unread > 99 ? "99+" : room.unread}
                       </b>
                     )}
                   </span>
@@ -1720,15 +2118,65 @@ function ChatList({ data, setData, navigate, previewMode = false, toast }) {
   );
 }
 
-function MessageBubble({ message, ai = false }) {
+function MessageBubble({
+  message,
+  ai = false,
+  avatar = "",
+  senderName = "",
+  chatRoom = false,
+  onViewImage,
+  onImageLoaded,
+}) {
+  const isImage = message.type === "IMAGE";
   return (
-    <div className={`message-row ${message.mine ? "mine" : "theirs"}`}>
+    <div
+      className={`message-row ${message.mine ? "mine" : "theirs"} ${chatRoom ? "chat-message-row" : ""}`}
+    >
       {ai && !message.mine && (
         <Icon name="ai-avatar.svg" className="bubble-avatar" />
       )}
-      <div className="bubble-group">
-        <div className="message-bubble">{message.text}</div>
-        {message.time && <small>{message.time}</small>}
+      {!ai && !message.mine && (
+        <img
+          className="bubble-avatar profile-bubble-avatar"
+          src={avatar || asset("chat-avatar-heart-terminal.svg")}
+          alt=""
+          onError={(event) => {
+            event.currentTarget.src = asset("chat-avatar-heart-terminal.svg");
+          }}
+        />
+      )}
+      <div className={`bubble-group ${chatRoom ? "chat-bubble-group" : ""}`}>
+        {chatRoom && !message.mine && !ai && senderName && (
+          <span className="message-sender-name">{senderName}</span>
+        )}
+        <div className={chatRoom ? "chat-bubble-content" : undefined}>
+          <div className={`message-bubble ${isImage ? "is-image" : ""}`}>
+            <span className="message-bubble-tail" aria-hidden="true" />
+            {isImage ? (
+              message.imageUrl ? (
+                <button
+                  type="button"
+                  className="message-image-button"
+                  aria-label="사진 크게 보기"
+                  onClick={() => onViewImage?.(message.imageUrl)}
+                >
+                  <img
+                    src={message.imageUrl}
+                    alt="채팅 첨부 사진"
+                    onLoad={onImageLoaded}
+                  />
+                </button>
+              ) : (
+                <span className="message-image-placeholder" role="status">
+                  사진을 불러오고 있어요.
+                </span>
+              )
+            ) : (
+              <span className="message-bubble-text">{message.text}</span>
+            )}
+          </div>
+          {message.time && <small>{message.time}</small>}
+        </div>
       </div>
     </div>
   );
@@ -1736,44 +2184,271 @@ function MessageBubble({ message, ai = false }) {
 
 function ChatRoom({ room, data, setData, navigate, toast }) {
   const [input, setInput] = useState("");
-  if (!room)
-    return (
-      <EmptyState
-        title="채팅방을 찾을 수 없어요"
-        description="채팅 목록에서 다시 확인해주세요."
-      />
-    );
-  const messages = data.messages[room.id] || [];
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [sending, setSending] = useState(false);
+  const [viewingImage, setViewingImage] = useState("");
+  const [targetMemberId, setTargetMemberId] = useState(room?.personId || null);
+  const [serverRoom, setServerRoom] = useState(null);
+  const [serverMessages, setServerMessages] = useState([]);
+  const [roomLoading, setRoomLoading] = useState(!DEMO_MODE);
+  const [roomError, setRoomError] = useState("");
+  const imageInputRef = useRef(null);
+  const messagesScrollRef = useRef(null);
+  const lastScrolledMessageIdRef = useRef(null);
+  const imageUrlCacheRef = useRef(new Map());
+  const roomId = DEMO_MODE
+    ? room?.id
+    : Number(window.location.pathname.split("/").pop());
+  const activeRoom = DEMO_MODE ? room : serverRoom;
+  const messages = DEMO_MODE
+    ? data.messages[roomId] || []
+    : serverMessages;
+  const latestMessage = messages[messages.length - 1];
+  const latestMessageKey = latestMessage ? String(latestMessage.id) : "";
+
+  useEffect(() => {
+    if (
+      !latestMessageKey ||
+      latestMessageKey === lastScrolledMessageIdRef.current
+    )
+      return;
+
+    const container = messagesScrollRef.current;
+    if (!container) return;
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: lastScrolledMessageIdRef.current ? "smooth" : "auto",
+    });
+    lastScrolledMessageIdRef.current = latestMessageKey;
+  }, [latestMessageKey]);
+
+  function scrollToLatestMessage() {
+    const container = messagesScrollRef.current;
+    container?.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+  }
+
+  useEffect(() => {
+    const previewUrl = selectedImage?.previewUrl;
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [selectedImage?.previewUrl]);
+
+  useEffect(() => {
+    if (!viewingImage) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setViewingImage("");
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [viewingImage]);
+
+  useEffect(() => {
+    if (DEMO_MODE) {
+      setTargetMemberId(room?.personId || null);
+      return undefined;
+    }
+    if (!Number.isFinite(roomId)) return undefined;
+    let active = true;
+    setTargetMemberId(null);
+    setRoomLoading(true);
+    setRoomError("");
+    backend
+      .rooms({ size: 100 })
+      .then((page) => {
+        if (!active) return;
+        const found = (page?.items || [])
+          .map(mapChatRoom)
+          .find((item) => String(item.id) === String(roomId));
+        setServerRoom(found || null);
+        if (!found) setRoomError("채팅 목록에서 방을 찾을 수 없어요.");
+      })
+      .catch((error) => {
+        if (!active) return;
+        setRoomError(
+          error?.code === "AUTH_REQUIRED"
+            ? "로그인이 만료됐어요. 다시 로그인한 뒤 이용해주세요."
+            : "채팅방을 불러오지 못했어요. 다시 시도해주세요.",
+        );
+      })
+      .finally(() => {
+        if (active) setRoomLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [roomId, room?.personId]);
+
+  useEffect(() => {
+    if (DEMO_MODE || !Number.isFinite(roomId)) return undefined;
+    let active = true;
+    let hasLoaded = false;
+    const loadMessages = async () => {
+      try {
+        const page = await backend.messages(roomId);
+        if (!active) return;
+        setTargetMemberId(page?.chatRoom?.otherParticipant?.memberId || null);
+        const incoming = await Promise.all(
+          (page?.messages || []).map(async (item) => {
+            const message = mapChatMessage(item);
+            if (message.type === "IMAGE" && message.imageFileId) {
+              message.imageUrl = await getChatImageAccessUrl(
+                imageUrlCacheRef.current,
+                roomId,
+                message.imageFileId,
+              );
+            }
+            return message;
+          }),
+        );
+        if (!active) return;
+        setServerMessages((current) => mergeChatMessages(current, incoming));
+        hasLoaded = true;
+      } catch (error) {
+        if (!active || hasLoaded) return;
+        setRoomError(
+          error?.code === "AUTH_REQUIRED"
+            ? "로그인이 만료됐어요. 다시 로그인한 뒤 이용해주세요."
+            : "메시지를 불러오지 못했어요. 채팅방 접근 권한을 확인해주세요.",
+        );
+      }
+    };
+    loadMessages();
+    const timer = window.setInterval(loadMessages, 2500);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [roomId]);
+
+  function selectImage(event) {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (!file) return;
+    if (!CHAT_IMAGE_MIME_TYPES.has(file.type)) {
+      toast("JPG, PNG, WebP 이미지만 첨부할 수 있어요.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast("사진은 10MB 이하로 첨부할 수 있어요.");
+      return;
+    }
+    setSelectedImage({ file, previewUrl: URL.createObjectURL(file) });
+  }
+
+  function clearSelectedImage() {
+    setSelectedImage(null);
+    if (imageInputRef.current) imageInputRef.current.value = "";
+  }
+
   async function send() {
     const text = input.trim();
-    if (!text) return;
+    const image = selectedImage;
+    if ((!text && !image) || !activeRoom || sending) return;
     if (!DEMO_MODE) {
+      setSending(true);
       try {
-        await backend.sendMessage(room.id, text);
+        if (image) {
+          const uploaded = image.fileId
+            ? { fileId: image.fileId }
+            : await backend.uploadChatImage(image.file);
+          if (!image.fileId) {
+            setSelectedImage((current) =>
+              current ? { ...current, fileId: uploaded.fileId } : current,
+            );
+          }
+          const created = await backend.sendImageMessage(
+            roomId,
+            uploaded.fileId,
+          );
+          const imageMessage = mapChatMessage({
+            messageId: created?.messageId ?? `pending-${Date.now()}`,
+            mine: true,
+            messageType: "IMAGE",
+            imageFileId: created?.imageFileId ?? uploaded.fileId,
+            createdAt: created?.createdAt,
+          });
+          imageMessage.imageUrl = await getChatImageAccessUrl(
+            imageUrlCacheRef.current,
+            roomId,
+            imageMessage.imageFileId,
+          );
+          setServerMessages((current) =>
+            mergeChatMessages(current, [imageMessage]),
+          );
+          clearSelectedImage();
+        }
+
+        if (text) {
+          const created = await backend.sendMessage(roomId, text);
+          setServerMessages((current) =>
+            mergeChatMessages(current, [
+              mapChatMessage({
+                messageId: created?.messageId ?? `pending-${Date.now()}`,
+                mine: true,
+                messageType: "TEXT",
+                textContent: text,
+                createdAt: created?.createdAt,
+              }),
+            ]),
+          );
+        }
+        setInput("");
       } catch (e) {
-        return toast(e.code || "메시지를 보내지 못했어요.");
+        toast(chatSendErrorMessage(e));
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
+    const timestamp = Date.now();
+    const localMessages = [];
+    if (image) {
+      try {
+        localMessages.push({
+          id: timestamp,
+          mine: true,
+          type: "IMAGE",
+          imageUrl: await readFileAsDataUrl(image.file),
+          time: "방금",
+        });
+      } catch {
+        toast("사진 미리보기를 읽지 못했어요. 다시 선택해주세요.");
+        return;
       }
     }
-    const message = { id: Date.now(), mine: true, text, time: "방금" };
+    if (text) {
+      localMessages.push({
+        id: timestamp + 1,
+        mine: true,
+        type: "TEXT",
+        text,
+        time: "방금",
+      });
+    }
     setData((old) => ({
       ...old,
       messages: {
         ...old.messages,
-        [room.id]: [...(old.messages[room.id] || []), message],
+        [roomId]: [...(old.messages[roomId] || []), ...localMessages],
       },
       rooms: old.rooms.map((item) =>
-        item.id === room.id ? { ...item, last: text, time: "방금" } : item,
+        item.id === roomId
+          ? { ...item, last: text || "사진", time: "방금" }
+          : item,
       ),
     }));
     setInput("");
+    clearSelectedImage();
   }
   return (
     <>
       <ScreenHeader
-        title={room.name}
+        title={activeRoom?.name || "채팅"}
         onBack={() => navigate("/chats")}
         right={
           <button
+            type="button"
             className="more-button"
             onClick={() => toast("채팅방 설정은 준비 중이에요.")}
           >
@@ -1782,62 +2457,349 @@ function ChatRoom({ room, data, setData, navigate, toast }) {
         }
       />
       <div className="mode-tabs">
-        <button onClick={() => navigate(`/ai/simulation/${room.personId}`)}>
+        <button
+          type="button"
+          disabled={!targetMemberId}
+          onClick={() => navigate(`/ai/simulation/${targetMemberId}`)}
+        >
           시뮬레이션
         </button>
-        <button onClick={() => navigate(`/ai/practice/${room.personId}`)}>
+        <button
+          type="button"
+          disabled={!targetMemberId}
+          onClick={() => navigate(`/ai/practice/${targetMemberId}`)}
+        >
           연습 대화
         </button>
-        <button className="active">채팅</button>
+        <button type="button" className="active">채팅</button>
       </div>
-      <div className="chat-messages">
-        {messages.map((message) => (
-          <MessageBubble key={message.id} message={message} />
-        ))}
+      <div
+        ref={messagesScrollRef}
+        className={`chat-messages chat-room-messages ${selectedImage ? "has-composer-preview" : ""} ${sending && selectedImage ? "is-uploading" : ""}`}
+      >
+        {roomLoading ? (
+          <p role="status">채팅방을 불러오고 있어요.</p>
+        ) : roomError ? (
+          <p role="alert">{roomError}</p>
+        ) : !activeRoom ? (
+          <EmptyState
+            title="채팅방을 찾을 수 없어요"
+            description="채팅 목록에서 다시 확인해주세요."
+          />
+        ) : (
+          messages.map((message) => (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              avatar={activeRoom?.image || ""}
+              senderName={activeRoom?.name || ""}
+              chatRoom
+              onViewImage={setViewingImage}
+              onImageLoaded={
+                String(message.id) === latestMessageKey
+                  ? scrollToLatestMessage
+                  : undefined
+              }
+            />
+          ))
+        )}
       </div>
       <form
-        className="message-composer"
+        className={`message-composer ${selectedImage ? "has-image" : ""} ${sending && selectedImage ? "is-uploading" : ""}`}
         onSubmit={(e) => {
           e.preventDefault();
           send();
         }}
       >
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="메시지를 입력하세요"
-          aria-label="메시지"
-          maxLength={1000}
-        />
-        <button disabled={!input.trim()} aria-label="보내기">
-          ➤
-        </button>
+        {selectedImage && (
+          <div className="image-attachment-preview">
+            <img src={selectedImage.previewUrl} alt="첨부할 사진 미리보기" />
+            <div className="image-attachment-file-info">
+              <strong>{selectedImage.file.name}</strong>
+              <small>{formatFileSize(selectedImage.file.size)}</small>
+            </div>
+            <button
+              type="button"
+              className="image-attachment-remove"
+              aria-label="첨부 사진 삭제"
+              disabled={sending}
+              onClick={clearSelectedImage}
+            >
+              ×
+            </button>
+          </div>
+        )}
+        <div className="message-composer-controls">
+          <button
+            type="button"
+            className="attach-image-button"
+            aria-label="사진 첨부"
+            disabled={!activeRoom || sending}
+            onClick={() => imageInputRef.current?.click()}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 5h16v14H4z" />
+              <circle cx="9" cy="10" r="1.5" />
+              <path d="m5 17 5-5 3 3 2-2 4 4" />
+              <path d="M18 3v5M15.5 5.5h5" />
+            </svg>
+          </button>
+          <input
+            ref={imageInputRef}
+            className="image-file-input"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            aria-label="첨부할 사진 선택"
+            onChange={selectImage}
+          />
+          <input
+            className="message-text-input"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="메시지를 입력하세요"
+            aria-label="메시지"
+            maxLength={1000}
+            disabled={sending}
+          />
+          <button
+            type="submit"
+            disabled={(!input.trim() && !selectedImage) || !activeRoom || sending}
+            aria-label={sending ? "전송 중" : "보내기"}
+          >
+            {sending ? "…" : "➤"}
+          </button>
+        </div>
+        {sending && selectedImage && (
+          <small className="image-upload-status" role="status">
+            사진을 전송하고 있어요.
+          </small>
+        )}
       </form>
+      {viewingImage && (
+        <div
+          className="image-viewer"
+          role="dialog"
+          aria-modal="true"
+          aria-label="사진 크게 보기"
+        >
+          <button
+            type="button"
+            className="image-viewer-backdrop"
+            aria-label="사진 닫기"
+            onClick={() => setViewingImage("")}
+          />
+          <button
+            type="button"
+            className="image-viewer-close"
+            aria-label="사진 닫기"
+            onClick={() => setViewingImage("")}
+          >
+            ×
+          </button>
+          <img
+            src={viewingImage}
+            alt="채팅 첨부 사진 크게 보기"
+          />
+        </div>
+      )}
     </>
   );
 }
 
-function Practice({ person, data, setData, navigate }) {
+function mergePracticeChats(current, incoming) {
+  const chatsById = new Map(current.map((chat) => [chat.id, chat]));
+  for (const chat of incoming) {
+    chatsById.set(chat.id, { ...chatsById.get(chat.id), ...chat });
+  }
+  return [...chatsById.values()].sort((left, right) => left.id - right.id);
+}
+
+async function loadPracticeHistory(sessionId) {
+  let cursor;
+  let session = null;
+  let chats = [];
+  for (let pageIndex = 0; pageIndex < 100; pageIndex++) {
+    const page = await backend.aiPracticeHistory(sessionId, { cursor, size: 100 });
+    session ||= page?.session || null;
+    chats = mergePracticeChats(chats, page?.chats || []);
+    if (!page?.hasNext || page.nextCursor == null) break;
+    cursor = page.nextCursor;
+  }
+  return { session, chats };
+}
+
+function practiceErrorMessage(error) {
+  const messages = {
+    AUTH_REQUIRED: "로그인이 만료됐어요. 다시 로그인한 뒤 이용해주세요.",
+    TARGET_MEMBER_NOT_FOUND: "상대 회원 정보를 찾을 수 없어요.",
+    SESSION_NOT_FOUND: "연습 대화 정보를 찾을 수 없어요.",
+    SESSION_ENDED: "종료된 연습 대화에는 새 메시지를 보낼 수 없어요.",
+    GENERATION_IN_PROGRESS: "AI가 이전 메시지에 답변하고 있어요.",
+    DAILY_LIMIT_EXCEEDED: "오늘의 연습 횟수를 모두 사용했어요.",
+    CHAT_NOT_RETRYABLE: "이 답변은 다시 시도할 수 없어요.",
+    AI_SERVER_NOT_CONFIGURED: "AI 응답 서버가 아직 연결되지 않았어요.",
+  };
+  return messages[error?.code] || "연습 대화를 처리하지 못했어요. 잠시 후 다시 시도해주세요.";
+}
+
+function Practice({ person, targetMemberId, data, setData, navigate }) {
   const [input, setInput] = useState("");
   const [waiting, setWaiting] = useState(false);
-  const id = person?.id || 12;
-  const messages = data.practice[id] || [
+  const [session, setSession] = useState(null);
+  const [chats, setChats] = useState([]);
+  const [usage, setUsage] = useState(null);
+  const [loading, setLoading] = useState(!DEMO_MODE);
+  const [loadError, setLoadError] = useState("");
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [sending, setSending] = useState(false);
+  const [retryingChatId, setRetryingChatId] = useState(null);
+  const [sendError, setSendError] = useState("");
+  const [showEndDialog, setShowEndDialog] = useState(false);
+  const [ending, setEnding] = useState(false);
+  const id = Number(targetMemberId || person?.id || (DEMO_MODE ? 12 : 0));
+  const demoMessages = data.practice[id] || [
     {
       id: "welcome",
       mine: false,
       text: "안녕하세요! 프로필 보고 반가워서 인사드려요",
     },
   ];
-  const count = messages.filter((item) => item.mine).length;
-  function send() {
-    const text = input.trim();
-    if (!text || waiting || count >= 30) return;
+  const demoCount = demoMessages.filter((item) => item.mine).length;
+  const count = DEMO_MODE ? demoCount : (usage?.used || 0) + (usage?.reserved || 0);
+  const dailyLimit = DEMO_MODE ? 30 : usage?.dailyLimit || 30;
+  const sessionLoadKey = `${id}:${loadAttempt}`;
+  const messageScrollKey = `${demoMessages.length}:${waiting}:${chats
+    .map((chat) => `${chat.id}:${chat.status}`)
+    .join(",")}`;
+  const hasGenerating = chats.some((chat) => chat.status === "GENERATING");
+  const chatsRef = useRef(chats);
+  const refreshRef = useRef(() => Promise.resolve());
+  const requestRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  chatsRef.current = chats;
+
+  useEffect(() => {
+    const [memberIdValue] = sessionLoadKey.split(":");
+    const memberId = Number(memberIdValue);
+    if (DEMO_MODE) return undefined;
+    let active = true;
+    setLoading(true);
+    setLoadError("");
+    setInput("");
+    setSendError("");
+    requestRef.current = null;
+    setSession(null);
+    setChats([]);
+    setUsage(null);
+    if (!Number.isSafeInteger(memberId) || memberId <= 0) {
+      setLoadError("상대 회원 ID가 없어 연습 대화를 시작할 수 없어요.");
+      setLoading(false);
+      return () => {
+        active = false;
+      };
+    }
+    (async () => {
+      const startedSession = await backend.aiPracticeStart(memberId);
+      const [history, todayUsage] = await Promise.all([
+        loadPracticeHistory(startedSession.id),
+        backend.aiPracticeUsage(),
+      ]);
+      if (!active) return;
+      setSession(history.session || startedSession);
+      setChats(history.chats);
+      setUsage(todayUsage);
+    })()
+      .catch((error) => {
+        if (active) setLoadError(practiceErrorMessage(error));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [sessionLoadKey]);
+
+  useEffect(() => {
+    if (DEMO_MODE || !session?.id) return undefined;
+    let active = true;
+    async function refresh() {
+      try {
+        const currentChats = chatsRef.current;
+        const pendingChat = currentChats.find(
+          (chat) => chat.status === "GENERATING",
+        );
+        const lastChat = currentChats.at(-1);
+        const cursor = pendingChat
+          ? pendingChat.id > 1
+            ? pendingChat.id - 1
+            : undefined
+          : lastChat?.id;
+        const page = await backend.aiPracticeHistory(session.id, {
+          cursor,
+          size: 100,
+        });
+        if (!active) return;
+        setChats((current) => mergePracticeChats(current, page?.chats || []));
+        const todayUsage = await backend.aiPracticeUsage();
+        if (active) setUsage(todayUsage);
+      } catch {
+        // REST history remains the recovery path if a live update was missed.
+      }
+    }
+    refreshRef.current = refresh;
+    const disconnect = connectAiPracticeSocket({
+      onMessage(event) {
+        if (event.sessionId !== session.id) return;
+        setChats((current) =>
+          current.map((chat) =>
+            chat.id === event.chatId
+              ? {
+                  ...chat,
+                  status: event.status,
+                  aiResponse: event.aiResponse || null,
+                  failureCode: event.failureCode || null,
+                  completedAt: event.completedAt || null,
+                }
+              : chat,
+          ),
+        );
+        void refresh();
+      },
+      onStatus(status) {
+        if (status === "connected") void refresh();
+      },
+    });
+    return () => {
+      active = false;
+      disconnect();
+      refreshRef.current = () => Promise.resolve();
+    };
+  }, [session?.id]);
+
+  useEffect(() => {
+    if (DEMO_MODE || !session?.id || !hasGenerating) return undefined;
+    const timer = window.setInterval(() => {
+      void refreshRef.current();
+    }, 4000);
+    return () => window.clearInterval(timer);
+  }, [session?.id, hasGenerating]);
+
+  useEffect(() => {
+    const marker = messagesEndRef.current;
+    if (!marker || marker.dataset.scrollKey === messageScrollKey) return;
+    marker.dataset.scrollKey = messageScrollKey;
+    marker.scrollIntoView({ block: "end", behavior: "smooth" });
+  }, [messageScrollKey]);
+
+  function sendDemo(text) {
+    if (!text || waiting || demoCount >= 30) return;
     const sent = { id: Date.now(), mine: true, text };
     setData((old) => ({
       ...old,
       practice: {
         ...old.practice,
-        [id]: [...(old.practice[id] || messages), sent],
+        [id]: [...(old.practice[id] || demoMessages), sent],
       },
     }));
     setInput("");
@@ -1850,70 +2812,306 @@ function Practice({ person, data, setData, navigate }) {
           "오, 재밌겠다. 조금 더 이야기해줄 수 있어요?",
           "저도 그런 순간을 좋아해요. 주말에는 주로 뭘 하세요?",
           "그렇군요! 대화가 편안해서 좋아요.",
-        ][count % 3],
+        ][demoCount % 3],
       };
       setData((old) => ({
         ...old,
         practice: {
           ...old.practice,
-          [id]: [...(old.practice[id] || messages), reply],
+          [id]: [...(old.practice[id] || demoMessages), reply],
         },
       }));
       setWaiting(false);
     }, 900);
   }
+
+  async function send() {
+    const text = input.trim();
+    if (!text) return;
+    if (DEMO_MODE) {
+      sendDemo(text);
+      return;
+    }
+    if (
+      sending ||
+      hasGenerating ||
+      !session ||
+      session.status !== "ACTIVE" ||
+      !usage ||
+      count >= dailyLimit
+    )
+      return;
+
+    const request =
+      requestRef.current?.userMessage === text
+        ? requestRef.current
+        : { clientMessageId: crypto.randomUUID(), userMessage: text };
+    requestRef.current = request;
+    setSending(true);
+    setSendError("");
+    try {
+      const accepted = await backend.aiPracticeSend(session.id, request);
+      requestRef.current = null;
+      setChats((current) =>
+        mergePracticeChats(current, [
+          {
+            id: accepted.chatId,
+            clientMessageId: request.clientMessageId,
+            userMessage: text,
+            aiResponse: null,
+            status: accepted.status || "GENERATING",
+            isRetry: false,
+            failureCode: null,
+            createdAt: accepted.createdAt,
+            completedAt: null,
+          },
+        ]),
+      );
+      setInput("");
+      const todayUsage = await backend.aiPracticeUsage().catch(() => null);
+      if (todayUsage) setUsage(todayUsage);
+    } catch (error) {
+      setSendError(practiceErrorMessage(error));
+      void refreshRef.current();
+      if (error?.code === "DAILY_LIMIT_EXCEEDED") {
+        backend.aiPracticeUsage().then(setUsage).catch(() => {});
+      }
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function retry(chat) {
+    if (!session || retryingChatId != null) return;
+    setRetryingChatId(chat.id);
+    setSendError("");
+    try {
+      const accepted = await backend.aiPracticeRetry(session.id, chat.id);
+      setChats((current) =>
+        current.map((item) =>
+          item.id === chat.id
+            ? {
+                ...item,
+                status: accepted.status || "GENERATING",
+                aiResponse: null,
+                failureCode: null,
+                isRetry: true,
+              }
+            : item,
+        ),
+      );
+      setUsage(await backend.aiPracticeUsage());
+    } catch (error) {
+      setSendError(practiceErrorMessage(error));
+      void refreshRef.current();
+    } finally {
+      setRetryingChatId(null);
+    }
+  }
+
+  async function endSession() {
+    if (!session || ending) return;
+    setEnding(true);
+    setSendError("");
+    try {
+      setSession(await backend.aiPracticeEnd(session.id));
+      setShowEndDialog(false);
+    } catch (error) {
+      setSendError(practiceErrorMessage(error));
+    } finally {
+      setEnding(false);
+    }
+  }
+
+  const inputDisabled =
+    DEMO_MODE
+      ? demoCount >= 30
+      : loading ||
+        !session ||
+        session.status !== "ACTIVE" ||
+        !usage ||
+        sending ||
+        hasGenerating ||
+        count >= dailyLimit;
+  const partnerTitle = DEMO_MODE
+    ? person?.nickname || "연습 대화"
+    : "AI 연습 대화";
+  const inputPlaceholder = DEMO_MODE
+    ? count >= dailyLimit
+      ? "오늘의 연습을 마쳤어요"
+      : "메시지를 입력하세요"
+    : count >= dailyLimit
+      ? "오늘의 연습을 마쳤어요"
+      : session?.status === "ENDED"
+        ? "종료된 대화예요"
+        : hasGenerating || sending
+          ? "AI가 답변을 준비하고 있어요"
+          : loading
+            ? "대화를 불러오는 중이에요"
+            : "메시지를 입력하세요";
   return (
     <>
       <ScreenHeader
-        title={person?.nickname || "연습 대화"}
+        title={partnerTitle}
         onBack={() => navigate("/chats")}
-        right={<Icon name="ai-avatar.svg" />}
+        right={
+          DEMO_MODE ? (
+            <Icon name="ai-avatar.svg" />
+          ) : session?.status === "ACTIVE" ? (
+            <button
+              type="button"
+              className="more-button"
+              aria-label="연습 대화 메뉴"
+              onClick={() => setShowEndDialog(true)}
+            >
+              •••
+            </button>
+          ) : null
+        }
       />
       <div className="mode-tabs">
-        <button onClick={() => navigate(`/ai/simulation/${id}`)}>
+        <button type="button" onClick={() => navigate(`/ai/simulation/${id}`)}>
           시뮬레이션
         </button>
-        <button className="active">연습 대화</button>
-        <button onClick={() => navigate("/chats/101")}>채팅</button>
+        <button type="button" className="active">연습 대화</button>
+        <button type="button" onClick={() => navigate("/chats")}>채팅</button>
       </div>
       <div className="ai-notice">
         ⓘ　실제 상대가 아닌 AI예요. 대화 내용은 상대에게 전달되지 않아요.
-        <span>일일 횟수 ({count} / 30)</span>
+        <span>일일 횟수 제한 ({count} / {dailyLimit})</span>
       </div>
       <div className="chat-messages practice-messages">
-        {messages.map((message) => (
-          <MessageBubble key={message.id} message={message} ai />
-        ))}
-        {waiting && (
-          <div className="typing-indicator">
-            AI가 답변을 생각하고 있어요 ···
+        {DEMO_MODE ? (
+          <>
+            {demoMessages.map((message) => (
+              <MessageBubble key={message.id} message={message} ai />
+            ))}
+            {waiting && (
+              <div className="typing-indicator" role="status">
+                AI가 답변을 생각하고 있어요 ···
+              </div>
+            )}
+          </>
+        ) : loading ? (
+          <div className="practice-state" role="status">
+            연습 대화를 불러오고 있어요…
           </div>
+        ) : loadError ? (
+          <div className="practice-state" role="alert">
+            <p>{loadError}</p>
+            <button
+              type="button"
+              className="practice-inline-button"
+              onClick={() => setLoadAttempt((value) => value + 1)}
+            >
+              다시 불러오기
+            </button>
+          </div>
+        ) : chats.length === 0 ? (
+          <div className="practice-state">
+            상대 AI와 편하게 대화를 시작해보세요.
+          </div>
+        ) : (
+          chats.map((chat) => (
+            <div className="practice-turn" key={chat.id}>
+              <MessageBubble
+                message={{ id: `${chat.id}-user`, mine: true, text: chat.userMessage }}
+                ai
+              />
+              {chat.status === "COMPLETED" && chat.aiResponse && (
+                <MessageBubble
+                  message={{ id: `${chat.id}-ai`, mine: false, text: chat.aiResponse }}
+                  ai
+                />
+              )}
+              {chat.status === "GENERATING" && (
+                <div className="typing-indicator" role="status">
+                  AI가 답변을 생각하고 있어요 ···
+                </div>
+              )}
+              {chat.status === "FAILED" && (
+                <div className="practice-retry">
+                  <span>답변을 만들지 못했어요. 다시 시도할 수 있어요.</span>
+                  <button
+                    type="button"
+                    className="practice-retry-button"
+                    disabled={retryingChatId === chat.id || count >= dailyLimit || session?.status !== "ACTIVE"}
+                    onClick={() => retry(chat)}
+                  >
+                    {retryingChatId === chat.id ? "요청 중…" : "다시 시도"}
+                  </button>
+                </div>
+              )}
+            </div>
+          ))
         )}
+        <div ref={messagesEndRef} />
       </div>
       <form
-        className="message-composer"
-        onSubmit={(e) => {
-          e.preventDefault();
-          send();
+        className="message-composer practice-composer"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void send();
         }}
       >
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder={
-            count >= 30 ? "오늘의 연습을 마쳤어요" : "메시지를 입력하세요"
-          }
-          aria-label="연습 메시지"
-          maxLength={1000}
-          disabled={count >= 30}
-        />
-        <button
-          disabled={!input.trim() || waiting || count >= 30}
-          aria-label="보내기"
-        >
-          ➤
-        </button>
+        {sendError && (
+          <p className="practice-send-error" role="alert">
+            {sendError}
+          </p>
+        )}
+        {!DEMO_MODE && session?.status === "ENDED" && (
+          <p className="practice-send-error">종료된 대화의 기록을 보고 있어요.</p>
+        )}
+        <div className="practice-compose-row">
+          <input
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            placeholder={inputPlaceholder}
+            aria-label="연습 메시지"
+            maxLength={500}
+            disabled={inputDisabled}
+          />
+          <button
+            type="submit"
+            className="practice-send-button"
+            disabled={!input.trim() || inputDisabled}
+            aria-label="보내기"
+          >
+            ➤
+          </button>
+        </div>
       </form>
+      {showEndDialog && (
+        <div className="practice-dialog-backdrop">
+          <section
+            className="practice-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="practice-end-title"
+          >
+            <h2 id="practice-end-title">연습 대화를 종료할까요?</h2>
+            <p>종료한 뒤에도 대화 기록은 다시 확인할 수 있어요.</p>
+            <div>
+              <button
+                type="button"
+                className="practice-dialog-button"
+                onClick={() => setShowEndDialog(false)}
+                disabled={ending}
+              >
+                계속 대화하기
+              </button>
+              <button
+                type="button"
+                className="practice-dialog-button is-primary"
+                onClick={() => void endSession()}
+                disabled={ending}
+              >
+                {ending ? "종료 중…" : "종료하기"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </>
   );
 }
@@ -2502,6 +3700,15 @@ export default function App() {
   const [path, setPath] = useState(window.location.pathname);
   const [toastText, setToastText] = useState("");
   const [loading, setLoading] = useState(!DEMO_MODE);
+  const [sessionCheckError, setSessionCheckError] = useState(false);
+  const [recommendations, setRecommendations] = useState(() =>
+    DEMO_MODE ? demoRecommendations : [],
+  );
+  const [recommendationStatus, setRecommendationStatus] = useState(
+    DEMO_MODE ? "ready" : "idle",
+  );
+  const [recommendationError, setRecommendationError] = useState("");
+  const [recommendationReload, setRecommendationReload] = useState(0);
   useEffect(() => {
     const hasConfirmedIdentity = data.registrationInfoConfirmed || data.onboarded;
     const storedData = hasConfirmedIdentity
@@ -2551,9 +3758,69 @@ export default function App() {
           onboarded: status?.userStatus === "ACTIVE",
         }));
       })
-      .catch(() => setData((old) => ({ ...old, session: false })))
+      .catch((error) => {
+        if (error?.code === "AUTH_REQUIRED") {
+          setData((old) => ({ ...old, session: false }));
+          return;
+        }
+        setSessionCheckError(true);
+      })
       .finally(() => setLoading(false));
   }, []);
+  useEffect(() => {
+    if (DEMO_MODE) return undefined;
+    if (loading) return undefined;
+    if (!data.session || !data.onboarded) {
+      setRecommendations([]);
+      setRecommendationError("");
+      setRecommendationStatus("idle");
+      return undefined;
+    }
+
+    let active = true;
+    setRecommendationStatus("loading");
+    setRecommendationError("");
+
+    async function loadRecommendations() {
+      let batch = await backend.activeBatch();
+      let batchId = batch?.batchId;
+      if (!batchId) {
+        const created = await backend.createRecommendationBatch();
+        batchId = created?.batchId;
+        if (!batchId) {
+          batch = await backend.activeBatch();
+          batchId = batch?.batchId;
+        }
+      }
+
+      if (!batchId) {
+        if (active) setRecommendations([]);
+        return;
+      }
+
+      const result = await backend.recommendationItems(batchId);
+      const items = Array.isArray(result?.items) ? result.items : [];
+      const nextRecommendations = items
+        .map(mapRecommendationItem)
+        .filter(Boolean);
+      if (active) setRecommendations(nextRecommendations);
+    }
+
+    loadRecommendations()
+      .catch((error) => {
+        if (active)
+          setRecommendationError(
+            error?.code || "RECOMMENDATIONS_UNAVAILABLE",
+          );
+      })
+      .finally(() => {
+        if (active) setRecommendationStatus("ready");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [loading, data.session, data.onboarded, recommendationReload]);
   useEffect(() => {
     if (!toastText) return undefined;
     const timer = window.setTimeout(() => setToastText(""), 3200);
@@ -2567,10 +3834,31 @@ export default function App() {
   function toast(message) {
     setToastText(message);
   }
+  async function loginWithLocalTestAccount(memberId, practiceTargetMemberId) {
+    if (!import.meta.env.DEV || DEMO_MODE) {
+      throw new Error("LOCAL_TEST_LOGIN_DISABLED");
+    }
+
+    await backend.localTestLogin(memberId);
+    const status = await backend.onboarding();
+    if (status?.userStatus !== "ACTIVE") {
+      const error = new Error("TEST_ACCOUNT_ONBOARDING_INCOMPLETE");
+      error.code = "TEST_ACCOUNT_ONBOARDING_INCOMPLETE";
+      throw error;
+    }
+
+    setData((old) => ({
+      ...old,
+      session: true,
+      onboarded: true,
+      onboardingStep: "complete",
+    }));
+    navigate(`/ai/practice/${practiceTargetMemberId}`);
+  }
   const personId = Number(path.split("/").pop());
   const person = useMemo(
-    () => demoRecommendations.find((item) => item.id === personId),
-    [personId],
+    () => recommendations.find((item) => item.id === personId),
+    [personId, recommendations],
   );
   const room = data.rooms.find((item) => item.id === personId);
   const chatPreview = import.meta.env.DEV && path === "/chats/preview";
@@ -2583,6 +3871,16 @@ export default function App() {
       <div className="loading-page">
         <img src={asset("logo.png")} alt="" />
         <span>잠시만 기다려주세요</span>
+      </div>
+    );
+  else if (sessionCheckError)
+    page = (
+      <div className="loading-page">
+        <img src={asset("logo.png")} alt="" />
+        <span>서버에 연결하지 못해 로그인 상태를 확인할 수 없어요.</span>
+        <PixelButton onClick={() => window.location.reload()}>
+          다시 시도
+        </PixelButton>
       </div>
     );
   else if (path === "/registration/restricted")
@@ -2615,9 +3913,24 @@ export default function App() {
         toast={toast}
       />
     );
+  else if (
+    import.meta.env.DEV &&
+    DEMO_MODE &&
+    path === "/ai/practice/preview"
+  )
+    page = (
+      <Practice
+        person={demoRecommendations[0]}
+        targetMemberId={demoRecommendations[0].id}
+        data={data}
+        setData={setData}
+        navigate={navigate}
+      />
+    );
   else if (!data.session || path === "/login")
     page = (
       <Login
+        onLocalTestLogin={loginWithLocalTestAccount}
         onLogin={() => {
           if (DEMO_MODE) {
             setData((old) => ({
@@ -2643,7 +3956,18 @@ export default function App() {
     );
   else if (path === "/home" || path === "/")
     page = (
-      <Home data={data} setData={setData} navigate={navigate} toast={toast} />
+      <Home
+        data={data}
+        setData={setData}
+        navigate={navigate}
+        toast={toast}
+        recommendations={recommendations}
+        recommendationStatus={recommendationStatus}
+        recommendationError={recommendationError}
+        onRetryRecommendations={() =>
+          setRecommendationReload((reload) => reload + 1)
+        }
+      />
     );
   else if (path.startsWith("/profiles/"))
     page = (
@@ -2675,6 +3999,7 @@ export default function App() {
     page = (
       <Practice
         person={person}
+        targetMemberId={personId}
         data={data}
         setData={setData}
         navigate={navigate}
