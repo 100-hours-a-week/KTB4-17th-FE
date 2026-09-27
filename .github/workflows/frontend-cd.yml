@@ -8,6 +8,10 @@ permissions:
   contents: read
   id-token: write
 
+concurrency: # 배포가 동시에 실행되지 않도록 순서대로 처리
+  group: frontend-deploy
+  cancel-in-progress: false
+
 env:
   AWS_REGION: ap-northeast-2
   S3_BUCKET: ${{ secrets.FRONTEND_S3_BUCKET }}
@@ -28,7 +32,7 @@ jobs:
       - name: Setup Node.js # JavaScript 빌드에 필요
         uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: "24"
           cache: npm
           cache-dependency-path: package-lock.json
 
@@ -36,7 +40,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
+          aws-region: ap-northeast-2
 
       - name: Frontend Build
         run: |
@@ -57,8 +61,14 @@ jobs:
       # - name: Dependency Vulnerability Check
       #   run: npm audit --audit-level=high
 
-      - name: Upload to S3 # 이전 버전 정리는 S3 수명 주기 정책에서 관리
-        run: aws s3 sync "$FRONTEND_BUILD_DIR" "s3://$S3_BUCKET"
+      - name: Upload to S3 # --delete: 빌드 결과에 없는 이전 파일은 버킷에서 삭제
+        run: aws s3 sync "$FRONTEND_BUILD_DIR" "s3://$S3_BUCKET" --delete
+
+      - name: index.html no-cache # 브라우저가 항상 최신 index.html을 받도록 설정
+        run: |
+          aws s3 cp "$FRONTEND_BUILD_DIR/index.html" "s3://$S3_BUCKET/index.html" \
+            --cache-control "no-cache" \
+            --content-type "text/html; charset=utf-8"
 
       - name: CloudFront Cache # 변경 파일을 새로 가져오도록 캐시 무효화
         run: |
