@@ -580,6 +580,8 @@ function Onboarding({ data, setData, navigate, toast }) {
   const [nameHelper, setNameHelper] = useState("");
   const [regionQuery, setRegionQuery] = useState("");
   const [regions, setRegions] = useState([]);
+  const [regionSearchStatus, setRegionSearchStatus] = useState("idle");
+  const [regionSearchError, setRegionSearchError] = useState("");
   const [answer, setAnswer] = useState("");
   const profile = data.profile;
   const step = data.onboardingStep;
@@ -635,6 +637,52 @@ function Onboarding({ data, setData, navigate, toast }) {
     advance(ONBOARDING_STEPS[stepIndex - 1]);
   };
 
+  useEffect(() => {
+    if (step !== "region") return undefined;
+
+    const query = regionQuery.trim();
+    let cancelled = false;
+
+    setRegionSearchError("");
+    if (!query) {
+      setRegions([]);
+      setRegionSearchStatus("idle");
+      return undefined;
+    }
+
+    setRegions([]);
+    setRegionSearchStatus("loading");
+    const timer = window.setTimeout(async () => {
+      try {
+        const result = await backend.regions(query);
+        if (cancelled) return;
+
+        const items = (result?.items || []).map((item) => ({
+          ...item,
+          name: `${item.provinceName} ${item.regionName}`,
+        }));
+        setRegions(items);
+        setRegionSearchStatus(items.length ? "success" : "empty");
+      } catch (requestError) {
+        if (cancelled) return;
+
+        setRegions([]);
+        setRegionSearchStatus("error");
+        setRegionSearchError(
+          requestError.code === "AUTH_REQUIRED" ||
+            requestError.code === "HTTP_401"
+            ? "로그인이 만료되었어요. 다시 로그인해주세요."
+            : "활동 지역을 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
+        );
+      }
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [regionQuery, step]);
+
   async function submitIdentity() {
     const name = profile.name;
     if (!isValidBirthDate(profile.birthDate))
@@ -671,40 +719,6 @@ function Onboarding({ data, setData, navigate, toast }) {
       registrationInfoConfirmed: true,
     }));
     navigate("/onboarding");
-  }
-
-  async function searchRegions(query) {
-    setRegionQuery(query);
-    if (!query.trim()) {
-      setRegions([]);
-      return;
-    }
-    if (DEMO_MODE) {
-      const names = [
-        "서울 마포구",
-        "서울 강남구",
-        "서울 강동구",
-        "경기 성남시",
-        "경기 수원시",
-      ];
-      setRegions(
-        names
-          .filter((name) => name.includes(query.trim()))
-          .map((name, index) => ({ activityRegionId: 100 + index, name })),
-      );
-    } else {
-      try {
-        const result = await backend.regions(query.trim());
-        setRegions(
-          (result?.items || []).map((item) => ({
-            ...item,
-            name: `${item.provinceName} ${item.regionName}`,
-          })),
-        );
-      } catch {
-        setRegions([]);
-      }
-    }
   }
 
   async function nextProfile() {
@@ -932,20 +946,37 @@ function Onboarding({ data, setData, navigate, toast }) {
             <Field label="지역 검색">
               <input
                 value={regionQuery}
-                onChange={(e) => searchRegions(e.target.value)}
+                onChange={(e) => setRegionQuery(e.target.value)}
                 placeholder="시/군/구를 입력하세요"
               />
             </Field>
+            {regionSearchStatus === "loading" && (
+              <p className="region-search-state" role="status">
+                활동 지역을 검색하고 있어요.
+              </p>
+            )}
+            {regionSearchStatus === "empty" && (
+              <p className="region-search-state" role="status">
+                검색 결과가 없어요.
+              </p>
+            )}
+            {regionSearchStatus === "error" && (
+              <p className="field-error region-search-state" role="alert">
+                {regionSearchError}
+              </p>
+            )}
             <div className="region-list">
               {regions.map((item) => (
                 <button
+                  type="button"
                   key={item.activityRegionId}
                   className={
                     profile.activityRegionId === item.activityRegionId
                       ? "selected"
                       : ""
                   }
-                  onClick={() =>
+                  onClick={() => {
+                    setError("");
                     setData((old) => ({
                       ...old,
                       profile: {
@@ -953,8 +984,8 @@ function Onboarding({ data, setData, navigate, toast }) {
                         activityRegionId: item.activityRegionId,
                         regionName: item.name,
                       },
-                    }))
-                  }
+                    }));
+                  }}
                 >
                   {item.name}
                   <span>
