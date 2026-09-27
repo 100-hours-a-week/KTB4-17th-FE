@@ -2,10 +2,6 @@
 name: Frontend CI
 
 on:
-  push:
-    branches:
-      - "chore/**"
-
   pull_request:
     branches:
       - dev
