@@ -368,12 +368,50 @@ function profilePayload(profile) {
     height: profile.height ? Number(profile.height) : null,
     bodyType: profile.bodyType || null,
     educationLevel: profile.educationLevel || null,
-    job: profile.job || null,
+    job: profile.job.trim() || null,
     religion: profile.religion || null,
     drinking: profile.drinking || null,
     smoking: profile.smoking || null,
     mbti: profile.mbti || null,
   };
+}
+
+function profileValidation(profile, includeLifestyle = false) {
+  if (!profile.activityRegionId)
+    return {
+      step: "region",
+      message: "활동 지역을 다시 선택해주세요.",
+    };
+  if (!profile.nickname || !/^[가-힣A-Za-z0-9]{2,10}$/.test(profile.nickname))
+    return {
+      step: "profile",
+      message: "닉네임은 한글·영문·숫자 2~10자로 입력해주세요.",
+    };
+
+  const height = Number(profile.height);
+  if (!Number.isInteger(height) || height < 130 || height > 220)
+    return {
+      step: "profile",
+      message: "키는 130~220cm의 정수로 입력해주세요.",
+    };
+  if (!profile.bodyType || !profile.educationLevel || !profile.job.trim())
+    return {
+      step: "profile",
+      message: "체형, 학력, 직업을 입력해주세요.",
+    };
+  if (
+    includeLifestyle &&
+    (!profile.religion ||
+      !profile.drinking ||
+      !profile.smoking ||
+      !profile.mbti)
+  )
+    return {
+      step: "lifestyle",
+      message: "라이프스타일과 MBTI를 모두 선택해주세요.",
+    };
+
+  return null;
 }
 
 function readPhoto(file, onReady, onError) {
@@ -583,6 +621,8 @@ function Onboarding({ data, setData, navigate, toast }) {
   const [regionSearchStatus, setRegionSearchStatus] = useState("idle");
   const [regionSearchError, setRegionSearchError] = useState("");
   const [answer, setAnswer] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
+  const profileSaveInFlight = useRef(false);
   const profile = data.profile;
   const step = data.onboardingStep;
   const stepIndex = ONBOARDING_STEPS.indexOf(step);
@@ -722,45 +762,96 @@ function Onboarding({ data, setData, navigate, toast }) {
   }
 
   async function nextProfile() {
-    if (!profile.nickname || !/^[가-힣A-Za-z0-9]{2,10}$/.test(profile.nickname))
-      return setError("닉네임은 한글·영문·숫자 2~10자로 입력해주세요.");
-    if (
-      !profile.height ||
-      Number(profile.height) < 130 ||
-      Number(profile.height) > 220
-    )
-      return setError("키는 130~220cm로 입력해주세요.");
-    if (!profile.bodyType || !profile.educationLevel || !profile.job.trim())
-      return setError("체형, 학력, 직업을 입력해주세요.");
+    const validation = profileValidation(profile);
+    if (validation) {
+      if (validation.step !== step)
+        setData((old) => ({ ...old, onboardingStep: validation.step }));
+      setError(validation.message);
+      return;
+    }
     if (!DEMO_MODE) {
       try {
         const checked = await backend.nickname(profile.nickname);
         if (!checked?.available)
           return setError("이미 사용 중인 닉네임이에요.");
-        await backend.profile(profilePayload(profile));
       } catch (e) {
-        return setError(e.code || "프로필을 저장하지 못했어요.");
+        return setError(
+          e.code === "AUTH_REQUIRED" || e.code === "HTTP_401"
+            ? "로그인이 만료되었어요. 다시 로그인해주세요."
+            : "닉네임 사용 가능 여부를 확인하지 못했어요. 잠시 후 다시 시도해주세요.",
+        );
       }
     }
     advance("lifestyle");
   }
 
-  async function nextLifestyle() {
-    if (
-      !profile.religion ||
-      !profile.drinking ||
-      !profile.smoking ||
-      !profile.mbti
-    )
-      return setError("라이프스타일과 MBTI를 모두 선택해주세요.");
-    if (!DEMO_MODE) {
-      try {
-        await backend.profile(profilePayload(profile));
-      } catch (e) {
-        return setError(e.code || "라이프스타일을 저장하지 못했어요.");
-      }
+  function showProfileSaveError(requestError) {
+    if (requestError.code === "NICKNAME_ALREADY_IN_USE") {
+      setData((old) => ({ ...old, onboardingStep: "profile" }));
+      setError("이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해주세요.");
+      return;
     }
-    advance("questions");
+    if (
+      requestError.code === "AUTH_REQUIRED" ||
+      requestError.code === "HTTP_401"
+    ) {
+      setError("로그인이 만료되었어요. 다시 로그인해주세요.");
+      return;
+    }
+
+    const field = requestError.fields?.[0]?.field;
+    const fieldErrors = {
+      activityRegionId: [
+        "region",
+        "활동 지역이 유효하지 않아요. 다시 선택해주세요.",
+      ],
+      nickname: ["profile", "닉네임을 다시 확인해주세요."],
+      height: ["profile", "키는 130~220cm의 정수로 입력해주세요."],
+      bodyType: ["profile", "체형을 다시 선택해주세요."],
+      educationLevel: ["profile", "학력을 다시 선택해주세요."],
+      job: ["profile", "직업을 다시 입력해주세요."],
+      religion: ["lifestyle", "종교를 다시 선택해주세요."],
+      drinking: ["lifestyle", "음주 정보를 다시 선택해주세요."],
+      smoking: ["lifestyle", "흡연 정보를 다시 선택해주세요."],
+      mbti: ["lifestyle", "MBTI를 다시 선택해주세요."],
+    };
+    const fieldError = fieldErrors[field];
+    if (requestError.code === "INVALID_REQUEST" && fieldError) {
+      setData((old) => ({ ...old, onboardingStep: fieldError[0] }));
+      setError(fieldError[1]);
+      return;
+    }
+
+    setError("프로필을 저장하지 못했어요. 잠시 후 다시 시도해주세요.");
+  }
+
+  async function nextLifestyle() {
+    if (profileSaveInFlight.current) return;
+
+    const validation = profileValidation(profile, true);
+    if (validation) {
+      if (validation.step !== step)
+        setData((old) => ({ ...old, onboardingStep: validation.step }));
+      setError(validation.message);
+      return;
+    }
+    if (DEMO_MODE) {
+      advance("questions");
+      return;
+    }
+
+    profileSaveInFlight.current = true;
+    setProfileSaving(true);
+    setError("");
+    try {
+      await backend.profile(profilePayload(profile));
+      advance("questions");
+    } catch (requestError) {
+      showProfileSaveError(requestError);
+    } finally {
+      profileSaveInFlight.current = false;
+      setProfileSaving(false);
+    }
   }
 
   function submitAnswer() {
@@ -1177,7 +1268,9 @@ function Onboarding({ data, setData, navigate, toast }) {
           <PixelButton onClick={nextProfile}>다음</PixelButton>
         )}
         {step === "lifestyle" && (
-          <PixelButton onClick={nextLifestyle}>다음</PixelButton>
+          <PixelButton onClick={nextLifestyle} disabled={profileSaving}>
+            {profileSaving ? "저장 중..." : "다음"}
+          </PixelButton>
         )}
         {step === "questions" && (
           <PixelButton onClick={submitAnswer}>
