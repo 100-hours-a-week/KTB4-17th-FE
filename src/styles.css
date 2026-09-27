@@ -14,6 +14,14 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Galmuri14";
+  src: url("galmuri/dist/Galmuri14.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
 :root {
   font-family: "Galmuri11", "Apple SD Gothic Neo", sans-serif;
   color: #352a48;
@@ -423,58 +431,63 @@ small {
 .login-page {
   min-height: 100%;
   position: relative;
+  overflow-y: auto;
   padding: 60px 24px 40px;
   display: flex;
   flex-direction: column;
 }
 
+.login-top-space {
+  height: 28px;
+  flex: 0 0 28px;
+}
+
 .login-illustration {
   width: 100%;
   height: 300px;
-  min-height: 190px;
-  flex: 0 1 300px;
+  flex: 0 0 300px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
 }
 
 .login-illustration img {
-  width: 250px;
-  height: 250px;
+  width: 256px;
+  max-width: 100%;
+  height: 116px;
+  margin-top: 8px;
   object-fit: contain;
 }
 
 .login-page h1 {
   margin: 0;
   width: 100%;
-  flex: 1 1 auto;
-  padding-top: 20px;
+  height: 350px;
+  flex: 0 0 350px;
   text-align: center;
-  font-size: 22px;
-  line-height: 1.5;
+  font-size: 24px;
+  line-height: 32px;
   font-weight: 400;
+  letter-spacing: -0.24px;
 }
 
-.kakao-button {
-  margin-top: auto;
-  background: #fff0a9;
-  box-shadow: 3px 4px 0 #352a484d;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 14px;
-  text-align: left;
+.kakao-login-button {
+  align-self: center;
+  width: min(100%, 336px);
+  flex: 0 1 auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+  line-height: 0;
 }
 
-.kakao-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  background: #806c96;
-  border-radius: 6px;
-  font-size: 10px;
+.kakao-login-button img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .onboarding-page {
@@ -1050,22 +1063,17 @@ small {
 
 .chat-list-main {
   top: 96px;
+  background: var(--paper);
 }
 
-.chat-list-heading {
-  padding: 17px 20px;
-  font-size: 14px;
-  color: var(--muted);
-}
-
-.chat-list-heading span {
-  color: var(--purple);
+.chat-list-items {
+  width: 100%;
 }
 
 .chat-list-item {
   width: 100%;
-  min-height: 82px;
-  padding: 10px 20px;
+  min-height: 90px;
+  padding: 15px 20px;
   border: 0;
   border-bottom: 1px solid var(--line);
   background: var(--paper);
@@ -1073,44 +1081,148 @@ small {
   align-items: center;
   gap: 12px;
   text-align: left;
+  color: var(--ink);
+  cursor: pointer;
 }
 
-.chat-list-item > span:nth-child(2) {
+.chat-list-item:hover {
+  background: #fcf9ff;
+}
+
+.chat-room-avatar {
+  display: block;
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #e6e6e6;
+}
+
+.chat-room-copy {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
   flex: 1;
 }
 
-.chat-list-item strong {
-  font-size: 15px;
-  font-weight: 500;
+.chat-room-name {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
 }
 
-.chat-list-item small {
+.chat-room-name strong {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.chat-room-copy > small {
+  display: block;
+  font-size: 13px;
   color: var(--muted);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.chat-meta {
+.chat-notification-muted {
+  display: block;
+  width: 13px;
+  height: 15px;
+  flex: 0 0 13px;
+  object-fit: contain;
+}
+
+.chat-room-meta {
+  min-width: 39px;
   display: flex;
   align-items: flex-end;
   flex-direction: column;
-  gap: 7px;
+  align-self: stretch;
+  padding-top: 3px;
+  gap: 8px;
+  color: var(--muted);
 }
 
-.chat-meta b {
+.chat-room-meta small {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.chat-room-meta b {
   min-width: 20px;
   height: 20px;
-  padding: 2px;
+  padding: 3px 5px;
   text-align: center;
   border-radius: 50%;
   background: var(--purple);
   color: white;
   font-size: 11px;
+  line-height: 14px;
+}
+
+.chat-empty-state {
+  min-height: 100%;
+  padding: 48px 28px 36px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  text-align: center;
+}
+
+.chat-empty-illustration {
+  display: block;
+  width: 150px;
+  height: 110px;
+  object-fit: contain;
+}
+
+.chat-empty-state strong {
+  max-width: 280px;
+  font-size: 15px;
+  line-height: 1.6;
+  font-weight: 500;
+}
+
+.chat-empty-state .pixel-button {
+  width: min(100%, 230px);
+}
+
+.chat-list-loading,
+.chat-list-error {
+  min-height: 240px;
+  padding: 48px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  color: var(--muted);
+  text-align: center;
+  font-size: 14px;
+}
+
+.chat-list-error p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.chat-list-pagination {
+  min-height: 54px;
+  padding: 12px 20px 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .mode-tabs {
@@ -1730,4 +1842,523 @@ small {
   .recommendation-card {
     height: min(600px, calc(100dvh - 192px));
   }
+}
+
+.onboarding-page.registration-info-page {
+  --pixel-field-shape: polygon(
+    6px 0,
+    calc(100% - 6px) 0,
+    calc(100% - 6px) 3px,
+    calc(100% - 3px) 3px,
+    calc(100% - 3px) 6px,
+    100% 6px,
+    100% calc(100% - 6px),
+    calc(100% - 3px) calc(100% - 6px),
+    calc(100% - 3px) calc(100% - 3px),
+    calc(100% - 6px) calc(100% - 3px),
+    calc(100% - 6px) 100%,
+    6px 100%,
+    6px calc(100% - 3px),
+    3px calc(100% - 3px),
+    3px calc(100% - 6px),
+    0 calc(100% - 6px),
+    0 6px,
+    3px 6px,
+    3px 3px,
+    6px 3px
+  );
+
+  position: relative;
+  min-height: 100%;
+  height: 100%;
+}
+
+.onboarding-page.registration-info-page .onboarding-body.registration-info-body {
+  padding: 82px 24px 130px;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.onboarding-page.registration-info-page .registration-info-body h1 {
+  margin: 0 0 8px;
+  font-size: 24px;
+  line-height: 1.45;
+}
+
+.registration-info-fields {
+  margin-top: 24px;
+}
+
+.registration-info-fields .field:last-child {
+  margin-bottom: 0;
+}
+
+.birth-date-picker {
+  position: relative;
+}
+
+.birth-date-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.birth-date-heading .field-label {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.birth-date-calendar-toggle {
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.birth-date-calendar-toggle svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 1.3;
+  stroke-linecap: square;
+}
+
+.birth-date-input {
+  display: grid;
+  grid-template-columns: 1.9fr 1fr 1fr;
+  gap: 8px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.birth-date-part {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 52px;
+  padding: 0 10px;
+  border: 1px solid #d8cde2;
+  background: var(--paper);
+  box-shadow: 0 1px 0 #8758cf30;
+}
+
+.birth-date-part input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 14px;
+}
+
+.birth-date-part input:focus {
+  outline: 0;
+}
+
+.birth-date-part input::placeholder {
+  color: #8f849b;
+  opacity: 1;
+}
+
+.birth-date-part .birth-date-unit {
+  flex: none;
+  color: #8f849b;
+  font-size: 13px;
+}
+
+.birth-date-calendar {
+  position: absolute;
+  z-index: 5;
+  top: 92px;
+  right: 0;
+  left: 0;
+  padding: 14px;
+  border: 1px solid #bda6d0;
+  background: var(--paper);
+  box-shadow: 3px 4px 0 #352a4830;
+}
+
+.birth-date-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.birth-date-calendar-selectors {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.birth-date-calendar-header .birth-date-calendar-select {
+  min-height: 30px;
+  padding: 0 5px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.birth-date-calendar-header .birth-date-calendar-nav {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  background: transparent;
+  font-size: 22px;
+}
+
+.birth-date-calendar-list {
+  display: flex;
+  max-height: 224px;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 3px;
+  scrollbar-color: #bda6d0 transparent;
+  scrollbar-width: thin;
+}
+
+.birth-date-calendar-list .birth-date-calendar-option {
+  display: grid;
+  min-height: 34px;
+  flex: none;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.birth-date-calendar-list .birth-date-calendar-option.selected {
+  background: var(--soft-lavender);
+  box-shadow: inset 0 0 0 1px var(--purple);
+}
+
+.birth-date-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+  text-align: center;
+}
+
+.birth-date-calendar-grid > * {
+  display: grid;
+  min-height: 32px;
+  place-items: center;
+  font-size: 12px;
+}
+
+.birth-date-calendar-grid .birth-date-day {
+  border: 0;
+  background: transparent;
+}
+
+.birth-date-calendar-grid .birth-date-day.selected {
+  background: var(--soft-lavender);
+  box-shadow: inset 0 0 0 1px var(--purple);
+}
+
+.birth-date-weekday {
+  color: var(--muted);
+}
+
+.birth-date-help {
+  margin: 10px 0 0;
+  padding: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  list-style: none;
+}
+
+.birth-date-help li {
+  position: relative;
+  padding-left: 9px;
+}
+
+.birth-date-help li::before {
+  position: absolute;
+  left: 0;
+  content: "·";
+}
+
+.registration-info-page .registration-info-action {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  bottom: 40px;
+  left: 0;
+  padding: 0 24px;
+  background: transparent;
+}
+
+.onboarding-page .onboarding-action .pixel-button {
+  position: relative;
+  isolation: isolate;
+  min-height: 50px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 400;
+  box-shadow: none;
+  filter: drop-shadow(3px 4px 0 #352a4850);
+}
+
+.onboarding-page .onboarding-action .pixel-button::before,
+.onboarding-page .onboarding-action .pixel-button::after {
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  content: "";
+  clip-path: polygon(
+    6px 0,
+    calc(100% - 6px) 0,
+    calc(100% - 6px) 3px,
+    calc(100% - 3px) 3px,
+    calc(100% - 3px) 6px,
+    100% 6px,
+    100% calc(100% - 6px),
+    calc(100% - 3px) calc(100% - 6px),
+    calc(100% - 3px) calc(100% - 3px),
+    calc(100% - 6px) calc(100% - 3px),
+    calc(100% - 6px) 100%,
+    6px 100%,
+    6px calc(100% - 3px),
+    3px calc(100% - 3px),
+    3px calc(100% - 6px),
+    0 calc(100% - 6px),
+    0 6px,
+    3px 6px,
+    3px 3px,
+    6px 3px
+  );
+}
+
+.onboarding-page .onboarding-action .pixel-button::before {
+  inset: 0;
+  background: #704394;
+}
+
+.onboarding-page .onboarding-action .pixel-button::after {
+  inset: 3px;
+  background:
+    linear-gradient(#ffe7f8 0 0) 7px 4px / calc(100% - 112px) 3px no-repeat,
+    linear-gradient(#ffe7f8 0 0) calc(100% - 48px) 4px / 4px 3px no-repeat,
+    linear-gradient(#ffe7f8 0 0) calc(100% - 36px) 4px / 4px 3px no-repeat,
+    linear-gradient(#ffe7f8 0 0) calc(100% - 24px) 4px / 4px 3px no-repeat,
+    linear-gradient(#dc95cd 0 0) left bottom / 100% 4px no-repeat,
+    #f2b5df;
+}
+
+.onboarding-page .onboarding-action .pixel-button:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+  filter: drop-shadow(1px 2px 0 #352a4850);
+}
+
+.registration-info-page .birth-date-part,
+.registration-info-page .pixel-field-frame,
+.registration-info-page .registration-info-fields .choice {
+  position: relative;
+  isolation: isolate;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.registration-info-page .birth-date-part::before,
+.registration-info-page .birth-date-part::after,
+.registration-info-page .pixel-field-frame::before,
+.registration-info-page .pixel-field-frame::after,
+.registration-info-page .registration-info-fields .choice::before,
+.registration-info-page .registration-info-fields .choice::after {
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  content: "";
+  clip-path: var(--pixel-field-shape);
+}
+
+.registration-info-page .birth-date-part::before,
+.registration-info-page .pixel-field-frame::before,
+.registration-info-page .registration-info-fields .choice::before {
+  inset: 0;
+  background: #d1c6db;
+}
+
+.registration-info-page .birth-date-part::after,
+.registration-info-page .pixel-field-frame::after,
+.registration-info-page .registration-info-fields .choice::after {
+  inset: 1px;
+  background: var(--paper);
+}
+
+.registration-info-page .birth-date-part > *,
+.registration-info-page .pixel-field-frame > input {
+  position: relative;
+  z-index: 1;
+}
+
+.registration-info-page .pixel-field-frame {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+}
+
+.registration-info-page .pixel-field-frame input {
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.registration-info-page .registration-info-fields .choice.selected {
+  font-weight: 700;
+}
+
+.registration-info-page .registration-info-fields .choice.selected::after {
+  inset: 2px;
+}
+
+.registration-info-page .birth-date-part:focus-within::before,
+.registration-info-page .pixel-field-frame:focus-within::before {
+  background: var(--purple);
+}
+
+.registration-info-page .identity-age-helper,
+.registration-info-page .identity-name-helper {
+  color: #ba386d;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.registration-info-page .identity-age-helper {
+  margin: 8px 0 0;
+}
+
+.registration-restricted-page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding: 60px 24px 40px;
+  overflow-y: auto;
+  background: #fff;
+  color: #111;
+  font-family:
+    "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.registration-restricted-top-space {
+  flex: 0 0 24px;
+}
+
+.registration-restricted-page h1 {
+  flex: none;
+  margin: 0;
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1.42;
+  letter-spacing: -0.045em;
+}
+
+.registration-restricted-subtitle {
+  flex: none;
+  margin: 13px 0 24px;
+  color: #777;
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: -0.035em;
+}
+
+.registration-restricted-card {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 13px;
+  margin: 0;
+  padding: 16px;
+  border-radius: 10px;
+  background: #fff0a9;
+}
+
+.registration-restricted-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.registration-restricted-row dt {
+  flex: none;
+  color: #888;
+}
+
+.registration-restricted-row dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #222;
+  font-weight: 700;
+  text-align: right;
+}
+
+.registration-restricted-notes {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 2px;
+  margin: 16px 0 0;
+  padding: 0;
+  color: #858585;
+  font-size: 11.5px;
+  line-height: 1.45;
+  letter-spacing: -0.025em;
+  list-style: none;
+}
+
+.registration-restricted-notes li::before {
+  content: "· ";
+}
+
+.registration-restricted-confirm {
+  flex: 0 0 52px;
+  width: 100%;
+  min-height: 52px;
+  margin-top: auto;
+  border: 0;
+  border-radius: 8px;
+  background: #1f1f1f;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.registration-restricted-confirm:focus-visible {
+  outline-color: #555;
 }

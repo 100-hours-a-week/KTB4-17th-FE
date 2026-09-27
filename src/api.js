@@ -67,7 +67,11 @@ export const backend = {
     apiRequest(`/api/v1/recommendation-batches/${batchId}/items?size=20`),
   receivedLikes: () => apiRequest("/api/v1/likes/received?size=20"),
   sentLikes: () => apiRequest("/api/v1/likes/sent?size=20"),
-  rooms: () => apiRequest("/api/v1/chat-rooms?size=20"),
+  rooms: ({ cursor, size = 20 } = {}) => {
+    const params = new URLSearchParams({ size: String(size) });
+    if (cursor) params.set("cursor", cursor);
+    return apiRequest(`/api/v1/chat-rooms?${params.toString()}`);
+  },
   messages: (roomId) =>
     apiRequest(`/api/v1/chat-rooms/${roomId}/messages?size=20`),
   sendMessage: (roomId, text) =>

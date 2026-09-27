@@ -222,7 +222,8 @@ export function makeInitialState() {
   return {
     session: false,
     onboarded: false,
-    onboardingStep: "terms",
+    onboardingStep: "identity",
+    registrationInfoConfirmed: false,
     agreed: false,
     terms: [false, false, false, false],
     profile: { ...initialProfile },
