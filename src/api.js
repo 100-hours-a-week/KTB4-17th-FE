@@ -28,7 +28,7 @@ let csrfBootstrap;
 async function ensureCsrfToken() {
   if (csrfToken()) return;
   if (!csrfBootstrap) {
-    csrfBootstrap = fetch(baseUrl + "/api/v1/csrf", {
+    csrfBootstrap = fetch(`${baseUrl}/api/v1/csrf`, {
       credentials: "include",
       headers: { Accept: "application/json" },
     })
@@ -38,7 +38,7 @@ async function ensureCsrfToken() {
           throw new Error(
             response.status === 401
               ? "AUTH_REQUIRED"
-              : "HTTP_" + response.status,
+              : `HTTP_${response.status}`,
           );
         if (!csrfToken()) throw new Error("CSRF_TOKEN_MISSING");
       })

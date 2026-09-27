@@ -199,13 +199,6 @@ small {
   text-align: center;
 }
 
-.pixel-button:active:not(:disabled) {
-  transform: translate(2px, 2px);
-  box-shadow:
-    1px 2px 0 #352a484d,
-    inset -2px -2px 0 #d993ce;
-}
-
 .pixel-button.secondary {
   background: var(--paper);
   box-shadow:
@@ -228,10 +221,18 @@ small {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-bottom: 23px;
+  width: 100%;
+  min-width: 0;
+  margin: 0 0 23px;
+  padding: 0;
+  border: 0;
 }
 
 .field-label {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
   font-size: 14px;
   line-height: 22px;
 }
@@ -1211,7 +1212,7 @@ small {
     inset -5px -5px 0 #c99fe8;
 }
 
-.like-person span:not(.person-avatar) {
+:where(.like-person) span:not(.person-avatar) {
   display: flex;
   flex-direction: column;
   gap: 7px;
@@ -1582,7 +1583,19 @@ small {
   width: 16px;
   height: 16px;
   background: var(--bubble-border, #d4c1e7);
-  clip-path: polygon(7px 0, 10px 0, 10px 3px, 12px 3px, 12px 5px, 16px 8px, 12px 11px, 12px 13px, 10px 13px, 10px 16px, 7px 16px);
+  clip-path: polygon(
+    7px 0,
+    10px 0,
+    10px 3px,
+    12px 3px,
+    12px 5px,
+    16px 8px,
+    12px 11px,
+    12px 13px,
+    10px 13px,
+    10px 16px,
+    7px 16px
+  );
   pointer-events: none;
 }
 
@@ -1590,7 +1603,19 @@ small {
   position: absolute;
   inset: 2px;
   background: var(--bubble-fill, var(--paper));
-  clip-path: polygon(5px 0, 8px 0, 8px 1px, 10px 1px, 10px 3px, 12px 6px, 10px 8px, 10px 10px, 8px 10px, 8px 12px, 5px 12px);
+  clip-path: polygon(
+    5px 0,
+    8px 0,
+    8px 1px,
+    10px 1px,
+    10px 3px,
+    12px 6px,
+    10px 8px,
+    10px 10px,
+    8px 10px,
+    8px 12px,
+    5px 12px
+  );
   content: "";
 }
 
@@ -2249,11 +2274,11 @@ section.practice-dialog button.practice-dialog-button.is-primary {
   font-size: 14px;
 }
 
-.my-menu button:last-child {
+:where(.my-menu) button:last-child {
   border-bottom: 1px solid #e8ddf2;
 }
 
-.my-menu button > span:last-child {
+:where(.my-menu button > span:last-child) {
   margin-left: auto;
   color: var(--muted);
   font-size: 12px;
@@ -2493,10 +2518,20 @@ section.practice-dialog button.practice-dialog-button.is-primary {
   height: 100%;
 }
 
-.onboarding-page.registration-info-page .onboarding-body.registration-info-body {
+.onboarding-page.registration-info-page
+  .onboarding-body.registration-info-body {
   padding: 82px 24px 130px;
   overflow-y: auto;
   height: 100%;
+}
+
+.registration-restricted-page h1 {
+  flex: none;
+  margin: 0;
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1.42;
+  letter-spacing: -0.045em;
 }
 
 .onboarding-page.registration-info-page .registration-info-body h1 {
@@ -2553,7 +2588,10 @@ section.practice-dialog button.practice-dialog-button.is-primary {
   display: grid;
   grid-template-columns: 1.9fr 1fr 1fr;
   gap: 8px;
+  width: 100%;
   min-height: 0;
+  min-width: 0;
+  margin: 0;
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -2786,6 +2824,13 @@ section.practice-dialog button.practice-dialog-button.is-primary {
     #f2b5df;
 }
 
+.pixel-button:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow:
+    1px 2px 0 #352a484d,
+    inset -2px -2px 0 #d993ce;
+}
+
 .onboarding-page .onboarding-action .pixel-button:active:not(:disabled) {
   transform: translate(2px, 2px);
   box-shadow: none;
@@ -2894,15 +2939,6 @@ section.practice-dialog button.practice-dialog-button.is-primary {
 
 .registration-restricted-top-space {
   flex: 0 0 24px;
-}
-
-.registration-restricted-page h1 {
-  flex: none;
-  margin: 0;
-  font-size: 27px;
-  font-weight: 700;
-  line-height: 1.42;
-  letter-spacing: -0.045em;
 }
 
 .registration-restricted-subtitle {

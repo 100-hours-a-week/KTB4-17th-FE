@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { connectAiPracticeSocket } from "./aiPracticeSocket.js";
 import { backend, beginKakaoLogin, DEMO_MODE } from "./api.js";
 import {
@@ -199,7 +199,8 @@ function BirthDateInput({ value, onChange }) {
 
   useEffect(() => {
     if (!calendarPicker) return;
-    const list = calendarPicker === "year" ? yearList.current : monthList.current;
+    const list =
+      calendarPicker === "year" ? yearList.current : monthList.current;
     list?.querySelector(".selected")?.scrollIntoView({ block: "center" });
   }, [calendarPicker]);
 
@@ -234,10 +235,23 @@ function BirthDateInput({ value, onChange }) {
   const calendarYear = calendarMonth.getFullYear();
   const calendarMonthIndex = calendarMonth.getMonth();
   const firstWeekday = new Date(calendarYear, calendarMonthIndex, 1).getDay();
-  const daysInMonth = new Date(calendarYear, calendarMonthIndex + 1, 0).getDate();
-  const calendarDays = [
-    ...Array(firstWeekday).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, index) => index + 1),
+  const daysInMonth = new Date(
+    calendarYear,
+    calendarMonthIndex + 1,
+    0,
+  ).getDate();
+  const calendarCells = [
+    ...Array.from({ length: firstWeekday }, (_, index) => ({
+      day: null,
+      key: `empty-${calendarYear}-${calendarMonthIndex}-${index}`,
+    })),
+    ...Array.from({ length: daysInMonth }, (_, index) => {
+      const day = index + 1;
+      return {
+        day,
+        key: `day-${calendarYear}-${calendarMonthIndex}-${day}`,
+      };
+    }),
   ];
   const selectedDate = isValidBirthDate(value) ? value : "";
   const currentYear = new Date().getFullYear();
@@ -263,7 +277,7 @@ function BirthDateInput({ value, onChange }) {
           </svg>
         </button>
       </div>
-      <div className="birth-date-input" role="group" aria-label="생년월일">
+      <fieldset className="birth-date-input" aria-label="생년월일">
         <div className="birth-date-part birth-date-year">
           <input
             ref={yearInput}
@@ -306,9 +320,13 @@ function BirthDateInput({ value, onChange }) {
           />
           <span className="birth-date-unit">일</span>
         </div>
-      </div>
+      </fieldset>
       {calendarOpen && (
-        <div className="birth-date-calendar" role="dialog" aria-label="생년월일 달력">
+        <div
+          className="birth-date-calendar"
+          role="dialog"
+          aria-label="생년월일 달력"
+        >
           <div className="birth-date-calendar-header">
             <button
               type="button"
@@ -316,7 +334,8 @@ function BirthDateInput({ value, onChange }) {
               aria-label="이전 달"
               onClick={() =>
                 setCalendarMonth(
-                  (month) => new Date(month.getFullYear(), month.getMonth() - 1, 1),
+                  (month) =>
+                    new Date(month.getFullYear(), month.getMonth() - 1, 1),
                 )
               }
             >
@@ -328,7 +347,11 @@ function BirthDateInput({ value, onChange }) {
                 className="birth-date-calendar-select"
                 aria-haspopup="listbox"
                 aria-expanded={calendarPicker === "year"}
-                onClick={() => setCalendarPicker((picker) => picker === "year" ? null : "year")}
+                onClick={() =>
+                  setCalendarPicker((picker) =>
+                    picker === "year" ? null : "year",
+                  )
+                }
               >
                 {calendarYear}년
               </button>
@@ -337,7 +360,11 @@ function BirthDateInput({ value, onChange }) {
                 className="birth-date-calendar-select"
                 aria-haspopup="listbox"
                 aria-expanded={calendarPicker === "month"}
-                onClick={() => setCalendarPicker((picker) => picker === "month" ? null : "month")}
+                onClick={() =>
+                  setCalendarPicker((picker) =>
+                    picker === "month" ? null : "month",
+                  )
+                }
               >
                 {calendarMonthIndex + 1}월
               </button>
@@ -348,7 +375,8 @@ function BirthDateInput({ value, onChange }) {
               aria-label="다음 달"
               onClick={() =>
                 setCalendarMonth(
-                  (month) => new Date(month.getFullYear(), month.getMonth() + 1, 1),
+                  (month) =>
+                    new Date(month.getFullYear(), month.getMonth() + 1, 1),
                 )
               }
             >
@@ -367,7 +395,7 @@ function BirthDateInput({ value, onChange }) {
                   type="button"
                   role="option"
                   key={year}
-                  className={"birth-date-calendar-option" + (calendarYear === year ? " selected" : "")}
+                  className={`birth-date-calendar-option${calendarYear === year ? " selected" : ""}`}
                   aria-selected={calendarYear === year}
                   onClick={() => selectCalendarYear(year)}
                 >
@@ -387,7 +415,7 @@ function BirthDateInput({ value, onChange }) {
                   type="button"
                   role="option"
                   key={month}
-                  className={"birth-date-calendar-option" + (calendarMonthIndex === month ? " selected" : "")}
+                  className={`birth-date-calendar-option${calendarMonthIndex === month ? " selected" : ""}`}
                   aria-selected={calendarMonthIndex === month}
                   onClick={() => selectCalendarMonth(month)}
                 >
@@ -398,18 +426,20 @@ function BirthDateInput({ value, onChange }) {
           ) : (
             <div className="birth-date-calendar-grid">
               {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
-                <span className="birth-date-weekday" key={day}>{day}</span>
+                <span className="birth-date-weekday" key={day}>
+                  {day}
+                </span>
               ))}
-              {calendarDays.map((day, index) => {
-                if (!day) return <span key={"empty-" + index} />;
-                const dateValue = calendarYear + "-" + String(calendarMonthIndex + 1).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+              {calendarCells.map(({ day, key }) => {
+                if (!day) return <span key={key} aria-hidden="true" />;
+                const dateValue = `${calendarYear}-${String(calendarMonthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
                 return (
                   <button
                     type="button"
-                    key={dateValue}
-                    className={"birth-date-day" + (selectedDate === dateValue ? " selected" : "")}
+                    key={key}
+                    className={`birth-date-day${selectedDate === dateValue ? " selected" : ""}`}
                     aria-pressed={selectedDate === dateValue}
-                    aria-label={calendarYear + "년 " + (calendarMonthIndex + 1) + "월 " + day + "일"}
+                    aria-label={`${calendarYear}년 ${calendarMonthIndex + 1}월 ${day}일`}
                     onClick={() => selectCalendarDay(day)}
                   >
                     {day}
@@ -417,7 +447,8 @@ function BirthDateInput({ value, onChange }) {
                 );
               })}
             </div>
-          )}        </div>
+          )}{" "}
+        </div>
       )}
     </div>
   );
@@ -485,7 +516,12 @@ function PixelButton({
 function ScreenHeader({ title, onBack, right, className = "" }) {
   return (
     <header className={`screen-header ${className}`}>
-      <button className="header-back" onClick={onBack} aria-label="뒤로가기">
+      <button
+        type="button"
+        className="header-back"
+        onClick={onBack}
+        aria-label="뒤로가기"
+      >
         ‹
       </button>
       <strong>{title}</strong>
@@ -499,6 +535,7 @@ function BottomNav({ path, navigate }) {
     <nav className="bottom-nav" aria-label="주요 메뉴">
       {tabItems.map(([label, href, icon]) => (
         <button
+          type="button"
           key={href}
           className={path.startsWith(href) ? "active" : ""}
           onClick={() => navigate(href)}
@@ -514,12 +551,12 @@ function BottomNav({ path, navigate }) {
 
 function Field({ label, children, hint, error }) {
   return (
-    <label className="field">
-      <span className="field-label">{label}</span>
+    <fieldset className="field">
+      <legend className="field-label">{label}</legend>
       {children}
       {hint && <small className="hint">{hint}</small>}
       {error && <small className="field-error">{error}</small>}
-    </label>
+    </fieldset>
   );
 }
 
@@ -618,9 +655,8 @@ function Login({ onLogin, onLocalTestLogin }) {
   const localTestAuthEnabled = import.meta.env.DEV && !DEMO_MODE;
   const [testAccounts, setTestAccounts] = useState([]);
   const [testTargetMemberId, setTestTargetMemberId] = useState(null);
-  const [testAccountsLoading, setTestAccountsLoading] = useState(
-    localTestAuthEnabled,
-  );
+  const [testAccountsLoading, setTestAccountsLoading] =
+    useState(localTestAuthEnabled);
   const [testLoginPending, setTestLoginPending] = useState(false);
   const [testLoginError, setTestLoginError] = useState("");
 
@@ -658,7 +694,9 @@ function Login({ onLogin, onLocalTestLogin }) {
   }
 
   return (
-    <div className={`login-page${localTestAuthEnabled ? " local-test-login-page" : ""}`}>
+    <div
+      className={`login-page${localTestAuthEnabled ? " local-test-login-page" : ""}`}
+    >
       <div className="login-top-space" aria-hidden="true" />
       <div className="login-illustration">
         <img src={asset("logo-login.png")} alt="*23#" />
@@ -674,10 +712,17 @@ function Login({ onLogin, onLocalTestLogin }) {
         aria-label="카카오 로그인"
         onClick={onLogin}
       >
-        <img src={asset("kakao_login_kr_large.svg")} alt="" aria-hidden="true" />
+        <img
+          src={asset("kakao_login_kr_large.svg")}
+          alt=""
+          aria-hidden="true"
+        />
       </button>
       {localTestAuthEnabled && (
-        <section className="local-test-login-card" aria-labelledby="local-test-login-title">
+        <section
+          className="local-test-login-card"
+          aria-labelledby="local-test-login-title"
+        >
           <h2 id="local-test-login-title">개발용 테스트 계정</h2>
           <p>카카오 로그인과 온보딩 없이 AI 연습 대화를 바로 확인해요.</p>
           {testAccountsLoading ? (
@@ -980,14 +1025,21 @@ function Onboarding({ data, setData, navigate, toast }) {
   }
 
   return (
-    <div
+    <form
       className={`onboarding-page${isRegistrationInfoStep ? " registration-info-page" : ""}`}
       onKeyDown={handleIdentityEnter}
+      onSubmit={(event) => event.preventDefault()}
+      aria-label="온보딩"
     >
       {!isRegistrationInfoStep && (
         <>
           <header className="onboarding-top">
-            <button className="plain-back" onClick={back} aria-label="뒤로가기">
+            <button
+              type="button"
+              className="plain-back"
+              onClick={back}
+              aria-label="뒤로가기"
+            >
               ←
             </button>
             <span>
@@ -1078,7 +1130,9 @@ function Onboarding({ data, setData, navigate, toast }) {
                     onCompositionEnd={handleNameCompositionEnd}
                     onBlur={handleNameBlur}
                     aria-invalid={!isValidKoreanName(profile.name)}
-                    aria-describedby={nameHelper ? "identity-name-helper" : undefined}
+                    aria-describedby={
+                      nameHelper ? "identity-name-helper" : undefined
+                    }
                     placeholder="본명을 입력해주세요"
                   />
                 </div>
@@ -1105,7 +1159,9 @@ function Onboarding({ data, setData, navigate, toast }) {
             </div>
             <ul className="birth-date-help">
               <li>입력한 생년월일은 성인 확인과 프로필 생일에 사용돼요.</li>
-              <li>가입 후에는 기본 정보를 변경할 수 없어요. 신중하게 입력해주세요.</li>
+              <li>
+                가입 후에는 기본 정보를 변경할 수 없어요. 신중하게 입력해주세요.
+              </li>
             </ul>
           </>
         )}
@@ -1123,6 +1179,7 @@ function Onboarding({ data, setData, navigate, toast }) {
             <div className="region-list">
               {regions.map((item) => (
                 <button
+                  type="button"
                   key={item.activityRegionId}
                   className={
                     profile.activityRegionId === item.activityRegionId
@@ -1341,7 +1398,7 @@ function Onboarding({ data, setData, navigate, toast }) {
           <PixelButton onClick={finish}>시작하기</PixelButton>
         )}
       </div>
-    </div>
+    </form>
   );
 }
 
@@ -1361,12 +1418,9 @@ function Home({
     (item) => !data.passedIds.includes(item.id),
   );
   const photoIndex =
-    person && photoSelection?.personId === person.id
-      ? photoSelection.index
-      : 0;
+    person && photoSelection?.personId === person.id ? photoSelection.index : 0;
   const liked = person && data.sentLikes.includes(person.id);
-  const allRecommendationsPassed =
-    recommendations.length > 0 && !person;
+  const allRecommendationsPassed = recommendations.length > 0 && !person;
 
   function pass() {
     if (person)
@@ -1392,7 +1446,11 @@ function Home({
   return (
     <>
       <header className="home-header">
-        <img className="home-brand-logo" src={asset("logo-login.png")} alt="*23#" />
+        <img
+          className="home-brand-logo"
+          src={asset("logo-login.png")}
+          alt="*23#"
+        />
         <span className="home-mode-label">AI 분석모드</span>
         <span className="home-header-spacer" />
         <button
@@ -1409,10 +1467,7 @@ function Home({
             <button type="button" onClick={() => navigate("/preferences")}>
               선호 설정
             </button>
-            <button
-              type="button"
-              onClick={() => navigate("/notifications")}
-            >
+            <button type="button" onClick={() => navigate("/notifications")}>
               알림
             </button>
           </nav>
@@ -1449,14 +1504,16 @@ function Home({
                 ? "지나친 프로필을 다시 확인할 수 있어요."
                 : "새로운 인연이 준비되면 이곳에서 만날 수 있어요."
             }
-            action={allRecommendationsPassed ? (
-              <PixelButton
-                secondary
-                onClick={() => setData((old) => ({ ...old, passedIds: [] }))}
-              >
-                다시 보기
-              </PixelButton>
-            ) : null}
+            action={
+              allRecommendationsPassed ? (
+                <PixelButton
+                  secondary
+                  onClick={() => setData((old) => ({ ...old, passedIds: [] }))}
+                >
+                  다시 보기
+                </PixelButton>
+              ) : null
+            }
           />
         ) : (
           <article className="recommendation-card">
@@ -1544,9 +1601,7 @@ function Home({
 function ProfileDetail({ person, navigate, data, setData, toast }) {
   const [photoSelection, setPhotoSelection] = useState(null);
   const photoIndex =
-    person && photoSelection?.personId === person.id
-      ? photoSelection.index
-      : 0;
+    person && photoSelection?.personId === person.id ? photoSelection.index : 0;
 
   if (!person)
     return (
@@ -1594,43 +1649,43 @@ function ProfileDetail({ person, navigate, data, setData, toast }) {
         />
       </div>
       <section className="detail-content">
-          {person.activity && (
-            <span className="online-badge">{person.activity}</span>
-          )}
-          <h1>
-            {person.nickname}
-            {person.age != null && `, ${person.age}`}
-            {person.verified && <Icon name="detail-shield.svg" />}
-          </h1>
-          {person.job && (
-            <div className="profile-detail-row">
-              <Icon name="detail-work.svg" />
-              <span>{person.job}</span>
-            </div>
-          )}
-          {person.region && (
-            <div className="profile-detail-row">
-              <Icon name="detail-location.svg" />
-              <span>{person.region}</span>
-            </div>
-          )}
-          {person.bio && (
-            <div className="profile-detail-bio">
-              <p>안녕하세요!</p>
-              <p>{person.bio}</p>
-            </div>
-          )}
-          <div className="detail-actions">
-            <PixelButton
-              secondary
-              onClick={() => navigate(`/ai/practice/${person.id}`)}
-            >
-              연습 대화
-            </PixelButton>
-            <PixelButton onClick={like} disabled={liked}>
-              {liked ? "좋아요 보냄" : "좋아요"}
-            </PixelButton>
+        {person.activity && (
+          <span className="online-badge">{person.activity}</span>
+        )}
+        <h1>
+          {person.nickname}
+          {person.age != null && `, ${person.age}`}
+          {person.verified && <Icon name="detail-shield.svg" />}
+        </h1>
+        {person.job && (
+          <div className="profile-detail-row">
+            <Icon name="detail-work.svg" />
+            <span>{person.job}</span>
           </div>
+        )}
+        {person.region && (
+          <div className="profile-detail-row">
+            <Icon name="detail-location.svg" />
+            <span>{person.region}</span>
+          </div>
+        )}
+        {person.bio && (
+          <div className="profile-detail-bio">
+            <p>안녕하세요!</p>
+            <p>{person.bio}</p>
+          </div>
+        )}
+        <div className="detail-actions">
+          <PixelButton
+            secondary
+            onClick={() => navigate(`/ai/practice/${person.id}`)}
+          >
+            연습 대화
+          </PixelButton>
+          <PixelButton onClick={like} disabled={liked}>
+            {liked ? "좋아요 보냄" : "좋아요"}
+          </PixelButton>
+        </div>
       </section>
     </main>
   );
@@ -1679,12 +1734,14 @@ function Likes({ data, setData, navigate, toast }) {
     <>
       <div className="segmented-tabs">
         <button
+          type="button"
           className={tab === "received" ? "active" : ""}
           onClick={() => setTab("received")}
         >
           받은 좋아요
         </button>
         <button
+          type="button"
           className={tab === "sent" ? "active" : ""}
           onClick={() => setTab("sent")}
         >
@@ -1716,6 +1773,7 @@ function Likes({ data, setData, navigate, toast }) {
             {people.map((person) => (
               <article className="like-card" key={person.id}>
                 <button
+                  type="button"
                   className="like-person"
                   onClick={() => navigate(`/profiles/${person.id}`)}
                 >
@@ -1785,8 +1843,16 @@ function parseChatDate(value) {
   );
   let date;
   if (localDateTime) {
-    const [, year, month, day, hour = "0", minute = "0", second = "0", fraction = ""] =
-      localDateTime;
+    const [
+      ,
+      year,
+      month,
+      day,
+      hour = "0",
+      minute = "0",
+      second = "0",
+      fraction = "",
+    ] = localDateTime;
     const milliseconds = Number(`${fraction}000`.slice(0, 3));
     date = new Date(
       Date.UTC(
@@ -1928,7 +1994,6 @@ function ChatList({ data, setData, navigate, previewMode = false, toast }) {
   );
   const [loading, setLoading] = useState(!isDemoMode);
   const [error, setError] = useState("");
-  const [retryCount, setRetryCount] = useState(0);
   const [nextCursor, setNextCursor] = useState(null);
   const [hasNext, setHasNext] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -1936,32 +2001,40 @@ function ChatList({ data, setData, navigate, previewMode = false, toast }) {
   const mainRef = useRef(null);
   const sentinelRef = useRef(null);
   const pagingRef = useRef(false);
+  const roomRequestRef = useRef(0);
+
+  const loadRooms = useCallback(async () => {
+    if (isDemoMode) return;
+    const requestId = roomRequestRef.current + 1;
+    roomRequestRef.current = requestId;
+    setLoading(true);
+    setError("");
+    setPageError(false);
+    setNextCursor(null);
+    setHasNext(false);
+    try {
+      const page = await backend.rooms({ size: 20 });
+      if (requestId !== roomRequestRef.current) return;
+      setRooms((page?.items || []).map(mapChatRoom));
+      setNextCursor(page?.pageInfo?.nextCursor || null);
+      setHasNext(Boolean(page?.pageInfo?.hasNext));
+    } catch (requestError) {
+      if (requestId === roomRequestRef.current)
+        setError(chatListErrorMessage(requestError));
+    } finally {
+      if (requestId === roomRequestRef.current) setLoading(false);
+    }
+  }, [isDemoMode]);
 
   useEffect(() => {
     if (isDemoMode) return undefined;
-    let active = true;
-    setLoading(true);
-    setError("");
-    backend
-      .rooms({ size: 20 })
-      .then((page) => {
-        if (!active) return;
-        setRooms((page?.items || []).map(mapChatRoom));
-        setNextCursor(page?.pageInfo?.nextCursor || null);
-        setHasNext(Boolean(page?.pageInfo?.hasNext));
-      })
-      .catch((requestError) => {
-        if (active) setError(chatListErrorMessage(requestError));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+    void loadRooms();
     return () => {
-      active = false;
+      roomRequestRef.current += 1;
     };
-  }, [isDemoMode, retryCount]);
+  }, [isDemoMode, loadRooms]);
 
-  async function loadNextPage() {
+  const loadNextPage = useCallback(async () => {
     if (
       isDemoMode ||
       !hasNext ||
@@ -1987,7 +2060,7 @@ function ChatList({ data, setData, navigate, previewMode = false, toast }) {
       pagingRef.current = false;
       setLoadingMore(false);
     }
-  }
+  }, [hasNext, isDemoMode, loadingMore, nextCursor]);
 
   useEffect(() => {
     const main = mainRef.current;
@@ -2009,7 +2082,7 @@ function ChatList({ data, setData, navigate, previewMode = false, toast }) {
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasNext, loadingMore, nextCursor, pageError]);
+  }, [hasNext, loadNextPage, loadingMore, pageError]);
 
   function openRoom(room) {
     if (previewMode) {
@@ -2030,7 +2103,11 @@ function ChatList({ data, setData, navigate, previewMode = false, toast }) {
   return (
     <>
       <header className="simple-topbar">
-        <img className="chat-brand-logo" src={asset("logo-login.png")} alt="*23#" />
+        <img
+          className="chat-brand-logo"
+          src={asset("logo-login.png")}
+          alt="*23#"
+        />
       </header>
       <main ref={mainRef} className="main-scroll chat-list-main">
         {loading ? (
@@ -2045,9 +2122,7 @@ function ChatList({ data, setData, navigate, previewMode = false, toast }) {
                 로그인하기
               </PixelButton>
             ) : (
-              <PixelButton onClick={() => setRetryCount((count) => count + 1)}>
-                다시 시도
-              </PixelButton>
+              <PixelButton onClick={loadRooms}>다시 시도</PixelButton>
             )}
           </div>
         ) : rooms.length ? (
@@ -2055,6 +2130,7 @@ function ChatList({ data, setData, navigate, previewMode = false, toast }) {
             <div className="chat-list-items">
               {rooms.map((room) => (
                 <button
+                  type="button"
                   key={room.id}
                   className="chat-list-item"
                   onClick={() => openRoom(room)}
@@ -2081,7 +2157,10 @@ function ChatList({ data, setData, navigate, previewMode = false, toast }) {
                   <span className="chat-room-meta">
                     {room.time && <small>{room.time}</small>}
                     {room.unread > 0 && (
-                      <b aria-label={`읽지 않은 메시지 ${room.unread}개`}>
+                      <b
+                        role="status"
+                        aria-label={`읽지 않은 메시지 ${room.unread}개`}
+                      >
                         {room.unread > 99 ? "99+" : room.unread}
                       </b>
                     )}
@@ -2091,7 +2170,9 @@ function ChatList({ data, setData, navigate, previewMode = false, toast }) {
             </div>
             {hasNext && (
               <div ref={sentinelRef} className="chat-list-pagination">
-                {loadingMore && <small role="status">이전 대화를 불러오는 중…</small>}
+                {loadingMore && (
+                  <small role="status">이전 대화를 불러오는 중…</small>
+                )}
                 {pageError && (
                   <PixelButton quiet onClick={loadNextPage}>
                     이전 대화 다시 불러오기
@@ -2200,9 +2281,7 @@ function ChatRoom({ room, data, setData, navigate, toast }) {
     ? room?.id
     : Number(window.location.pathname.split("/").pop());
   const activeRoom = DEMO_MODE ? room : serverRoom;
-  const messages = DEMO_MODE
-    ? data.messages[roomId] || []
-    : serverMessages;
+  const messages = DEMO_MODE ? data.messages[roomId] || [] : serverMessages;
   const latestMessage = messages[messages.length - 1];
   const latestMessageKey = latestMessage ? String(latestMessage.id) : "";
 
@@ -2471,7 +2550,9 @@ function ChatRoom({ room, data, setData, navigate, toast }) {
         >
           연습 대화
         </button>
-        <button type="button" className="active">채팅</button>
+        <button type="button" className="active">
+          채팅
+        </button>
       </div>
       <div
         ref={messagesScrollRef}
@@ -2563,7 +2644,9 @@ function ChatRoom({ room, data, setData, navigate, toast }) {
           />
           <button
             type="submit"
-            disabled={(!input.trim() && !selectedImage) || !activeRoom || sending}
+            disabled={
+              (!input.trim() && !selectedImage) || !activeRoom || sending
+            }
             aria-label={sending ? "전송 중" : "보내기"}
           >
             {sending ? "…" : "➤"}
@@ -2596,10 +2679,7 @@ function ChatRoom({ room, data, setData, navigate, toast }) {
           >
             ×
           </button>
-          <img
-            src={viewingImage}
-            alt="채팅 첨부 사진 크게 보기"
-          />
+          <img src={viewingImage} alt="채팅 첨부 사진 크게 보기" />
         </div>
       )}
     </>
@@ -2619,7 +2699,10 @@ async function loadPracticeHistory(sessionId) {
   let session = null;
   let chats = [];
   for (let pageIndex = 0; pageIndex < 100; pageIndex++) {
-    const page = await backend.aiPracticeHistory(sessionId, { cursor, size: 100 });
+    const page = await backend.aiPracticeHistory(sessionId, {
+      cursor,
+      size: 100,
+    });
     session ||= page?.session || null;
     chats = mergePracticeChats(chats, page?.chats || []);
     if (!page?.hasNext || page.nextCursor == null) break;
@@ -2639,7 +2722,10 @@ function practiceErrorMessage(error) {
     CHAT_NOT_RETRYABLE: "이 답변은 다시 시도할 수 없어요.",
     AI_SERVER_NOT_CONFIGURED: "AI 응답 서버가 아직 연결되지 않았어요.",
   };
-  return messages[error?.code] || "연습 대화를 처리하지 못했어요. 잠시 후 다시 시도해주세요.";
+  return (
+    messages[error?.code] ||
+    "연습 대화를 처리하지 못했어요. 잠시 후 다시 시도해주세요."
+  );
 }
 
 function Practice({ person, targetMemberId, data, setData, navigate }) {
@@ -2665,7 +2751,9 @@ function Practice({ person, targetMemberId, data, setData, navigate }) {
     },
   ];
   const demoCount = demoMessages.filter((item) => item.mine).length;
-  const count = DEMO_MODE ? demoCount : (usage?.used || 0) + (usage?.reserved || 0);
+  const count = DEMO_MODE
+    ? demoCount
+    : (usage?.used || 0) + (usage?.reserved || 0);
   const dailyLimit = DEMO_MODE ? 30 : usage?.dailyLimit || 30;
   const sessionLoadKey = `${id}:${loadAttempt}`;
   const messageScrollKey = `${demoMessages.length}:${waiting}:${chats
@@ -2874,7 +2962,10 @@ function Practice({ person, targetMemberId, data, setData, navigate }) {
       setSendError(practiceErrorMessage(error));
       void refreshRef.current();
       if (error?.code === "DAILY_LIMIT_EXCEEDED") {
-        backend.aiPracticeUsage().then(setUsage).catch(() => {});
+        backend
+          .aiPracticeUsage()
+          .then(setUsage)
+          .catch(() => {});
       }
     } finally {
       setSending(false);
@@ -2923,16 +3014,15 @@ function Practice({ person, targetMemberId, data, setData, navigate }) {
     }
   }
 
-  const inputDisabled =
-    DEMO_MODE
-      ? demoCount >= 30
-      : loading ||
-        !session ||
-        session.status !== "ACTIVE" ||
-        !usage ||
-        sending ||
-        hasGenerating ||
-        count >= dailyLimit;
+  const inputDisabled = DEMO_MODE
+    ? demoCount >= 30
+    : loading ||
+      !session ||
+      session.status !== "ACTIVE" ||
+      !usage ||
+      sending ||
+      hasGenerating ||
+      count >= dailyLimit;
   const partnerTitle = DEMO_MODE
     ? person?.nickname || "연습 대화"
     : "AI 연습 대화";
@@ -2973,12 +3063,18 @@ function Practice({ person, targetMemberId, data, setData, navigate }) {
         <button type="button" onClick={() => navigate(`/ai/simulation/${id}`)}>
           시뮬레이션
         </button>
-        <button type="button" className="active">연습 대화</button>
-        <button type="button" onClick={() => navigate("/chats")}>채팅</button>
+        <button type="button" className="active">
+          연습 대화
+        </button>
+        <button type="button" onClick={() => navigate("/chats")}>
+          채팅
+        </button>
       </div>
       <div className="ai-notice">
         ⓘ　실제 상대가 아닌 AI예요. 대화 내용은 상대에게 전달되지 않아요.
-        <span>일일 횟수 제한 ({count} / {dailyLimit})</span>
+        <span>
+          일일 횟수 제한 ({count} / {dailyLimit})
+        </span>
       </div>
       <div className="chat-messages practice-messages">
         {DEMO_MODE ? (
@@ -3015,12 +3111,20 @@ function Practice({ person, targetMemberId, data, setData, navigate }) {
           chats.map((chat) => (
             <div className="practice-turn" key={chat.id}>
               <MessageBubble
-                message={{ id: `${chat.id}-user`, mine: true, text: chat.userMessage }}
+                message={{
+                  id: `${chat.id}-user`,
+                  mine: true,
+                  text: chat.userMessage,
+                }}
                 ai
               />
               {chat.status === "COMPLETED" && chat.aiResponse && (
                 <MessageBubble
-                  message={{ id: `${chat.id}-ai`, mine: false, text: chat.aiResponse }}
+                  message={{
+                    id: `${chat.id}-ai`,
+                    mine: false,
+                    text: chat.aiResponse,
+                  }}
                   ai
                 />
               )}
@@ -3035,7 +3139,11 @@ function Practice({ person, targetMemberId, data, setData, navigate }) {
                   <button
                     type="button"
                     className="practice-retry-button"
-                    disabled={retryingChatId === chat.id || count >= dailyLimit || session?.status !== "ACTIVE"}
+                    disabled={
+                      retryingChatId === chat.id ||
+                      count >= dailyLimit ||
+                      session?.status !== "ACTIVE"
+                    }
                     onClick={() => retry(chat)}
                   >
                     {retryingChatId === chat.id ? "요청 중…" : "다시 시도"}
@@ -3060,7 +3168,9 @@ function Practice({ person, targetMemberId, data, setData, navigate }) {
           </p>
         )}
         {!DEMO_MODE && session?.status === "ENDED" && (
-          <p className="practice-send-error">종료된 대화의 기록을 보고 있어요.</p>
+          <p className="practice-send-error">
+            종료된 대화의 기록을 보고 있어요.
+          </p>
         )}
         <div className="practice-compose-row">
           <input
@@ -3119,12 +3229,17 @@ function Practice({ person, targetMemberId, data, setData, navigate }) {
 function Simulation({ person, data, setData, navigate }) {
   const id = person?.id || 12;
   const simulation = data.simulations[id] || { status: "READY", messages: [] };
+  const simulationMessageCount = simulation.messages.length;
   useEffect(() => {
     if (simulation.status !== "PROCESSING") return undefined;
     const timer = window.setTimeout(() => {
       setData((old) => {
         const current = old.simulations[id];
-        if (!current || current.status !== "PROCESSING") return old;
+        if (
+          current?.status !== "PROCESSING" ||
+          current.messages.length !== simulationMessageCount
+        )
+          return old;
         const next = simulationScript[current.messages.length];
         if (!next)
           return {
@@ -3154,7 +3269,7 @@ function Simulation({ person, data, setData, navigate }) {
       });
     }, 1200);
     return () => window.clearTimeout(timer);
-  }, [simulation.status, simulation.messages.length, id, setData]);
+  }, [simulation.status, simulationMessageCount, id, setData]);
   function start() {
     setData((old) => ({
       ...old,
@@ -3181,11 +3296,15 @@ function Simulation({ person, data, setData, navigate }) {
         right={<Icon name="ai-avatar.svg" />}
       />
       <div className="mode-tabs">
-        <button className="active">시뮬레이션</button>
-        <button onClick={() => navigate(`/ai/practice/${id}`)}>
+        <button type="button" className="active">
+          시뮬레이션
+        </button>
+        <button type="button" onClick={() => navigate(`/ai/practice/${id}`)}>
           연습 대화
         </button>
-        <button onClick={() => navigate("/chats/101")}>채팅</button>
+        <button type="button" onClick={() => navigate("/chats/101")}>
+          채팅
+        </button>
       </div>
       <div className="ai-notice">
         ⓘ　실제 상대가 아닌 AI예요. 대화 내용은 상대에게 전달되지 않아요.
@@ -3319,7 +3438,11 @@ function MyPage({ data, navigate }) {
     <>
       <header className="my-topbar">
         <span>*23#</span>
-        <button onClick={() => navigate("/notifications")} aria-label="알림">
+        <button
+          type="button"
+          onClick={() => navigate("/notifications")}
+          aria-label="알림"
+        >
           <Icon name="bell.svg" />
           {data.notifications.some((item) => !item.read) && <i />}
         </button>
@@ -3347,17 +3470,17 @@ function MyPage({ data, navigate }) {
           프로필 수정
         </PixelButton>
         <div className="my-menu">
-          <button onClick={() => navigate("/my/persona")}>
+          <button type="button" onClick={() => navigate("/my/persona")}>
             <Icon name="ai-avatar.svg" />내 페르소나 <span>활성　›</span>
           </button>
-          <button onClick={() => navigate("/notifications")}>
+          <button type="button" onClick={() => navigate("/notifications")}>
             <Icon name="bell.svg" />
             알림{" "}
             <span>
               {data.notifications.filter((item) => !item.read).length || ""}　›
             </span>
           </button>
-          <button onClick={() => navigate("/preferences")}>
+          <button type="button" onClick={() => navigate("/preferences")}>
             <span className="menu-glyph">⚙</span>선호 설정 <span>›</span>
           </button>
         </div>
@@ -3617,6 +3740,7 @@ function Notifications({ data, setData, navigate, toast }) {
         onBack={() => navigate("/my")}
         right={
           <button
+            type="button"
             className="text-action"
             onClick={() => {
               setData((old) => ({
@@ -3635,6 +3759,7 @@ function Notifications({ data, setData, navigate, toast }) {
       <div className="notification-tabs">
         {Object.entries(types).map(([key, label]) => (
           <button
+            type="button"
             key={key}
             className={category === key ? "active" : ""}
             onClick={() => setCategory(key)}
@@ -3650,7 +3775,11 @@ function Notifications({ data, setData, navigate, toast }) {
               className={`notification-card ${item.read ? "read" : ""}`}
               key={item.id}
             >
-              <button className="notification-open" onClick={() => open(item)}>
+              <button
+                type="button"
+                className="notification-open"
+                onClick={() => open(item)}
+              >
                 <span className="notification-glyph">
                   {item.type === "LIKE"
                     ? "♥"
@@ -3668,6 +3797,7 @@ function Notifications({ data, setData, navigate, toast }) {
                 </span>
               </button>
               <button
+                type="button"
                 className="notification-delete"
                 onClick={() =>
                   setData((old) => ({
@@ -3708,9 +3838,49 @@ export default function App() {
     DEMO_MODE ? "ready" : "idle",
   );
   const [recommendationError, setRecommendationError] = useState("");
-  const [recommendationReload, setRecommendationReload] = useState(0);
+  const recommendationRequestRef = useRef(0);
+  const loadRecommendations = useCallback(async () => {
+    const requestId = recommendationRequestRef.current + 1;
+    recommendationRequestRef.current = requestId;
+    setRecommendationStatus("loading");
+    setRecommendationError("");
+
+    try {
+      let batch = await backend.activeBatch();
+      let batchId = batch?.batchId;
+      if (!batchId) {
+        const created = await backend.createRecommendationBatch();
+        batchId = created?.batchId;
+        if (!batchId) {
+          batch = await backend.activeBatch();
+          batchId = batch?.batchId;
+        }
+      }
+
+      if (!batchId) {
+        if (requestId === recommendationRequestRef.current)
+          setRecommendations([]);
+        return;
+      }
+
+      const result = await backend.recommendationItems(batchId);
+      const items = Array.isArray(result?.items) ? result.items : [];
+      const nextRecommendations = items
+        .map(mapRecommendationItem)
+        .filter(Boolean);
+      if (requestId === recommendationRequestRef.current)
+        setRecommendations(nextRecommendations);
+    } catch (error) {
+      if (requestId === recommendationRequestRef.current)
+        setRecommendationError(error?.code || "RECOMMENDATIONS_UNAVAILABLE");
+    } finally {
+      if (requestId === recommendationRequestRef.current)
+        setRecommendationStatus("ready");
+    }
+  }, []);
   useEffect(() => {
-    const hasConfirmedIdentity = data.registrationInfoConfirmed || data.onboarded;
+    const hasConfirmedIdentity =
+      data.registrationInfoConfirmed || data.onboarded;
     const storedData = hasConfirmedIdentity
       ? data
       : {
@@ -3731,10 +3901,7 @@ export default function App() {
   }, []);
   useEffect(() => {
     if (DEMO_MODE) return;
-    if (
-      import.meta.env.DEV &&
-      window.location.pathname === "/chats/preview"
-    ) {
+    if (import.meta.env.DEV && window.location.pathname === "/chats/preview") {
       setLoading(false);
       return;
     }
@@ -3777,50 +3944,12 @@ export default function App() {
       return undefined;
     }
 
-    let active = true;
-    setRecommendationStatus("loading");
-    setRecommendationError("");
-
-    async function loadRecommendations() {
-      let batch = await backend.activeBatch();
-      let batchId = batch?.batchId;
-      if (!batchId) {
-        const created = await backend.createRecommendationBatch();
-        batchId = created?.batchId;
-        if (!batchId) {
-          batch = await backend.activeBatch();
-          batchId = batch?.batchId;
-        }
-      }
-
-      if (!batchId) {
-        if (active) setRecommendations([]);
-        return;
-      }
-
-      const result = await backend.recommendationItems(batchId);
-      const items = Array.isArray(result?.items) ? result.items : [];
-      const nextRecommendations = items
-        .map(mapRecommendationItem)
-        .filter(Boolean);
-      if (active) setRecommendations(nextRecommendations);
-    }
-
-    loadRecommendations()
-      .catch((error) => {
-        if (active)
-          setRecommendationError(
-            error?.code || "RECOMMENDATIONS_UNAVAILABLE",
-          );
-      })
-      .finally(() => {
-        if (active) setRecommendationStatus("ready");
-      });
+    void loadRecommendations();
 
     return () => {
-      active = false;
+      recommendationRequestRef.current += 1;
     };
-  }, [loading, data.session, data.onboarded, recommendationReload]);
+  }, [loading, data.session, data.onboarded, loadRecommendations]);
   useEffect(() => {
     if (!toastText) return undefined;
     const timer = window.setTimeout(() => setToastText(""), 3200);
@@ -3913,11 +4042,7 @@ export default function App() {
         toast={toast}
       />
     );
-  else if (
-    import.meta.env.DEV &&
-    DEMO_MODE &&
-    path === "/ai/practice/preview"
-  )
+  else if (import.meta.env.DEV && DEMO_MODE && path === "/ai/practice/preview")
     page = (
       <Practice
         person={demoRecommendations[0]}
@@ -3964,9 +4089,7 @@ export default function App() {
         recommendations={recommendations}
         recommendationStatus={recommendationStatus}
         recommendationError={recommendationError}
-        onRetryRecommendations={() =>
-          setRecommendationReload((reload) => reload + 1)
-        }
+        onRetryRecommendations={loadRecommendations}
       />
     );
   else if (path.startsWith("/profiles/"))
