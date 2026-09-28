@@ -2,22 +2,41 @@
   min-height: 100%;
   position: relative;
   overflow-y: auto;
-  padding: 60px 24px 40px;
+  padding: max(20px, env(safe-area-inset-top, 0px)) 24px
+    max(20px, env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
 }
 
+.login-page:not(.local-test-login-page) {
+  display: grid;
+  height: 100%;
+  grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  justify-items: center;
+  row-gap: clamp(12px, 2.5vh, 20px);
+  row-gap: clamp(12px, 2.5dvh, 20px);
+}
+
+.login-page:not(.local-test-login-page) .login-top-space {
+  display: none;
+}
+
 .login-top-space {
-  height: 28px;
-  flex: 0 0 28px;
+  height: clamp(0px, 1.5vh, 14px);
+  flex: 0 0 clamp(0px, 1.5vh, 14px);
+  height: clamp(0px, 1.5dvh, 14px);
+  flex-basis: clamp(0px, 1.5dvh, 14px);
 }
 
 .login-illustration {
   width: 100%;
-  height: 300px;
-  flex: 0 0 300px;
+  height: clamp(140px, 26vh, 240px);
+  flex: 0 0 clamp(140px, 26vh, 240px);
+  height: clamp(140px, 26dvh, 240px);
+  flex-basis: clamp(140px, 26dvh, 240px);
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
 }
 
@@ -25,15 +44,15 @@
   width: 256px;
   max-width: 100%;
   height: 116px;
-  margin-top: 8px;
+  margin-top: 0;
   object-fit: contain;
 }
 
 .login-page h1 {
   margin: 0;
   width: 100%;
-  height: 350px;
-  flex: 0 0 350px;
+  height: auto;
+  flex: 0 0 auto;
   text-align: center;
   font-size: 24px;
   line-height: 32px;
@@ -44,7 +63,7 @@
 .kakao-login-button {
   align-self: center;
   width: min(100%, 336px);
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   margin: 0;
   padding: 0;
   border: 0;
@@ -58,6 +77,18 @@
   display: block;
   width: 100%;
   height: auto;
+}
+
+@media (width < 600px) {
+  .login-page {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .login-page:not(.local-test-login-page) {
+    height: 100vh;
+    height: 100dvh;
+  }
 }
 
 .local-test-login-page .login-top-space {
