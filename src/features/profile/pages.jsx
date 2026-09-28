@@ -1,0 +1,217 @@
+import { useAppState } from "../../shared/appState.jsx";
+import { asset } from "../../shared/assets.js";
+import { readPhoto } from "../../shared/fileUtils.js";
+import {
+  ChoiceGroup,
+  Field,
+  Icon,
+  PersonAvatar,
+  PixelButton,
+  ScreenHeader,
+} from "../../shared/ui/components.jsx";
+import { dateAge } from "../../shared/utils.js";
+import { profile as saveProfile } from "./api.js";
+import {
+  bodyTypes,
+  drinkings,
+  educationLevels,
+  religions,
+  smokings,
+} from "./data.js";
+import { profilePayload } from "./serialize.js";
+
+export function MyPage({ navigate }) {
+  const { data } = useAppState();
+  const profile = data.profile;
+  const age = dateAge(profile.birthDate);
+  return (
+    <>
+      <header className="my-topbar">
+        <span>*23#</span>
+        <button
+          type="button"
+          onClick={() => navigate("/notifications")}
+          aria-label="알림"
+        >
+          <Icon name="bell.svg" />
+          {data.notifications.some((item) => !item.read) && <i />}
+        </button>
+      </header>
+      <main className="main-scroll my-main">
+        <div className="my-identity">
+          <PersonAvatar
+            person={{ photo: profile.photo || asset("user-avatar.png") }}
+            size="large"
+          />
+          <div>
+            <h1>
+              {profile.nickname || "내 프로필"}
+              {age ? `, ${age}` : ""}
+            </h1>
+            <p>
+              {[profile.job, profile.regionName].filter(Boolean).join(" · ") ||
+                "프로필 수정에서 정보를 입력해주세요."}
+            </p>
+          </div>
+        </div>
+        <PixelButton
+          secondary
+          className="my-edit"
+          onClick={() => navigate("/my/profile")}
+        >
+          프로필 수정
+        </PixelButton>
+        <div className="my-menu">
+          <button type="button" onClick={() => navigate("/my/persona")}>
+            <Icon name="ai-avatar.svg" />내 페르소나 <span>활성　›</span>
+          </button>
+          <button type="button" onClick={() => navigate("/notifications")}>
+            <Icon name="bell.svg" />
+            알림{" "}
+            <span>
+              {data.notifications.filter((item) => !item.read).length || ""}　›
+            </span>
+          </button>
+          <button type="button" onClick={() => navigate("/preferences")}>
+            <span className="menu-glyph">⚙</span>선호 설정 <span>›</span>
+          </button>
+        </div>
+        <p className="my-footer">*23# · LITTLE PIXELS, REAL CONNECTIONS.</p>
+      </main>
+    </>
+  );
+}
+
+export function MyProfile({ navigate, toast }) {
+  const { data, setData } = useAppState();
+  const profile = data.profile;
+  const set = (key, value) =>
+    setData((old) => ({ ...old, profile: { ...old.profile, [key]: value } }));
+  async function save() {
+    try {
+      await saveProfile(profilePayload(profile));
+    } catch (e) {
+      return toast(e.code || "프로필을 저장하지 못했어요.");
+    }
+    toast("프로필을 저장했어요.");
+    navigate("/my");
+  }
+  return (
+    <>
+      <ScreenHeader title="프로필 수정" onBack={() => navigate("/my")} />
+      <main className="main-scroll edit-main">
+        <label className="edit-avatar">
+          <PersonAvatar
+            person={{ photo: profile.photo || asset("user-avatar.png") }}
+            size="large"
+          />
+          <span>사진 변경</span>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={(e) =>
+              readPhoto(e.target.files?.[0], (url) => set("photo", url), toast)
+            }
+          />
+        </label>
+        <Field label="닉네임">
+          <input
+            value={profile.nickname}
+            onChange={(e) => set("nickname", e.target.value)}
+            maxLength={10}
+          />
+        </Field>
+        <Field label="활동 지역">
+          <input
+            value={profile.regionName}
+            onChange={(e) => set("regionName", e.target.value)}
+          />
+        </Field>
+        <Field label="키 (cm)">
+          <input
+            type="number"
+            value={profile.height}
+            onChange={(e) => set("height", e.target.value)}
+            min="130"
+            max="220"
+          />
+        </Field>
+        <Field label="체형">
+          <ChoiceGroup
+            options={bodyTypes}
+            value={profile.bodyType}
+            onChange={(v) => set("bodyType", v)}
+          />
+        </Field>
+        <Field label="학력">
+          <ChoiceGroup
+            options={educationLevels}
+            value={profile.educationLevel}
+            onChange={(v) => set("educationLevel", v)}
+          />
+        </Field>
+        <Field label="직업">
+          <input
+            value={profile.job}
+            onChange={(e) => set("job", e.target.value)}
+            maxLength={50}
+          />
+        </Field>
+        <Field label="종교">
+          <ChoiceGroup
+            options={religions}
+            value={profile.religion}
+            onChange={(v) => set("religion", v)}
+          />
+        </Field>
+        <Field label="음주">
+          <ChoiceGroup
+            options={drinkings}
+            value={profile.drinking}
+            onChange={(v) => set("drinking", v)}
+          />
+        </Field>
+        <Field label="흡연">
+          <ChoiceGroup
+            options={smokings}
+            value={profile.smoking}
+            onChange={(v) => set("smoking", v)}
+          />
+        </Field>
+        <div className="edit-actions">
+          <PixelButton onClick={save}>저장하기</PixelButton>
+        </div>
+      </main>
+    </>
+  );
+}
+
+export function Persona({ navigate }) {
+  return (
+    <>
+      <ScreenHeader title="내 페르소나" onBack={() => navigate("/my")} />
+      <main className="main-scroll persona-main">
+        <div className="persona-hero">
+          <Icon name="ai-avatar.svg" />
+          <h1>나를 닮은 AI가 준비됐어요</h1>
+          <p>
+            가치관 문답을 바탕으로 상대와의 연습 대화와 시뮬레이션에 참여해요.
+          </p>
+        </div>
+        <h2>나의 성향</h2>
+        {[
+          ["관계 속도", "천천히 가까워지는 편"],
+          ["갈등 대응", "차분히 이야기하는 편"],
+          ["여가 성향", "함께하는 시간도, 혼자만의 시간도 소중해요"],
+          ["연락 빈도", "필요할 때 충분히 소통해요"],
+        ].map(([label, value]) => (
+          <div className="persona-trait" key={label}>
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
+        <small>온보딩에서 확정한 가치관이 반영되어 있어요.</small>
+      </main>
+    </>
+  );
+}

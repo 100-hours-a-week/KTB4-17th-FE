@@ -1,0 +1,134 @@
+.login-page {
+  min-height: 100%;
+  position: relative;
+  overflow-y: auto;
+  padding: 60px 24px 40px;
+  display: flex;
+  flex-direction: column;
+}
+
+.login-top-space {
+  height: 28px;
+  flex: 0 0 28px;
+}
+
+.login-illustration {
+  width: 100%;
+  height: 300px;
+  flex: 0 0 300px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.login-illustration img {
+  width: 256px;
+  max-width: 100%;
+  height: 116px;
+  margin-top: 8px;
+  object-fit: contain;
+}
+
+.login-page h1 {
+  margin: 0;
+  width: 100%;
+  height: 350px;
+  flex: 0 0 350px;
+  text-align: center;
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 400;
+  letter-spacing: -0.24px;
+}
+
+.kakao-login-button {
+  align-self: center;
+  width: min(100%, 336px);
+  flex: 0 1 auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+  line-height: 0;
+}
+
+.kakao-login-button img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.local-test-login-page .login-top-space {
+  height: 12px;
+  flex-basis: 12px;
+}
+
+.local-test-login-page .login-illustration {
+  height: 180px;
+  flex-basis: 180px;
+}
+
+.local-test-login-page h1 {
+  height: 100px;
+  flex-basis: 100px;
+}
+
+.local-test-login-page .kakao-login-button {
+  margin-bottom: 20px;
+}
+
+.local-test-login-card {
+  width: min(100%, 336px);
+  align-self: center;
+  box-sizing: border-box;
+  padding: 16px;
+  border: 1px solid #e6d9f2;
+  border-radius: 12px;
+  background: #fffaff;
+}
+
+.local-test-login-card h2 {
+  margin: 0 0 6px;
+  color: #3f3448;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.local-test-login-card p {
+  margin: 0 0 12px;
+  color: #726a78;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.local-test-login-button {
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: #7b51a3;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.local-test-login-button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.local-test-login-status,
+.local-test-login-error {
+  color: #625a68;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.local-test-login-error {
+  margin-top: 10px;
+  color: #b42318;
+}

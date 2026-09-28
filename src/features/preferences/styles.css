@@ -1,0 +1,9 @@
+.range-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.range-row input {
+  width: 45%;
+}

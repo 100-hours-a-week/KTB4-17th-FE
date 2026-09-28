@@ -1,0 +1,177 @@
+.my-topbar {
+  height: 62px;
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px 0;
+}
+
+.my-topbar span {
+  font-size: 14px;
+}
+
+.my-topbar button {
+  position: relative;
+  border: 0;
+  background: none;
+}
+
+.my-topbar i,
+.notification-open i {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: #e96db8;
+  border-radius: 50%;
+}
+
+.my-topbar i {
+  top: 0;
+  right: 0;
+}
+
+.my-main {
+  top: 62px;
+  padding: 20px 0;
+}
+
+.my-identity {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 0 20px 24px;
+}
+
+.my-identity h1 {
+  font-size: 21px;
+  margin: 0 0 6px;
+}
+
+.my-identity p {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.my-edit {
+  margin: 0 0 24px;
+}
+
+.my-menu button {
+  border: 0;
+  border-top: 1px solid #e8ddf2;
+  background: transparent;
+  min-height: 58px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  text-align: left;
+  padding: 10px 22px;
+  font-size: 14px;
+}
+
+:where(.my-menu) button:last-child {
+  border-bottom: 1px solid #e8ddf2;
+}
+
+:where(.my-menu button > span:last-child) {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.menu-glyph {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  font-size: 20px;
+}
+
+.my-footer {
+  margin: 40px 0;
+  color: #a69bb2;
+  font-size: 10px;
+  text-align: center;
+}
+
+.edit-main {
+  top: 96px;
+  bottom: 0;
+  padding: 20px;
+}
+
+.edit-avatar {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  position: relative;
+  margin-bottom: 24px;
+  font-size: 12px;
+  color: var(--purple);
+}
+
+.edit-actions {
+  margin: 30px 0;
+}
+
+.persona-main,
+.preferences-main {
+  top: 96px;
+  bottom: 0;
+  padding: 24px 20px;
+}
+
+.persona-hero {
+  text-align: center;
+  padding: 18px 20px 30px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+
+.persona-hero .icon {
+  width: 72px;
+  height: 72px;
+}
+
+.persona-hero h1 {
+  font-size: 18px;
+  margin: 16px 0 10px;
+}
+
+.persona-hero p {
+  color: var(--muted);
+  line-height: 1.6;
+  font-size: 12px;
+  margin: 0;
+}
+
+.persona-main h2 {
+  margin: 25px 0 15px;
+}
+
+.persona-trait {
+  border-bottom: 1px solid var(--line);
+  padding: 15px 5px;
+}
+
+.persona-trait span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+
+.persona-trait strong {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.persona-main > small {
+  display: block;
+  color: var(--muted);
+  margin: 24px 0;
+}
