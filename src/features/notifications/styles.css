@@ -1,0 +1,105 @@
+.notification-tabs {
+  height: 50px;
+  border-bottom: 2px solid #38205f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.notification-tabs button {
+  border: 0;
+  background: transparent;
+  padding: 8px 13px;
+  font-size: 12px;
+  color: var(--muted);
+  border-radius: 6px;
+}
+
+.notification-tabs button.active {
+  background: var(--purple);
+  color: white;
+}
+
+.notifications-main {
+  top: 146px;
+  bottom: 0;
+  padding: 14px 14px 30px;
+}
+
+.notification-card {
+  display: flex;
+  align-items: center;
+  position: relative;
+  border: 1px solid #38205f;
+  background: var(--paper);
+  min-height: 87px;
+  margin-bottom: 1px;
+}
+
+.notification-card.read {
+  opacity: 0.72;
+}
+
+.notification-open {
+  border: 0;
+  background: none;
+  display: flex;
+  width: 100%;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 13px 34px 13px 14px;
+  text-align: left;
+}
+
+.notification-glyph {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  color: var(--ink);
+  border: 1px solid #38205f;
+  font-size: 19px;
+}
+
+.notification-open > span:last-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.notification-open strong {
+  font-size: 13px;
+  font-weight: 500;
+  position: relative;
+}
+
+.notification-open i {
+  position: relative;
+  display: inline-block;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.notification-open small {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.notification-open em {
+  font-style: normal;
+  font-size: 10px;
+  color: #9c91a9;
+}
+
+.notification-delete {
+  position: absolute;
+  right: 5px;
+  top: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 20px;
+}

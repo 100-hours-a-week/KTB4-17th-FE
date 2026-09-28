@@ -1,0 +1,508 @@
+.onboarding-page.registration-info-page {
+  --pixel-field-shape: var(--pixel-step-shape);
+
+  position: relative;
+  min-height: 100%;
+  height: 100%;
+}
+
+.onboarding-page.registration-info-page
+  .onboarding-body.registration-info-body {
+  padding: 82px 24px 130px;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.registration-restricted-page h1 {
+  flex: none;
+  margin: 0;
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1.42;
+  letter-spacing: -0.045em;
+}
+
+.onboarding-page.registration-info-page .registration-info-body h1 {
+  margin: 0 0 8px;
+  font-size: 24px;
+  line-height: 1.45;
+}
+
+.registration-info-fields {
+  margin-top: 24px;
+}
+
+.registration-info-fields .field:last-child {
+  margin-bottom: 0;
+}
+
+.birth-date-picker {
+  position: relative;
+}
+
+.birth-date-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.birth-date-heading .field-label {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.birth-date-calendar-toggle {
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.birth-date-calendar-toggle svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 1.3;
+  stroke-linecap: square;
+}
+
+.birth-date-input {
+  display: grid;
+  grid-template-columns: 1.9fr 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+  min-height: 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.birth-date-part {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 52px;
+  padding: 0 10px;
+  border: 1px solid #d8cde2;
+  background: var(--paper);
+  box-shadow: 0 1px 0 #8758cf30;
+}
+
+.birth-date-part input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 14px;
+}
+
+.birth-date-part input:focus {
+  outline: 0;
+}
+
+.birth-date-part input::placeholder {
+  color: #8f849b;
+  opacity: 1;
+}
+
+.birth-date-part .birth-date-unit {
+  flex: none;
+  color: #8f849b;
+  font-size: 13px;
+}
+
+.birth-date-calendar {
+  position: absolute;
+  z-index: 5;
+  top: 92px;
+  right: 0;
+  left: 0;
+  padding: 14px;
+  border: 1px solid #bda6d0;
+  background: var(--paper);
+  box-shadow: 3px 4px 0 #352a4830;
+}
+
+.birth-date-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.birth-date-calendar-selectors {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.birth-date-calendar-header .birth-date-calendar-select {
+  min-height: 30px;
+  padding: 0 5px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.birth-date-calendar-header .birth-date-calendar-nav {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  background: transparent;
+  font-size: 22px;
+}
+
+.birth-date-calendar-list {
+  display: flex;
+  max-height: 224px;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 3px;
+  scrollbar-color: #bda6d0 transparent;
+  scrollbar-width: thin;
+}
+
+.birth-date-calendar-list .birth-date-calendar-option {
+  display: grid;
+  min-height: 34px;
+  flex: none;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.birth-date-calendar-list .birth-date-calendar-option.selected {
+  background: var(--soft-lavender);
+  box-shadow: inset 0 0 0 1px var(--purple);
+}
+
+.birth-date-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+  text-align: center;
+}
+
+.birth-date-calendar-grid > * {
+  display: grid;
+  min-height: 32px;
+  place-items: center;
+  font-size: 12px;
+}
+
+.birth-date-calendar-grid .birth-date-day {
+  border: 0;
+  background: transparent;
+}
+
+.birth-date-calendar-grid .birth-date-day.selected {
+  background: var(--soft-lavender);
+  box-shadow: inset 0 0 0 1px var(--purple);
+}
+
+.birth-date-weekday {
+  color: var(--muted);
+}
+
+.birth-date-help {
+  margin: 10px 0 0;
+  padding: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  list-style: none;
+}
+
+.birth-date-help li {
+  position: relative;
+  padding-left: 9px;
+}
+
+.birth-date-help li::before {
+  position: absolute;
+  left: 0;
+  content: "·";
+}
+
+.registration-info-page .registration-info-action {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  bottom: 40px;
+  left: 0;
+  padding: 0 24px;
+  background: transparent;
+}
+
+.onboarding-page .onboarding-action .pixel-button {
+  position: relative;
+  isolation: isolate;
+  min-height: 50px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 400;
+  box-shadow: none;
+  filter: drop-shadow(3px 4px 0 #352a4850);
+}
+
+.onboarding-page .onboarding-action .pixel-button::before,
+.onboarding-page .onboarding-action .pixel-button::after {
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  content: "";
+  clip-path: polygon(
+    6px 0,
+    calc(100% - 6px) 0,
+    calc(100% - 6px) 3px,
+    calc(100% - 3px) 3px,
+    calc(100% - 3px) 6px,
+    100% 6px,
+    100% calc(100% - 6px),
+    calc(100% - 3px) calc(100% - 6px),
+    calc(100% - 3px) calc(100% - 3px),
+    calc(100% - 6px) calc(100% - 3px),
+    calc(100% - 6px) 100%,
+    6px 100%,
+    6px calc(100% - 3px),
+    3px calc(100% - 3px),
+    3px calc(100% - 6px),
+    0 calc(100% - 6px),
+    0 6px,
+    3px 6px,
+    3px 3px,
+    6px 3px
+  );
+}
+
+.onboarding-page .onboarding-action .pixel-button::before {
+  inset: 0;
+  background: #704394;
+}
+
+.onboarding-page .onboarding-action .pixel-button::after {
+  inset: 3px;
+  background:
+    linear-gradient(#ffe7f8 0 0) 7px 4px / calc(100% - 112px) 3px no-repeat,
+    linear-gradient(#ffe7f8 0 0) calc(100% - 48px) 4px / 4px 3px no-repeat,
+    linear-gradient(#ffe7f8 0 0) calc(100% - 36px) 4px / 4px 3px no-repeat,
+    linear-gradient(#ffe7f8 0 0) calc(100% - 24px) 4px / 4px 3px no-repeat,
+    linear-gradient(#dc95cd 0 0) left bottom / 100% 4px no-repeat,
+    #f2b5df;
+}
+
+.pixel-button:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow:
+    1px 2px 0 #352a484d,
+    inset -2px -2px 0 #d993ce;
+}
+
+.onboarding-page .onboarding-action .pixel-button:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+  filter: drop-shadow(1px 2px 0 #352a4850);
+}
+
+.registration-info-page .birth-date-part,
+.registration-info-page .pixel-field-frame,
+.registration-info-page .registration-info-fields .choice {
+  position: relative;
+  isolation: isolate;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.registration-info-page .birth-date-part::before,
+.registration-info-page .birth-date-part::after,
+.registration-info-page .pixel-field-frame::before,
+.registration-info-page .pixel-field-frame::after,
+.registration-info-page .registration-info-fields .choice::before,
+.registration-info-page .registration-info-fields .choice::after {
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  content: "";
+  clip-path: var(--pixel-field-shape);
+}
+
+.registration-info-page .birth-date-part::before,
+.registration-info-page .pixel-field-frame::before,
+.registration-info-page .registration-info-fields .choice::before {
+  inset: 0;
+  background: #d1c6db;
+}
+
+.registration-info-page .birth-date-part::after,
+.registration-info-page .pixel-field-frame::after,
+.registration-info-page .registration-info-fields .choice::after {
+  inset: 1px;
+  background: var(--paper);
+}
+
+.registration-info-page .birth-date-part > *,
+.registration-info-page .pixel-field-frame > input {
+  position: relative;
+  z-index: 1;
+}
+
+.registration-info-page .pixel-field-frame {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+}
+
+.registration-info-page .pixel-field-frame input {
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.registration-info-page .registration-info-fields .choice.selected {
+  font-weight: 700;
+}
+
+.registration-info-page .registration-info-fields .choice.selected::after {
+  inset: 2px;
+}
+
+.registration-info-page .birth-date-part:focus-within::before,
+.registration-info-page .pixel-field-frame:focus-within::before {
+  background: var(--purple);
+}
+
+.registration-info-page .identity-age-helper,
+.registration-info-page .identity-name-helper {
+  color: #ba386d;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.registration-info-page .identity-age-helper {
+  margin: 8px 0 0;
+}
+
+.registration-restricted-page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding: 60px 24px 40px;
+  overflow-y: auto;
+  background: #fff;
+  color: #111;
+  font-family:
+    "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.registration-restricted-top-space {
+  flex: 0 0 24px;
+}
+
+.registration-restricted-subtitle {
+  flex: none;
+  margin: 13px 0 24px;
+  color: #777;
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: -0.035em;
+}
+
+.registration-restricted-card {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 13px;
+  margin: 0;
+  padding: 16px;
+  border-radius: 10px;
+  background: #fff0a9;
+}
+
+.registration-restricted-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.registration-restricted-row dt {
+  flex: none;
+  color: #888;
+}
+
+.registration-restricted-row dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #222;
+  font-weight: 700;
+  text-align: right;
+}
+
+.registration-restricted-notes {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 2px;
+  margin: 16px 0 0;
+  padding: 0;
+  color: #858585;
+  font-size: 11.5px;
+  line-height: 1.45;
+  letter-spacing: -0.025em;
+  list-style: none;
+}
+
+.registration-restricted-notes li::before {
+  content: "· ";
+}
+
+.registration-restricted-confirm {
+  flex: 0 0 52px;
+  width: 100%;
+  min-height: 52px;
+  margin-top: auto;
+  border: 0;
+  border-radius: 8px;
+  background: #1f1f1f;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.registration-restricted-confirm:focus-visible {
+  outline-color: #555;
+}

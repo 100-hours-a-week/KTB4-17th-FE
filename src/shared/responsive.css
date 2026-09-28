@@ -1,0 +1,15 @@
+@media (width >= 600px) {
+  .app-shell {
+    padding: 24px 0;
+  }
+
+  .app-screen {
+    height: min(844px, calc(100dvh - 48px));
+    min-height: 600px;
+    border-radius: 4px;
+  }
+
+  .recommendation-card {
+    height: min(600px, calc(100dvh - 192px));
+  }
+}
