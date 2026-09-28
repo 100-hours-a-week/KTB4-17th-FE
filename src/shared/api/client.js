@@ -27,7 +27,7 @@ export async function ensureCsrfToken({ force = false } = {}) {
   if (csrfBootstrap) return csrfBootstrap;
 
   const generation = csrfGeneration;
-  const bootstrap = async () => {
+  const bootstrap = (async () => {
     const response = await fetch(`${baseUrl}/api/v1/csrf`, {
       method: "GET",
       credentials: "include",
@@ -49,7 +49,7 @@ export async function ensureCsrfToken({ force = false } = {}) {
     csrfTokenValue = result.token;
     csrfHeaderName = result.headerName || DEFAULT_CSRF_HEADER;
     return csrfTokenValue;
-  };
+  })();
   csrfBootstrap = bootstrap;
   bootstrap.then(
     () => {
