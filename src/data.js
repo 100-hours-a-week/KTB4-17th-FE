@@ -58,19 +58,6 @@ export const mbtis = [
   "ENTJ",
 ];
 
-export const questions = [
-  "주말에 갑자기 약속이 취소되면 어떤 편이세요?",
-  "새로운 사람과 친해질 때 무엇이 가장 중요한가요?",
-  "서로 의견이 다를 때 어떻게 이야기하는 편인가요?",
-  "하루 중 가장 편안함을 느끼는 순간은 언제인가요?",
-  "연락은 얼마나 자주 주고받는 게 편한가요?",
-  "처음 만나는 사람과 하고 싶은 활동은 무엇인가요?",
-  "상대가 힘든 하루를 보냈다면 어떻게 해주고 싶나요?",
-  "연애할 때 서로에게 꼭 필요한 시간은 무엇인가요?",
-  "함께하고 싶은 주말은 어떤 모습인가요?",
-  "좋은 관계를 오래 이어가는 데 가장 중요한 건 무엇인가요?",
-];
-
 export const initialProfile = {
   name: "",
   birthDate: "",
@@ -227,8 +214,6 @@ export function makeInitialState() {
     agreed: false,
     terms: [false, false, false, false],
     profile: { ...initialProfile },
-    questionIndex: 0,
-    answers: [],
     passedIds: [],
     sentLikes: [],
     receivedLikes: [34, 21],

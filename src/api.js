@@ -147,7 +147,15 @@ export const backend = {
   onboarding: () => apiRequest("/api/v1/users/me/onboarding"),
   onboardingProfile: () => apiRequest("/api/v1/users/me/onboarding/profile"),
   identity: (body) =>
-    apiRequest("/api/v1/registration/identity", { method: "PUT", body }),
+    // The pending-registration token authenticates this endpoint and the
+    // backend deliberately excludes it from CSRF validation. Avoid fetching
+    // the general CSRF token first: that endpoint requires a service session,
+    // which a new registrant does not have yet.
+    apiRequest("/api/v1/registration/identity", {
+      method: "PUT",
+      body,
+      skipCsrf: true,
+    }),
   nickname: (nickname) =>
     apiRequest(
       `/api/v1/nicknames/availability?nickname=${encodeURIComponent(nickname)}`,
@@ -156,10 +164,37 @@ export const backend = {
     apiRequest(`/api/v1/activity-regions?query=${encodeURIComponent(query)}`),
   profile: (body) =>
     apiRequest("/api/v1/users/me/profile", { method: "PUT", body }),
+  personaStart: () =>
+    apiRequest("/api/v1/persona/onboarding/start", { method: "POST" }),
+  personaAnswer: (sessionId, body) =>
+    apiRequest(`/api/v1/persona/onboarding/${sessionId}/answer`, {
+      method: "POST",
+      body,
+    }),
+  personaSkip: (sessionId) =>
+    apiRequest(`/api/v1/persona/onboarding/${sessionId}/skip`, {
+      method: "POST",
+    }),
+  personaFinish: (sessionId) =>
+    apiRequest(`/api/v1/persona/onboarding/${sessionId}/finish`, {
+      method: "POST",
+    }),
+  personaBuild: (sessionId) =>
+    apiRequest(`/api/v1/persona/${sessionId}/build`, { method: "POST" }),
+  personaConfirm: (personaId) =>
+    apiRequest(`/api/v1/persona/${personaId}/confirm`, { method: "POST" }),
+  uploadProfileImage: uploadChatImage,
+  profileImages: (images) =>
+    apiRequest("/api/v1/users/me/profile/images", {
+      method: "PUT",
+      body: { images },
+    }),
   createRecommendationBatch: () =>
     apiRequest("/api/v1/recommendation-batches", { method: "POST" }),
   sendLike: (receiverId) =>
     apiRequest("/api/v1/likes", { method: "POST", body: { receiverId } }),
+  rejectLike: (likeId) =>
+    apiRequest(`/api/v1/likes/${likeId}`, { method: "POST" }),
   // The remaining V1 contracts are described in the API workbook and can be enabled as controllers land.
   activeBatch: () => apiRequest("/api/v1/recommendation-batches/active"),
   recommendationItems: (batchId, cursor) => {
@@ -170,8 +205,23 @@ export const backend = {
       `/api/v1/recommendation-batches/${batchId}/items${query}`,
     );
   },
-  receivedLikes: () => apiRequest("/api/v1/likes/received?size=20"),
-  sentLikes: () => apiRequest("/api/v1/likes/sent?size=20"),
+  sentLikes: (cursor) =>
+    apiRequest(
+      `/api/v1/likes/sent${cursor != null ? `?cursor=${encodeURIComponent(cursor)}` : ""}`,
+    ),
+  receivedLikes: (cursor) =>
+    apiRequest(
+      `/api/v1/likes/received${cursor != null ? `?cursor=${encodeURIComponent(cursor)}` : ""}`,
+    ),
+  createAiSimulation: (targetMemberId) =>
+    apiRequest("/api/v1/ai-simulations", {
+      method: "POST",
+      body: { targetMemberId },
+    }),
+  aiSimulation: (simulationId) =>
+    apiRequest(`/api/v1/ai-simulations/${simulationId}`),
+  aiSimulationReport: (simulationId) =>
+    apiRequest(`/api/v1/ai-simulations/${simulationId}/report`),
   rooms: ({ cursor, size = 20 } = {}) => {
     const params = new URLSearchParams({ size: String(size) });
     if (cursor) params.set("cursor", cursor);
