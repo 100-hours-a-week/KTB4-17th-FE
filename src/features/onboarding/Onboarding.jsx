@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useAppState } from "../../shared/appState.jsx";
 import { storeBearerToken } from "../../shared/api/authToken.js";
+import { useAppState } from "../../shared/appState.jsx";
 import {
   ChoiceGroup,
   Field,

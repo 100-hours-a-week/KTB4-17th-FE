@@ -33,7 +33,7 @@ export async function apiRequest(path, options = {}) {
   };
   const accessToken = skipAuth ? null : getAccessToken();
 
-  if (accessToken) headers.Authorization = "Bearer " + accessToken;
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
   if (hasBody && !isFormData) headers["Content-Type"] = "application/json";
 
   const response = await fetch(`${baseUrl}${path}`, {

@@ -1,9 +1,6 @@
 import { useAppState } from "../../shared/appState.jsx";
 import { onboarding } from "../user/api.js";
-import {
-  localTestAuthEnabled,
-  localTestLogin,
-} from "./api.js";
+import { localTestAuthEnabled, localTestLogin } from "./api.js";
 
 export function useLocalTestLogin({ navigate }) {
   const { setData } = useAppState();

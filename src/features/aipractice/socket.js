@@ -123,15 +123,13 @@ export function connectAiPracticeSocket({ onMessage, onStatus = () => {} }) {
     connected = false;
     buffer = "";
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    socket = new WebSocket(
-      protocol + "//" + window.location.host + "/ws/chat",
-    );
+    socket = new WebSocket(`${protocol}//${window.location.host}/ws/chat`);
     socket.onopen = () => {
       sendFrame("CONNECT", {
         "accept-version": "1.2",
         host: window.location.host,
         "heart-beat": "10000,10000",
-        Authorization: "Bearer " + accessToken,
+        Authorization: `Bearer ${accessToken}`,
       });
     };
     socket.onmessage = async (event) => {

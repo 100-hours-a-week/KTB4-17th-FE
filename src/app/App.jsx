@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Practice } from "../features/aipractice/Practice.jsx";
 import { Report, Simulation } from "../features/aisimulation/pages.jsx";
 import { useSimulationLaunch } from "../features/aisimulation/useSimulationLaunch.js";
@@ -20,12 +20,12 @@ import {
 } from "../features/recommendation/Home.jsx";
 import { useRecommendationFeed } from "../features/recommendation/useRecommendationFeed.js";
 import * as userApi from "../features/user/api.js";
-import { AppStateProvider, useAppState } from "../shared/appState.jsx";
 import {
   AUTH_EXPIRED_EVENT,
   clearAccessToken,
   getAccessToken,
 } from "../shared/api/authToken.js";
+import { AppStateProvider, useAppState } from "../shared/appState.jsx";
 import { asset } from "../shared/assets.js";
 import {
   BottomNav,
@@ -40,6 +40,11 @@ function AppRouter() {
   const [toastText, setToastText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sessionCheckError, setSessionCheckError] = useState(false);
+  const navigate = useCallback((to) => {
+    if (window.location.pathname !== to) window.history.pushState({}, "", to);
+    setPath(to);
+    window.scrollTo(0, 0);
+  }, []);
   const { startSimulation, simulationStartingFor } = useSimulationLaunch({
     navigate: (to) => navigate(to),
     toast: (message) => toast(message),
@@ -139,19 +144,13 @@ function AppRouter() {
     window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
     return () =>
       window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
-  }, [setData]);
+  }, [setData, navigate]);
 
   useEffect(() => {
     if (!toastText) return undefined;
     const timer = window.setTimeout(() => setToastText(""), 3200);
     return () => window.clearTimeout(timer);
   }, [toastText]);
-
-  function navigate(to) {
-    if (window.location.pathname !== to) window.history.pushState({}, "", to);
-    setPath(to);
-    window.scrollTo(0, 0);
-  }
 
   function toast(message) {
     setToastText(message);
