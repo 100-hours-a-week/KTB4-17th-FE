@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ScreenHeader } from "../../shared/ui/components.jsx";
+import { MessageBubble } from "../chat/Chat.jsx";
 import * as aiPracticeApi from "./api.js";
 import { connectAiPracticeSocket } from "./socket.js";
 

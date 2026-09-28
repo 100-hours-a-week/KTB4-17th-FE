@@ -5,6 +5,7 @@ import {
   PixelButton,
   ScreenHeader,
 } from "../../shared/ui/components.jsx";
+import { MessageBubble } from "../chat/Chat.jsx";
 import * as aiSimulationApi from "./api.js";
 
 export function Simulation({ simulationId, navigate }) {
