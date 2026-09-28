@@ -50,6 +50,13 @@ export function ScreenHeader({ title, onBack, right, className = "" }) {
   );
 }
 
+const tabItems = [
+  ["HOME", "/home", "nav-home.svg"],
+  ["LIKES", "/likes", "nav-heart.svg"],
+  ["CHAT", "/chats", "nav-chat.svg"],
+  ["MY", "/my", "nav-person.svg"],
+];
+
 export function BottomNav({ path, navigate, onRefreshHome }) {
   return (
     <nav className="bottom-nav" aria-label="주요 메뉴">
