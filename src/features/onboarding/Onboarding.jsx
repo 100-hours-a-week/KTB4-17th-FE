@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { storeBearerToken } from "../../shared/api/authToken.js";
 import { useAppState } from "../../shared/appState.jsx";
 import {
   ChoiceGroup,
@@ -595,11 +596,12 @@ export function Onboarding({ navigate, toast }) {
 
     setError("");
     try {
-      await userApi.identity({
+      const authResponse = await userApi.identity({
         name,
         birthDate: profile.birthDate,
         gender: profile.gender,
       });
+      storeBearerToken(authResponse);
     } catch (e) {
       return setError(e.code || "기본 정보를 저장하지 못했어요.");
     }

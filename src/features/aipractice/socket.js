@@ -1,6 +1,7 @@
 import {
   AUTH_EXPIRED_EVENT,
   clearAccessToken,
+  getAccessToken,
 } from "../../shared/api/authToken.js";
 import { refreshAuthSession } from "../../shared/api/client.js";
 
@@ -132,12 +133,24 @@ export function connectAiPracticeSocket({ onMessage, onStatus = () => {} }) {
 
     connected = false;
     buffer = "";
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    socket = new WebSocket(`${protocol}//${window.location.host}/ws/chat`);
+    const socketUrl = new URL(
+      "/ws/chat",
+      import.meta.env.VITE_API_BASE_URL || window.location.origin,
+    );
+    socketUrl.protocol = socketUrl.protocol === "https:" ? "wss:" : "ws:";
+
+    const accessToken = getAccessToken();
+    if (!accessToken) {
+      failAuthentication();
+      return;
+    }
+
+    socket = new WebSocket(socketUrl.toString());
     socket.onopen = () => {
       sendFrame("CONNECT", {
+        Authorization: `Bearer ${accessToken}`,
         "accept-version": "1.2",
-        host: window.location.host,
+        host: socketUrl.host,
         "heart-beat": "10000,10000",
       });
     };

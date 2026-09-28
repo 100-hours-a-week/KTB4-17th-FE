@@ -2,7 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import { Practice } from "../features/aipractice/Practice.jsx";
 import { Report, Simulation } from "../features/aisimulation/pages.jsx";
 import { useSimulationLaunch } from "../features/aisimulation/useSimulationLaunch.js";
-import { beginKakaoLogin } from "../features/auth/api.js";
+import {
+  beginKakaoLogin,
+  completeOAuthCallback,
+} from "../features/auth/api.js";
 import { Login, RegistrationRestricted } from "../features/auth/pages.jsx";
 import { useLocalTestLogin } from "../features/auth/useLocalTestLogin.js";
 import { ChatList, ChatRoom } from "../features/chat/Chat.jsx";
@@ -74,7 +77,6 @@ function AppRouter() {
       window.location.pathname.startsWith("/registration");
 
     async function bootstrapSession() {
-      clearAccessToken();
       try {
         if (registrationPath) {
           clearAccessToken();
@@ -89,6 +91,9 @@ function AppRouter() {
           }
           return;
         }
+
+        await completeOAuthCallback();
+        if (!active) return;
 
         const status = await userApi.onboarding();
         if (!active) return;
