@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { useAppState } from "../../shared/appState.jsx";
 import { asset } from "../../shared/assets.js";
-import { localTestAccounts } from "./api.js";
+import { localTestAccounts, localTestAuthEnabled } from "./api.js";
 
 export function Login({ onLogin, onLocalTestLogin }) {
-  const localTestAuthEnabled = import.meta.env.DEV;
   const [testAccounts, setTestAccounts] = useState([]);
   const [testTargetMemberId, setTestTargetMemberId] = useState(null);
   const [testAccountsLoading, setTestAccountsLoading] =
