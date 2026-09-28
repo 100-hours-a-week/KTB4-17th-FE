@@ -17,6 +17,7 @@ import {
 } from "../features/recommendation/Home.jsx";
 import { useRecommendationFeed } from "../features/recommendation/useRecommendationFeed.js";
 import * as userApi from "../features/user/api.js";
+import { ensureCsrfToken } from "../shared/api/client.js";
 import { AppStateProvider, useAppState } from "../shared/appState.jsx";
 import { asset } from "../shared/assets.js";
 import {
@@ -77,6 +78,7 @@ function AppRouter() {
       .onboarding()
       .then((status) => {
         if (!active) return;
+        void ensureCsrfToken().catch(() => {});
         setData((old) => ({
           ...old,
           session: true,

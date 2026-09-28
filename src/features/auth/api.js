@@ -1,8 +1,13 @@
-import { apiRequest } from "../../shared/api/client.js";
+import {
+  apiRequest,
+  clearCsrfToken,
+  ensureCsrfToken,
+} from "../../shared/api/client.js";
 
 const localTestAuthEnabled = import.meta.env.DEV;
 
 export function beginKakaoLogin() {
+  clearCsrfToken();
   const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
   window.location.assign(`${baseUrl}/api/v1/auth/kakao`);
 }
@@ -24,10 +29,12 @@ export const localTestAccounts = async () => {
   return result || { accounts: [], practiceTargetMemberId: null };
 };
 
-export const localTestLogin = (memberId) =>
-  localTestAuthEnabled
-    ? apiRequest(`/api/v1/dev/test-auth/${memberId}/login`, {
-        method: "POST",
-        skipCsrf: true,
-      })
-    : Promise.reject(new Error("LOCAL_TEST_LOGIN_DISABLED"));
+export async function localTestLogin(memberId) {
+  if (!localTestAuthEnabled) throw new Error("LOCAL_TEST_LOGIN_DISABLED");
+  clearCsrfToken();
+  await apiRequest(`/api/v1/dev/test-auth/${memberId}/login`, {
+    method: "POST",
+    skipCsrf: true,
+  });
+  await ensureCsrfToken();
+}
