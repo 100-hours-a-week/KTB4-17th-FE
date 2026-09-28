@@ -7,6 +7,7 @@ import {
   PixelButton,
 } from "../../shared/ui/components.jsx";
 import { dateAge } from "../../shared/utils.js";
+import { regions as searchActivityRegions } from "../activity-region/api.js";
 import * as personaApi from "../persona/api.js";
 import * as profileApi from "../profile/api.js";
 import {
@@ -405,7 +406,7 @@ export function Onboarding({ navigate, toast }) {
   const [nameTouched, setNameTouched] = useState(false);
   const [nameHelper, setNameHelper] = useState("");
   const [regionQuery, setRegionQuery] = useState("");
-  const [regions, setRegions] = useState([]);
+  const [regionResults, setRegionResults] = useState([]);
   const [regionSearchStatus, setRegionSearchStatus] = useState("idle");
   const [regionSearchError, setRegionSearchError] = useState("");
   const [answer, setAnswer] = useState("");
@@ -482,28 +483,28 @@ export function Onboarding({ navigate, toast }) {
 
     setRegionSearchError("");
     if (!query) {
-      setRegions([]);
+      setRegionResults([]);
       setRegionSearchStatus("idle");
       return undefined;
     }
 
-    setRegions([]);
+    setRegionResults([]);
     setRegionSearchStatus("loading");
     const timer = window.setTimeout(async () => {
       try {
-        const result = await regions(query);
+        const result = await searchActivityRegions(query);
         if (cancelled) return;
 
         const items = (result?.items || []).map((item) => ({
           ...item,
           name: `${item.provinceName} ${item.regionName}`,
         }));
-        setRegions(items);
+        setRegionResults(items);
         setRegionSearchStatus(items.length ? "success" : "empty");
       } catch (requestError) {
         if (cancelled) return;
 
-        setRegions([]);
+        setRegionResults([]);
         setRegionSearchStatus("error");
         setRegionSearchError(
           requestError.code === "AUTH_REQUIRED" ||
@@ -518,7 +519,7 @@ export function Onboarding({ navigate, toast }) {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [regionQuery, step, regions]);
+  }, [regionQuery, step]);
   const applyConversation = useCallback(
     async (conversation) => {
       setPersonaConversation(conversation);
@@ -1047,7 +1048,7 @@ export function Onboarding({ navigate, toast }) {
               </p>
             )}
             <div className="region-list">
-              {regions.map((item) => (
+              {regionResults.map((item) => (
                 <button
                   type="button"
                   key={item.activityRegionId}
