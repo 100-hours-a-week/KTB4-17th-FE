@@ -680,6 +680,17 @@ small {
   flex-direction: column;
 }
 
+.region-search-state {
+  margin: -8px 3px 8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.region-search-state.field-error {
+  color: #ba386d;
+}
+
 .region-list button {
   border: 0;
   border-bottom: 1px solid #e6deea;
