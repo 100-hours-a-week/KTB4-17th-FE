@@ -2,10 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Practice } from "../features/aipractice/Practice.jsx";
 import { Report, Simulation } from "../features/aisimulation/pages.jsx";
 import { useSimulationLaunch } from "../features/aisimulation/useSimulationLaunch.js";
-import {
-  beginKakaoLogin,
-  completeOAuthCallback,
-} from "../features/auth/api.js";
+import { beginKakaoLogin } from "../features/auth/api.js";
 import { Login, RegistrationRestricted } from "../features/auth/pages.jsx";
 import { useLocalTestLogin } from "../features/auth/useLocalTestLogin.js";
 import { ChatList, ChatRoom } from "../features/chat/Chat.jsx";
@@ -23,7 +20,6 @@ import * as userApi from "../features/user/api.js";
 import {
   AUTH_EXPIRED_EVENT,
   clearAccessToken,
-  getAccessToken,
 } from "../shared/api/authToken.js";
 import { AppStateProvider, useAppState } from "../shared/appState.jsx";
 import { asset } from "../shared/assets.js";
@@ -78,6 +74,7 @@ function AppRouter() {
       window.location.pathname.startsWith("/registration");
 
     async function bootstrapSession() {
+      clearAccessToken();
       try {
         if (registrationPath) {
           clearAccessToken();
@@ -90,14 +87,6 @@ function AppRouter() {
               registrationInfoConfirmed: false,
             }));
           }
-          return;
-        }
-
-        await completeOAuthCallback();
-        if (!active) return;
-
-        if (!getAccessToken()) {
-          setData((old) => ({ ...old, session: false, onboarded: false }));
           return;
         }
 
