@@ -23,7 +23,6 @@ import * as userApi from "../features/user/api.js";
 import {
   AUTH_EXPIRED_EVENT,
   clearAccessToken,
-  getAccessToken,
 } from "../shared/api/authToken.js";
 import { AppStateProvider, useAppState } from "../shared/appState.jsx";
 import { asset } from "../shared/assets.js";
@@ -95,11 +94,6 @@ function AppRouter() {
 
         await completeOAuthCallback();
         if (!active) return;
-
-        if (!getAccessToken()) {
-          setData((old) => ({ ...old, session: false, onboarded: false }));
-          return;
-        }
 
         const status = await userApi.onboarding();
         if (!active) return;

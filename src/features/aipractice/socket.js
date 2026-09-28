@@ -3,6 +3,7 @@ import {
   clearAccessToken,
   getAccessToken,
 } from "../../shared/api/authToken.js";
+import { refreshAuthSession } from "../../shared/api/client.js";
 
 const FRAME_END = "\0";
 const SUBSCRIPTION_ID = "ai-practice-updates";
@@ -56,7 +57,7 @@ export function connectAiPracticeSocket({ onMessage, onStatus = () => {} }) {
     onStatus("reconnecting");
     reconnectTimer = window.setTimeout(() => {
       reconnectTimer = null;
-      connect();
+      void connect();
     }, reconnectDelay);
     reconnectDelay = Math.min(reconnectDelay * 2, 15000);
   }
@@ -104,7 +105,7 @@ export function connectAiPracticeSocket({ onMessage, onStatus = () => {} }) {
           message.includes("bearer") ||
           message.includes("token")
         ) {
-          failAuthentication();
+          socket?.close();
         } else {
           onStatus("error");
         }
@@ -112,24 +113,45 @@ export function connectAiPracticeSocket({ onMessage, onStatus = () => {} }) {
     }
   }
 
-  function connect() {
+  async function connect() {
     if (stopped) return;
+
+    try {
+      // Refresh before each handshake so reconnects also use a current cookie.
+      await refreshAuthSession();
+    } catch (error) {
+      if (stopped) return;
+      if (error?.status === 401 || error?.code === "AUTH_REQUIRED") {
+        failAuthentication();
+      } else {
+        onStatus("error");
+        scheduleReconnect();
+      }
+      return;
+    }
+    if (stopped) return;
+
+    connected = false;
+    buffer = "";
+    const socketUrl = new URL(
+      "/ws/chat",
+      import.meta.env.VITE_API_BASE_URL || window.location.origin,
+    );
+    socketUrl.protocol = socketUrl.protocol === "https:" ? "wss:" : "ws:";
+
     const accessToken = getAccessToken();
     if (!accessToken) {
       failAuthentication();
       return;
     }
 
-    connected = false;
-    buffer = "";
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    socket = new WebSocket(`${protocol}//${window.location.host}/ws/chat`);
+    socket = new WebSocket(socketUrl.toString());
     socket.onopen = () => {
       sendFrame("CONNECT", {
-        "accept-version": "1.2",
-        host: window.location.host,
-        "heart-beat": "10000,10000",
         Authorization: `Bearer ${accessToken}`,
+        "accept-version": "1.2",
+        host: socketUrl.host,
+        "heart-beat": "10000,10000",
       });
     };
     socket.onmessage = async (event) => {
@@ -147,7 +169,7 @@ export function connectAiPracticeSocket({ onMessage, onStatus = () => {} }) {
   }
 
   onStatus("connecting");
-  connect();
+  void connect();
   return () => {
     stopped = true;
     if (reconnectTimer) window.clearTimeout(reconnectTimer);
