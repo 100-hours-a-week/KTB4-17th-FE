@@ -3,6 +3,7 @@ import { apiRequest } from "../../shared/api/client.js";
 
 export const localTestAuthEnabled =
   import.meta.env.DEV && import.meta.env.VITE_ENABLE_LOCAL_TEST_AUTH === "true";
+
 let oauthCallbackExchange = null;
 
 export function beginKakaoLogin() {
@@ -14,10 +15,10 @@ export function completeOAuthCallback() {
   if (oauthCallbackExchange) return oauthCallbackExchange;
 
   const hash = window.location.hash;
-  const hashParams = new URLSearchParams(
+  const params = new URLSearchParams(
     hash.startsWith("#") ? hash.slice(1) : hash,
   );
-  const code = hashParams.get("auth_code");
+  const code = params.get("auth_code");
   if (!code) return null;
 
   window.history.replaceState(
