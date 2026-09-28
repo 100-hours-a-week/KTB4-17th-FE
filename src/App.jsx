@@ -9,9 +9,7 @@ import {
   educationLevels,
   makeInitialState,
   mbtis,
-  questions,
   religions,
-  simulationScript,
   smokings,
 } from "./data.js";
 
@@ -24,8 +22,18 @@ const ONBOARDING_STEPS = [
   "profile",
   "lifestyle",
   "questions",
+  "persona-summary",
+  "photo-intro",
   "photo",
 ];
+const SERVER_ONBOARDING_STEP = {
+  REGION: "region",
+  PROFILE: "profile",
+  LIFESTYLE: "lifestyle",
+  PERSONA: "questions",
+  PROFILE_IMAGE: "photo-intro",
+  COMPLETE: "complete",
+};
 const tabItems = [
   ["HOME", "/home", "nav-home.svg"],
   ["LIKES", "/likes", "nav-heart.svg"],
@@ -82,6 +90,10 @@ function initialState() {
     /* use initial state */
   }
   return makeInitialState();
+}
+
+function onboardingStepFromStatus(status) {
+  return SERVER_ONBOARDING_STEP[status?.onboardingNextStep] || "identity";
 }
 
 function dateAge(value) {
@@ -568,21 +580,32 @@ function ScreenHeader({ title, onBack, right, className = "" }) {
   );
 }
 
-function BottomNav({ path, navigate }) {
+function BottomNav({ path, navigate, onRefreshHome }) {
   return (
     <nav className="bottom-nav" aria-label="주요 메뉴">
-      {tabItems.map(([label, href, icon]) => (
-        <button
-          type="button"
-          key={href}
-          className={path.startsWith(href) ? "active" : ""}
-          onClick={() => navigate(href)}
-          aria-current={path.startsWith(href) ? "page" : undefined}
-        >
-          <Icon name={icon} />
-          <span>{label}</span>
-        </button>
-      ))}
+      {tabItems.map(([label, href, icon]) => {
+        const disabled = href === "/my";
+        return (
+          <button
+            type="button"
+            key={href}
+            className={path.startsWith(href) ? "active" : ""}
+            onClick={() => {
+              if (href === "/home") {
+                navigate(href);
+                onRefreshHome?.();
+                return;
+              }
+              navigate(href);
+            }}
+            disabled={disabled}
+            aria-current={path.startsWith(href) ? "page" : undefined}
+          >
+            <Icon name={icon} />
+            <span>{label}</span>
+          </button>
+        );
+      })}
     </nav>
   );
 }
@@ -851,7 +874,13 @@ function Onboarding({ data, setData, navigate, toast }) {
   const [regionSearchError, setRegionSearchError] = useState("");
   const [answer, setAnswer] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
+  const [personaConversation, setPersonaConversation] = useState(null);
+  const [personaBusy, setPersonaBusy] = useState(false);
+  const [photoItems, setPhotoItems] = useState([]);
+  const [photoSaving, setPhotoSaving] = useState(false);
+  const [draggedPhotoId, setDraggedPhotoId] = useState(null);
   const profileSaveInFlight = useRef(false);
+  const personaStartInFlight = useRef(false);
   const profile = data.profile;
   const step = data.onboardingStep;
   const stepIndex = ONBOARDING_STEPS.indexOf(step);
@@ -894,10 +923,13 @@ function Onboarding({ data, setData, navigate, toast }) {
     if (!isValidKoreanName(profile.name))
       setNameHelper("이름은 한글 2~8자 이내로 입력해주세요");
   }
-  const advance = (next) => {
-    setError("");
-    setData((old) => ({ ...old, onboardingStep: next }));
-  };
+  const advance = useCallback(
+    (next) => {
+      setError("");
+      setData((old) => ({ ...old, onboardingStep: next }));
+    },
+    [setData],
+  );
   const back = () => {
     if (stepIndex <= 0) {
       navigate("/login");
@@ -951,6 +983,60 @@ function Onboarding({ data, setData, navigate, toast }) {
       window.clearTimeout(timer);
     };
   }, [regionQuery, step]);
+  const applyConversation = useCallback(
+    async (conversation) => {
+      setPersonaConversation(conversation);
+      setAnswer("");
+      if (!conversation?.done) return;
+      if (conversation.personaDraft) {
+        advance("persona-summary");
+        return;
+      }
+      try {
+        const personaDraft = await backend.personaBuild(conversation.sessionId);
+        setPersonaConversation((current) =>
+          current?.sessionId === conversation.sessionId
+            ? { ...current, personaDraft }
+            : current,
+        );
+        advance("persona-summary");
+      } catch {
+        setError("가치관 요약을 불러오지 못했어요. 다시 시도해주세요.");
+      }
+    },
+    [advance],
+  );
+
+  const startPersona = useCallback(async () => {
+    if (personaStartInFlight.current) return;
+    personaStartInFlight.current = true;
+    setPersonaBusy(true);
+    setError("");
+    try {
+      const conversation = await backend.personaStart();
+      await applyConversation(conversation);
+    } catch (requestError) {
+      setError(
+        requestError?.code === "AUTH_REQUIRED" ||
+          requestError?.code === "HTTP_401"
+          ? "로그인이 만료되었어요. 다시 로그인해주세요."
+          : "AI 문답을 시작하지 못했어요. 잠시 후 다시 시도해주세요.",
+      );
+    } finally {
+      personaStartInFlight.current = false;
+      setPersonaBusy(false);
+    }
+  }, [applyConversation]);
+
+  function restartPersona() {
+    setPersonaConversation(null);
+    advance("questions");
+  }
+
+  useEffect(() => {
+    if (step === "questions" && !personaConversation && !DEMO_MODE)
+      void startPersona();
+  }, [step, personaConversation, startPersona]);
 
   async function submitIdentity() {
     const name = profile.name;
@@ -1083,23 +1169,160 @@ function Onboarding({ data, setData, navigate, toast }) {
     }
   }
 
-  function submitAnswer() {
-    if (!answer.trim()) return setError("답변을 입력해주세요.");
-    setData((old) => ({
-      ...old,
-      answers: [...old.answers, answer.trim()],
-      questionIndex: Math.min(old.questionIndex + 1, 9),
-    }));
-    setAnswer("");
+  async function submitPersonaAnswer() {
+    const trimmedAnswer = answer.trim();
+    if (trimmedAnswer.length < 2)
+      return setError("답변은 두 글자 이상 입력해주세요.");
+    if (!personaConversation?.sessionId || personaBusy) return;
+
+    setPersonaBusy(true);
     setError("");
-    if (data.questionIndex === 9) advance("photo");
+    try {
+      const conversation = await backend.personaAnswer(
+        personaConversation.sessionId,
+        { answer: trimmedAnswer, turnIndex: personaConversation.turnIndex },
+      );
+      await applyConversation(conversation);
+    } catch {
+      setError("답변을 보내지 못했어요. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setPersonaBusy(false);
+    }
   }
 
-  function finish() {
-    if (!profile.photo) return setError("대표 사진을 추가해주세요.");
-    setData((old) => ({ ...old, onboarded: true, onboardingStep: "complete" }));
-    toast("환영해요! 새로운 인연을 만나보세요.");
-    navigate("/home");
+  async function updatePersonaConversation(action) {
+    if (!personaConversation?.sessionId || personaBusy) return;
+    setPersonaBusy(true);
+    setError("");
+    try {
+      const conversation = await action(personaConversation.sessionId);
+      await applyConversation(conversation);
+    } catch {
+      setError("AI 문답을 진행하지 못했어요. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setPersonaBusy(false);
+    }
+  }
+
+  async function confirmPersona() {
+    const personaId = personaConversation?.personaDraft?.personaId;
+    if (!personaId || personaBusy) return;
+    setPersonaBusy(true);
+    setError("");
+    try {
+      await backend.personaConfirm(personaId);
+      advance("photo-intro");
+    } catch {
+      setError("가치관을 확정하지 못했어요. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setPersonaBusy(false);
+    }
+  }
+
+  function addPhotoItem(file, isFrontal) {
+    if (!file) return;
+    if (!CHAT_IMAGE_MIME_TYPES.has(file.type)) {
+      setError("JPG, PNG, WEBP 형식의 사진만 등록할 수 있어요.");
+      return;
+    }
+    if (photoItems.length >= 6) {
+      setError("사진은 최대 6장까지 등록할 수 있어요.");
+      return;
+    }
+
+    const localId = crypto.randomUUID();
+    const previewUrl = URL.createObjectURL(file);
+    setPhotoItems((current) => [
+      ...current,
+      { localId, previewUrl, fileId: null, isFrontal, uploading: true },
+    ]);
+    setError("");
+
+    const upload = async () => {
+      try {
+        const metadata = await backend.uploadProfileImage(file);
+        setPhotoItems((current) =>
+          current.map((item) =>
+            item.localId === localId
+              ? { ...item, fileId: metadata.fileId, uploading: false }
+              : item,
+          ),
+        );
+      } catch {
+        URL.revokeObjectURL(previewUrl);
+        setPhotoItems((current) =>
+          current.filter((item) => item.localId !== localId),
+        );
+        setError("사진을 업로드하지 못했어요. 잠시 후 다시 시도해주세요.");
+      }
+    };
+    void upload();
+  }
+
+  function reorderPhotos(sourceId, targetId) {
+    if (!sourceId || sourceId === targetId) return;
+    setPhotoItems((current) => {
+      const sourceIndex = current.findIndex(
+        (item) => item.localId === sourceId,
+      );
+      const targetIndex = current.findIndex(
+        (item) => item.localId === targetId,
+      );
+      if (sourceIndex < 0 || targetIndex < 0) return current;
+      const next = [...current];
+      const [moved] = next.splice(sourceIndex, 1);
+      next.splice(targetIndex, 0, moved);
+      return next;
+    });
+  }
+
+  function removePhoto(localId) {
+    setPhotoItems((current) => {
+      const item = current.find((photo) => photo.localId === localId);
+      if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl);
+      return current.filter((photo) => photo.localId !== localId);
+    });
+  }
+
+  async function finishOnboarding() {
+    const hasFrontPhoto = photoItems.some(
+      (item) => item.isFrontal && item.fileId,
+    );
+    if (!hasFrontPhoto) return setError("정면 사진을 먼저 등록해주세요.");
+    if (photoItems.some((item) => item.uploading || !item.fileId))
+      return setError("사진 업로드가 끝난 뒤 저장해주세요.");
+    if (photoSaving) return;
+
+    setPhotoSaving(true);
+    setError("");
+    try {
+      await backend.profileImages(
+        photoItems.map((item) => ({
+          fileId: item.fileId,
+          isFrontal: item.isFrontal,
+        })),
+      );
+      const status = await backend.onboarding();
+      if (status?.userStatus !== "ACTIVE") {
+        setData((old) => ({
+          ...old,
+          onboardingStep: onboardingStepFromStatus(status),
+        }));
+        setError("온보딩을 완료하지 못했어요. 입력 정보를 다시 확인해주세요.");
+        return;
+      }
+      setData((old) => ({
+        ...old,
+        onboarded: true,
+        onboardingStep: "complete",
+      }));
+      toast("환영해요! 새로운 인연을 만나보세요.");
+      navigate("/home");
+    } catch {
+      setError("프로필 사진을 저장하지 못했어요. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setPhotoSaving(false);
+    }
   }
 
   const progress = (Math.max(0, stepIndex) / ONBOARDING_STEPS.length) * 100;
@@ -1419,54 +1642,215 @@ function Onboarding({ data, setData, navigate, toast }) {
           <>
             <div className="question-progress">
               <strong>가치관 문답</strong>
-              <span>{data.questionIndex + 1} / 10</span>
+              <span>{personaConversation?.progress || "준비 중"}</span>
             </div>
             <p className="subcopy">
               프로필만으로 알기 어려운 부분을 여쭤볼게요.
             </p>
             <div className="question-bubble">
               <Icon name="ai-avatar.svg" />
-              {questions[data.questionIndex]}
+              <div>
+                {(personaConversation?.segments || []).length > 0
+                  ? personaConversation.segments.map((segment) => (
+                      <p key={`${segment.type}-${segment.text}`}>
+                        {segment.text}
+                      </p>
+                    ))
+                  : personaConversation?.utterance || "질문을 준비하고 있어요."}
+              </div>
             </div>
-            <Field label="나의 답변">
-              <textarea
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
-                placeholder="자유롭게 답해보세요"
-                maxLength={200}
-                rows={5}
-              />
-            </Field>
+            {personaConversation && !personaConversation.done && (
+              <>
+                <Field label="나의 답변">
+                  <textarea
+                    value={answer}
+                    onChange={(e) => setAnswer(e.target.value)}
+                    placeholder="자유롭게 답해보세요"
+                    maxLength={200}
+                    rows={5}
+                    disabled={personaBusy}
+                  />
+                </Field>
+                <div className="persona-actions">
+                  {personaConversation.canSkip && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updatePersonaConversation(backend.personaSkip)
+                      }
+                      disabled={personaBusy}
+                    >
+                      이 질문 건너뛰기
+                    </button>
+                  )}
+                  {personaConversation.canFinish && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updatePersonaConversation(backend.personaFinish)
+                      }
+                      disabled={personaBusy}
+                    >
+                      여기까지 답할게요
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+            {!personaConversation && !DEMO_MODE && (
+              <button
+                className="persona-retry"
+                type="button"
+                onClick={() => void startPersona()}
+                disabled={personaBusy}
+              >
+                {personaBusy ? "질문을 준비하고 있어요..." : "문답 다시 시작"}
+              </button>
+            )}
+          </>
+        )}
+        {step === "persona-summary" && (
+          <>
+            <div className="question-progress">
+              <strong>이렇게 이해했어요</strong>
+              <span>가치관 요약</span>
+            </div>
+            {personaConversation?.personaDraft?.narrative ? (
+              <section className="persona-summary-card">
+                <h2>{personaConversation.personaDraft.narrative.headline}</h2>
+                <p>{personaConversation.personaDraft.narrative.body}</p>
+                <div className="persona-traits">
+                  {personaConversation.personaDraft.narrative.traits?.map(
+                    (trait) => (
+                      <span key={trait}>{trait}</span>
+                    ),
+                  )}
+                </div>
+              </section>
+            ) : (
+              <p className="info-panel">
+                지금까지의 답변을 바탕으로 가치관을 정리했어요.
+              </p>
+            )}
+            <div className="persona-summary-list">
+              {(personaConversation?.personaDraft?.summaries || []).map(
+                (summary) => (
+                  <section
+                    className="persona-summary-card"
+                    key={summary.category}
+                  >
+                    <small>{summary.category}</small>
+                    <h2>{summary.title}</h2>
+                    <p>{summary.content}</p>
+                  </section>
+                ),
+              )}
+            </div>
+            <button
+              className="persona-retry"
+              type="button"
+              onClick={restartPersona}
+              disabled={personaBusy}
+            >
+              다시 답할래요
+            </button>
+          </>
+        )}
+        {step === "photo-intro" && (
+          <>
+            <h1>정면 사진을 먼저 등록해주세요</h1>
+            <p className="subcopy">
+              얼굴이 잘 보이는 사진은 신뢰할 수 있는 만남을 만드는 데 도움이
+              돼요.
+            </p>
+            <div className="photo-guide">
+              <span aria-hidden="true">◉</span>
+              <strong>정면을 바라본 최근 사진을 준비해주세요.</strong>
+              <ul>
+                <li>얼굴이 선명하게 보여야 해요.</li>
+                <li>다른 사람과 함께 찍은 사진은 피해요.</li>
+                <li>필터가 강한 사진은 피해주세요.</li>
+              </ul>
+            </div>
           </>
         )}
         {step === "photo" && (
           <>
-            <h1>대표 사진을 추가해주세요</h1>
-            <p className="subcopy">얼굴이 잘 보이는 사진으로 나를 소개해요.</p>
-            <label className="photo-upload">
-              {profile.photo ? (
-                <img src={profile.photo} alt="선택한 대표 사진" />
-              ) : (
-                <>
-                  <span>＋</span>
-                  <strong>사진 선택하기</strong>
-                  <small>JPG · PNG · WEBP</small>
-                </>
-              )}
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                onChange={(e) =>
-                  readPhoto(
-                    e.target.files?.[0],
-                    (url) => updateProfile("photo", url),
-                    setError,
-                  )
-                }
-              />
-            </label>
+            <h1>사진으로 나를 소개해주세요</h1>
+            <p className="subcopy">사진은 최대 6장까지 등록할 수 있어요.</p>
+            {!photoItems.some((item) => item.isFrontal) && (
+              <label className="photo-front-upload">
+                <strong>정면 사진 등록</strong>
+                <span>얼굴이 잘 보이는 정면 사진을 선택해주세요.</span>
+                <small>JPG · PNG · WEBP</small>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(event) => {
+                    addPhotoItem(event.target.files?.[0], true);
+                    event.target.value = "";
+                  }}
+                />
+              </label>
+            )}
+            <section className="onboarding-photo-grid" aria-label="등록한 사진">
+              {photoItems.map((item) => (
+                <article
+                  className="onboarding-photo-tile"
+                  data-photo-id={item.localId}
+                  draggable={!item.uploading}
+                  key={item.localId}
+                  onDragStart={() => setDraggedPhotoId(item.localId)}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={() => {
+                    reorderPhotos(draggedPhotoId, item.localId);
+                    setDraggedPhotoId(null);
+                  }}
+                  onPointerDown={() => {
+                    if (!item.uploading) setDraggedPhotoId(item.localId);
+                  }}
+                  onPointerUp={(event) => {
+                    const target = document
+                      .elementFromPoint(event.clientX, event.clientY)
+                      ?.closest("[data-photo-id]");
+                    reorderPhotos(draggedPhotoId, target?.dataset.photoId);
+                    setDraggedPhotoId(null);
+                  }}
+                  onPointerCancel={() => setDraggedPhotoId(null)}
+                >
+                  <img src={item.previewUrl} alt="등록한 프로필 사진" />
+                  {item.isFrontal && <b>정면 사진</b>}
+                  {item.uploading && (
+                    <span className="photo-uploading">업로드 중</span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(item.localId)}
+                    aria-label="사진 삭제"
+                  >
+                    ×
+                  </button>
+                </article>
+              ))}
+              {photoItems.length < 6 &&
+                photoItems.some((item) => item.isFrontal) && (
+                  <label className="onboarding-photo-add">
+                    <span>＋</span>
+                    <small>추가 사진</small>
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={(event) => {
+                        addPhotoItem(event.target.files?.[0], false);
+                        event.target.value = "";
+                      }}
+                    />
+                  </label>
+                )}
+            </section>
             <div className="info-panel">
-              사진은 상대에게 공개되는 대표 이미지예요.
+              사진을 드래그하면 순서를 바꿀 수 있어요. 정면 사진은 위치가
+              바뀌어도 유지돼요.
             </div>
           </>
         )}
@@ -1513,12 +1897,29 @@ function Onboarding({ data, setData, navigate, toast }) {
           </PixelButton>
         )}
         {step === "questions" && (
-          <PixelButton onClick={submitAnswer}>
-            {data.questionIndex === 9 ? "문답 완료" : "답변 보내기"}
+          <PixelButton
+            onClick={submitPersonaAnswer}
+            disabled={
+              !personaConversation || personaConversation.done || personaBusy
+            }
+          >
+            {personaBusy ? "보내는 중..." : "답변 보내기"}
+          </PixelButton>
+        )}
+        {step === "persona-summary" && (
+          <PixelButton onClick={confirmPersona} disabled={personaBusy}>
+            {personaBusy ? "확정 중..." : "이 내용으로 확정하기"}
+          </PixelButton>
+        )}
+        {step === "photo-intro" && (
+          <PixelButton onClick={() => advance("photo")}>
+            사진 등록하기
           </PixelButton>
         )}
         {step === "photo" && (
-          <PixelButton onClick={finish}>시작하기</PixelButton>
+          <PixelButton onClick={finishOnboarding} disabled={photoSaving}>
+            {photoSaving ? "저장 중..." : "시작하기"}
+          </PixelButton>
         )}
       </div>
     </form>
@@ -1526,45 +1927,89 @@ function Onboarding({ data, setData, navigate, toast }) {
 }
 
 function Home({
-  data,
-  setData,
   navigate,
   toast,
   recommendations,
+  currentIndex,
+  hasNext,
   recommendationStatus,
   recommendationError,
   onRetryRecommendations,
+  onAdvance,
+  onLoadMore,
+  onPracticeStarted,
+  onStartSimulation,
 }) {
-  const [photoSelection, setPhotoSelection] = useState(null);
+  const [photoIndex, setPhotoIndex] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
-  const person = recommendations.find(
-    (item) => !data.passedIds.includes(item.id),
-  );
-  const photoIndex =
-    person && photoSelection?.personId === person.id ? photoSelection.index : 0;
-  const liked = person && data.sentLikes.includes(person.id);
-  const allRecommendationsPassed = recommendations.length > 0 && !person;
+  const [actionBusy, setActionBusy] = useState("");
+  const gestureStart = useRef(null);
+  const person = recommendations[currentIndex] || null;
 
-  function pass() {
-    if (person)
-      setData((old) => ({
-        ...old,
-        passedIds: old.passedIds.includes(person.id)
-          ? old.passedIds
-          : [...old.passedIds, person.id],
-      }));
+  async function advance() {
+    if (currentIndex < recommendations.length - 1) {
+      setPhotoIndex(0);
+      onAdvance();
+      return;
+    }
+    if (hasNext && (await onLoadMore())) {
+      setPhotoIndex(0);
+      onAdvance();
+    }
+  }
+  function cyclePhoto(direction) {
+    const count = Math.max(profilePhotoUrls(person).length, 1);
+    setPhotoIndex((current) => (current + direction + count) % count);
+  }
+  function handlePointerDown(event) {
+    gestureStart.current = { x: event.clientX, y: event.clientY };
+  }
+  function handlePointerUp(event) {
+    const start = gestureStart.current;
+    gestureStart.current = null;
+    if (!start || !person || actionBusy) return;
+    const x = event.clientX - start.x;
+    const y = event.clientY - start.y;
+    if (Math.abs(x) >= 48 && Math.abs(x) > Math.abs(y))
+      cyclePhoto(x < 0 ? 1 : -1);
+    else if (y <= -64 && Math.abs(y) > Math.abs(x)) void advance();
   }
   async function like() {
-    if (!person || liked) return;
-    if (!DEMO_MODE) {
-      try {
-        await backend.sendLike(person.id);
-      } catch (e) {
-        return toast(e.code || "좋아요를 보내지 못했어요.");
-      }
+    if (!person || actionBusy) return;
+    setActionBusy("like");
+    try {
+      if (!DEMO_MODE) await backend.sendLike(person.id);
+      toast(`${person.nickname}님에게 좋아요를 보냈어요`);
+      await advance();
+    } catch (error) {
+      toast(error?.code || "좋아요를 보내지 못했어요.");
+    } finally {
+      setActionBusy("");
     }
-    setData((old) => ({ ...old, sentLikes: [...old.sentLikes, person.id] }));
-    toast(`${person.nickname}님에게 좋아요를 보냈어요`);
+  }
+  async function startPractice() {
+    if (!person || actionBusy) return;
+    setActionBusy("practice");
+    try {
+      const session = DEMO_MODE
+        ? null
+        : await backend.aiPracticeStart(person.id);
+      if (session) onPracticeStarted(person.id, session);
+      navigate(`/ai/practice/${person.id}`);
+    } catch (error) {
+      toast(error?.code || "연습 대화를 시작하지 못했어요.");
+    } finally {
+      setActionBusy("");
+    }
+  }
+  async function startSimulation() {
+    if (!person || actionBusy) return;
+    setActionBusy("simulation");
+    try {
+      await onStartSimulation(person.id);
+    } finally {
+      setActionBusy("");
+    }
   }
   return (
     <>
@@ -1618,28 +2063,18 @@ function Home({
           <EmptyState
             icon="✦"
             title={
-              allRecommendationsPassed
+              recommendations.length > 0
                 ? "추천을 모두 봤어요"
                 : "새로운 추천을 준비하고 있어요"
             }
-            description={
-              allRecommendationsPassed
-                ? "지나친 프로필을 다시 확인할 수 있어요."
-                : "새로운 인연이 준비되면 이곳에서 만날 수 있어요."
-            }
-            action={
-              allRecommendationsPassed ? (
-                <PixelButton
-                  secondary
-                  onClick={() => setData((old) => ({ ...old, passedIds: [] }))}
-                >
-                  다시 보기
-                </PixelButton>
-              ) : null
-            }
+            description={"새로운 인연이 준비되면 이곳에서 만날 수 있어요."}
           />
         ) : (
-          <article className="recommendation-card">
+          <article
+            className="recommendation-card"
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+          >
             <ProfilePhoto
               className="recommendation-photo"
               person={person}
@@ -1648,9 +2083,7 @@ function Home({
             <PhotoSegments
               person={person}
               index={photoIndex}
-              onSelect={(index) =>
-                setPhotoSelection({ personId: person.id, index })
-              }
+              onSelect={setPhotoIndex}
             />
             <div className="recommendation-gradient" />
             <div className="recommendation-info">
@@ -1670,27 +2103,26 @@ function Home({
               )}
               <div className="recommendation-actions">
                 {[
-                  ["패스", "action-pass.svg", pass, false],
                   [
                     "시뮬레이션",
                     "action-simulation.svg",
-                    () => navigate(`/ai/simulation/${person.id}`),
-                    false,
+                    startSimulation,
+                    "simulation",
                   ],
                   [
                     "연습 대화",
                     "action-practice.svg",
-                    () => navigate(`/ai/practice/${person.id}`),
-                    false,
+                    startPractice,
+                    "practice",
                   ],
-                  [liked ? "보냄" : "좋아요", "action-like.svg", like, liked],
-                ].map(([label, icon, action, disabled]) => (
+                  ["좋아요", "action-like.svg", like, "like"],
+                ].map(([label, icon, action, busyKey]) => (
                   <button
                     type="button"
                     key={label}
                     className="card-action"
                     onClick={action}
-                    disabled={disabled}
+                    disabled={Boolean(actionBusy)}
                   >
                     <span
                       className="action-key"
@@ -1700,158 +2132,135 @@ function Home({
                     >
                       <Icon name={icon} />
                     </span>
-                    <span>{label}</span>
+                    <span>{actionBusy === busyKey ? "처리 중..." : label}</span>
                   </button>
                 ))}
               </div>
             </div>
-            <button
-              className="card-detail-link"
-              type="button"
-              onClick={() => navigate(`/profiles/${person.id}`)}
-              aria-label={`${person.nickname} 프로필 자세히 보기`}
-            />
           </article>
-        )}
-        {person && (
-          <p className="home-tip">프로필을 탭하면 더 자세히 볼 수 있어요.</p>
         )}
       </main>
     </>
   );
 }
 
-function ProfileDetail({ person, navigate, data, setData, toast }) {
-  const [photoSelection, setPhotoSelection] = useState(null);
-  const photoIndex =
-    person && photoSelection?.personId === person.id ? photoSelection.index : 0;
-
-  if (!person)
-    return (
-      <EmptyState
-        title="프로필을 찾을 수 없어요"
-        description="추천 목록으로 돌아가 다시 확인해주세요."
-      />
-    );
-  const liked = data.sentLikes.includes(person.id);
-  async function like() {
-    if (liked) return;
-    if (!DEMO_MODE) {
-      try {
-        await backend.sendLike(person.id);
-      } catch (e) {
-        return toast(e.code || "좋아요를 보내지 못했어요.");
-      }
-    }
-    setData((old) => ({ ...old, sentLikes: [...old.sentLikes, person.id] }));
-    toast("좋아요를 보냈어요");
-  }
-  return (
-    <main className="main-scroll profile-detail-main">
-      <div className="detail-photo">
-        <ProfilePhoto
-          className="detail-photo-image"
-          person={person}
-          index={photoIndex}
-        />
-        <button
-          className="detail-back-button"
-          type="button"
-          aria-label="추천으로 돌아가기"
-          onClick={() => navigate("/home")}
-        >
-          ‹
-        </button>
-        <PhotoSegments
-          className="detail-photo-steps"
-          person={person}
-          index={photoIndex}
-          onSelect={(index) =>
-            setPhotoSelection({ personId: person.id, index })
-          }
-        />
-      </div>
-      <section className="detail-content">
-        {person.activity && (
-          <span className="online-badge">{person.activity}</span>
-        )}
-        <h1>
-          {person.nickname}
-          {person.age != null && `, ${person.age}`}
-          {person.verified && <Icon name="detail-shield.svg" />}
-        </h1>
-        {person.job && (
-          <div className="profile-detail-row">
-            <Icon name="detail-work.svg" />
-            <span>{person.job}</span>
-          </div>
-        )}
-        {person.region && (
-          <div className="profile-detail-row">
-            <Icon name="detail-location.svg" />
-            <span>{person.region}</span>
-          </div>
-        )}
-        {person.bio && (
-          <div className="profile-detail-bio">
-            <p>안녕하세요!</p>
-            <p>{person.bio}</p>
-          </div>
-        )}
-        <div className="detail-actions">
-          <PixelButton
-            secondary
-            onClick={() => navigate(`/ai/practice/${person.id}`)}
-          >
-            연습 대화
-          </PixelButton>
-          <PixelButton onClick={like} disabled={liked}>
-            {liked ? "좋아요 보냄" : "좋아요"}
-          </PixelButton>
-        </div>
-      </section>
-    </main>
-  );
+function mapLikeItem(item, tab) {
+  const member = tab === "received" ? item?.sender : item?.receiver;
+  return {
+    id: item?.likeId,
+    memberId: member?.memberId,
+    nickname: member?.nickname || "닉네임 정보 없음",
+    age: member?.age,
+    job: member?.job || "",
+    region: member?.region || "",
+    photo: member?.profileImageUrl || "",
+    status: item?.status || "",
+  };
 }
 
-function Likes({ data, setData, navigate, toast }) {
+function Likes({ toast, onFindMatch }) {
   const [tab, setTab] = useState("received");
-  const ids = tab === "received" ? data.receivedLikes : data.sentLikes;
-  const people = ids
-    .map((id) => demoRecommendations.find((person) => person.id === id))
-    .filter(Boolean);
-  function reject(id) {
-    setData((old) => ({
-      ...old,
-      receivedLikes: old.receivedLikes.filter((value) => value !== id),
+  const [rejectTarget, setRejectTarget] = useState(null);
+  const [actionLikeId, setActionLikeId] = useState(null);
+  const requestInFlight = useRef({ received: false, sent: false });
+  const [pages, setPages] = useState({
+    received: {
+      items: [],
+      loaded: false,
+      loading: false,
+      error: "",
+      nextCursor: null,
+      hasNext: false,
+    },
+    sent: {
+      items: [],
+      loaded: false,
+      loading: false,
+      error: "",
+      nextCursor: null,
+      hasNext: false,
+    },
+  });
+  const load = useCallback(async (targetTab, cursor = null) => {
+    if (requestInFlight.current[targetTab]) return;
+    requestInFlight.current[targetTab] = true;
+    setPages((current) => ({
+      ...current,
+      [targetTab]: { ...current[targetTab], loading: true, error: "" },
     }));
-    toast("관심 없음으로 정리했어요.");
+    try {
+      const response =
+        targetTab === "received"
+          ? await backend.receivedLikes(cursor)
+          : await backend.sentLikes(cursor);
+      const items = (response?.items || []).map((item) =>
+        mapLikeItem(item, targetTab),
+      );
+      setPages((current) => ({
+        ...current,
+        [targetTab]: {
+          ...current[targetTab],
+          items:
+            cursor == null ? items : [...current[targetTab].items, ...items],
+          loaded: true,
+          loading: false,
+          nextCursor: response?.pageInfo?.nextCursor || null,
+          hasNext: Boolean(response?.pageInfo?.hasNext),
+        },
+      }));
+    } catch (error) {
+      setPages((current) => ({
+        ...current,
+        [targetTab]: {
+          ...current[targetTab],
+          loading: false,
+          error: error?.code || "LIKES_UNAVAILABLE",
+        },
+      }));
+    } finally {
+      requestInFlight.current[targetTab] = false;
+    }
+  }, []);
+  useEffect(() => {
+    if (!pages[tab].loaded && !pages[tab].loading && !pages[tab].error)
+      void load(tab);
+  }, [load, pages, tab]);
+  const page = pages[tab];
+  const removeReceivedLike = useCallback((likeId) => {
+    setPages((current) => ({
+      ...current,
+      received: {
+        ...current.received,
+        items: current.received.items.filter((item) => item.id !== likeId),
+      },
+    }));
+  }, []);
+  async function acceptLike(person) {
+    if (!person.memberId || actionLikeId != null) return;
+    setActionLikeId(person.id);
+    try {
+      await backend.sendLike(person.memberId);
+      removeReceivedLike(person.id);
+      toast("매칭에 성공했어요");
+    } catch (error) {
+      toast(error?.code || "좋아요를 처리하지 못했어요.");
+    } finally {
+      setActionLikeId(null);
+    }
   }
-  function accept(id) {
-    const person = demoRecommendations.find((item) => item.id === id);
-    setData((old) => ({
-      ...old,
-      receivedLikes: old.receivedLikes.filter((value) => value !== id),
-      matches: old.matches.includes(id) ? old.matches : [...old.matches, id],
-      sentLikes: old.sentLikes.includes(id)
-        ? old.sentLikes
-        : [...old.sentLikes, id],
-      rooms: old.rooms.some((room) => room.personId === id)
-        ? old.rooms
-        : [
-            {
-              id: 1000 + id,
-              personId: id,
-              name: person?.nickname || "새 인연",
-              image: person?.photo || "",
-              last: "서로 좋아요! 첫 인사를 보내보세요.",
-              time: "방금",
-              unread: 0,
-            },
-            ...old.rooms,
-          ],
-    }));
-    toast("서로 좋아요! 채팅에서 만나요.");
+  async function rejectLike() {
+    if (!rejectTarget || actionLikeId != null) return;
+    setActionLikeId(rejectTarget.id);
+    try {
+      await backend.rejectLike(rejectTarget.id);
+      removeReceivedLike(rejectTarget.id);
+      setRejectTarget(null);
+      toast("좋아요를 거절했어요");
+    } catch (error) {
+      toast(error?.code || "좋아요를 거절하지 못했어요.");
+    } finally {
+      setActionLikeId(null);
+    }
   }
   return (
     <>
@@ -1874,65 +2283,131 @@ function Likes({ data, setData, navigate, toast }) {
       <main className="main-scroll likes-main">
         <div className="section-heading">
           <h1>{tab === "received" ? "받은 좋아요" : "보낸 좋아요"}</h1>
-          <span>최신순⌄</span>
         </div>
-        {people.length === 0 ? (
+        {page.loading && !page.loaded ? (
+          <EmptyState
+            icon="♡"
+            title="좋아요를 불러오고 있어요"
+            description="잠시만 기다려주세요."
+          />
+        ) : page.error ? (
+          <EmptyState
+            icon="!"
+            title="좋아요를 불러오지 못했어요"
+            description="잠시 후 다시 시도해주세요."
+            action={
+              <PixelButton secondary onClick={() => load(tab)}>
+                다시 시도
+              </PixelButton>
+            }
+          />
+        ) : page.items.length === 0 ? (
           <EmptyState
             icon="♡"
             title={
               tab === "received"
-                ? "아직 받은 좋아요가 없어요"
+                ? "아직 도착한 마음이 없어요"
                 : "아직 보낸 좋아요가 없어요"
             }
-            description="홈에서 새로운 인연을 만나보세요."
             action={
-              <PixelButton secondary onClick={() => navigate("/home")}>
-                홈으로 가기
-              </PixelButton>
+              tab === "sent" ? (
+                <PixelButton secondary onClick={onFindMatch}>
+                  인연 찾으러 가기
+                </PixelButton>
+              ) : undefined
             }
           />
         ) : (
           <div className="like-list">
-            {people.map((person) => (
+            {page.items.map((person) => (
               <article className="like-card" key={person.id}>
-                <button
-                  type="button"
-                  className="like-person"
-                  onClick={() => navigate(`/profiles/${person.id}`)}
-                >
+                <div className="like-person">
                   <PersonAvatar person={person} />
                   <span>
                     <strong>
-                      {person.nickname}, {person.age}
+                      {person.nickname}
+                      {person.age != null && `, ${person.age}`}
                     </strong>
                     <small>
-                      {person.job} · {person.region}
+                      {[person.job, person.region].filter(Boolean).join(" · ")}
                     </small>
                   </span>
-                </button>
-                {tab === "received" ? (
+                </div>
+                {tab === "received" && (
+                  <p className="like-status">
+                    {person.status === "MATCHED"
+                      ? "서로 좋아요"
+                      : "나에게 좋아요를 보냈어요"}
+                  </p>
+                )}
+                {tab === "received" && (
                   <div className="like-actions">
-                    <PixelButton secondary onClick={() => reject(person.id)}>
-                      관심 없음
+                    <PixelButton
+                      secondary
+                      onClick={() => setRejectTarget(person)}
+                      disabled={actionLikeId != null}
+                    >
+                      관심없음
                     </PixelButton>
-                    <PixelButton onClick={() => accept(person.id)}>
-                      좋아요
+                    <PixelButton
+                      onClick={() => acceptLike(person)}
+                      disabled={actionLikeId != null || !person.memberId}
+                    >
+                      {actionLikeId === person.id ? "처리 중..." : "좋아요"}
                     </PixelButton>
                   </div>
-                ) : (
-                  <p className="like-status">
-                    {data.matches.includes(person.id)
-                      ? "서로 좋아요"
-                      : "상대의 답변을 기다리고 있어요"}
-                  </p>
                 )}
               </article>
             ))}
+            {page.hasNext && (
+              <PixelButton
+                secondary
+                disabled={page.loading}
+                onClick={() => load(tab, page.nextCursor)}
+              >
+                {page.loading ? "불러오는 중..." : "더 보기"}
+              </PixelButton>
+            )}
           </div>
         )}
       </main>
+      {rejectTarget && (
+        <div className="like-confirm-backdrop">
+          <section
+            className="like-confirm-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="like-reject-title"
+          >
+            <h2 id="like-reject-title">정말 관심없음으로 할까요?</h2>
+            <p>거절한 좋아요는 다시 되돌릴 수 없어요.</p>
+            <div>
+              <button
+                type="button"
+                onClick={() => setRejectTarget(null)}
+                disabled={actionLikeId != null}
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                className="is-primary"
+                onClick={() => void rejectLike()}
+                disabled={actionLikeId != null}
+              >
+                {actionLikeId === rejectTarget.id ? "처리 중..." : "관심없음"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </>
   );
+}
+
+function LegacyProfileRedirect({ navigate }) {
+  useEffect(() => navigate("/home"), [navigate]);
+  return null;
 }
 
 function formatChatActivity(value) {
@@ -2386,7 +2861,15 @@ function MessageBubble({
   );
 }
 
-function ChatRoom({ room, data, setData, navigate, toast }) {
+function ChatRoom({
+  room,
+  data,
+  setData,
+  navigate,
+  toast,
+  onStartSimulation,
+  simulationStartingFor,
+}) {
   const [input, setInput] = useState("");
   const [selectedImage, setSelectedImage] = useState(null);
   const [sending, setSending] = useState(false);
@@ -2661,10 +3144,12 @@ function ChatRoom({ room, data, setData, navigate, toast }) {
       <div className="mode-tabs">
         <button
           type="button"
-          disabled={!targetMemberId}
-          onClick={() => navigate(`/ai/simulation/${targetMemberId}`)}
+          disabled={!targetMemberId || simulationStartingFor != null}
+          onClick={() => void onStartSimulation(targetMemberId)}
         >
-          시뮬레이션
+          {simulationStartingFor === targetMemberId
+            ? "시뮬레이션 생성 중..."
+            : "시뮬레이션"}
         </button>
         <button
           type="button"
@@ -2851,7 +3336,16 @@ function practiceErrorMessage(error) {
   );
 }
 
-function Practice({ person, targetMemberId, data, setData, navigate }) {
+function Practice({
+  person,
+  targetMemberId,
+  initialSession,
+  data,
+  setData,
+  navigate,
+  onStartSimulation,
+  simulationStartingFor,
+}) {
   const [input, setInput] = useState("");
   const [waiting, setWaiting] = useState(false);
   const [session, setSession] = useState(null);
@@ -2910,7 +3404,8 @@ function Practice({ person, targetMemberId, data, setData, navigate }) {
       };
     }
     (async () => {
-      const startedSession = await backend.aiPracticeStart(memberId);
+      const startedSession =
+        initialSession || (await backend.aiPracticeStart(memberId));
       const [history, todayUsage] = await Promise.all([
         loadPracticeHistory(startedSession.id),
         backend.aiPracticeUsage(),
@@ -2929,7 +3424,7 @@ function Practice({ person, targetMemberId, data, setData, navigate }) {
     return () => {
       active = false;
     };
-  }, [sessionLoadKey]);
+  }, [initialSession, sessionLoadKey]);
 
   useEffect(() => {
     if (DEMO_MODE || !session?.id) return undefined;
@@ -3183,8 +3678,18 @@ function Practice({ person, targetMemberId, data, setData, navigate }) {
         }
       />
       <div className="mode-tabs">
-        <button type="button" onClick={() => navigate(`/ai/simulation/${id}`)}>
-          시뮬레이션
+        <button
+          type="button"
+          onClick={() => void onStartSimulation(id)}
+          disabled={
+            !Number.isSafeInteger(id) ||
+            id <= 0 ||
+            simulationStartingFor != null
+          }
+        >
+          {simulationStartingFor === id
+            ? "시뮬레이션 생성 중..."
+            : "시뮬레이션"}
         </button>
         <button type="button" className="active">
           연습 대화
@@ -3349,72 +3854,59 @@ function Practice({ person, targetMemberId, data, setData, navigate }) {
   );
 }
 
-function Simulation({ person, data, setData, navigate }) {
-  const id = person?.id || 12;
-  const simulation = data.simulations[id] || { status: "READY", messages: [] };
-  const simulationMessageCount = simulation.messages.length;
+function Simulation({ simulationId, navigate }) {
+  const [simulation, setSimulation] = useState(null);
+  const [error, setError] = useState("");
   useEffect(() => {
-    if (simulation.status !== "PROCESSING") return undefined;
-    const timer = window.setTimeout(() => {
-      setData((old) => {
-        const current = old.simulations[id];
-        if (
-          current?.status !== "PROCESSING" ||
-          current.messages.length !== simulationMessageCount
-        )
-          return old;
-        const next = simulationScript[current.messages.length];
-        if (!next)
-          return {
-            ...old,
-            simulations: {
-              ...old.simulations,
-              [id]: { ...current, status: "COMPLETED" },
-            },
-          };
-        const messages = [
-          ...current.messages,
-          { id: messagesId(), mine: next[0] === "mine", text: next[1] },
-        ];
-        return {
-          ...old,
-          simulations: {
-            ...old.simulations,
-            [id]: {
-              status:
-                messages.length === simulationScript.length
-                  ? "COMPLETED"
-                  : "PROCESSING",
-              messages,
-            },
-          },
-        };
-      });
-    }, 1200);
-    return () => window.clearTimeout(timer);
-  }, [simulation.status, simulationMessageCount, id, setData]);
-  function start() {
-    setData((old) => ({
-      ...old,
-      simulations: {
-        ...old.simulations,
-        [id]: { status: "PROCESSING", messages: [] },
-      },
-    }));
-  }
-  function stop() {
-    setData((old) => ({
-      ...old,
-      simulations: {
-        ...old.simulations,
-        [id]: { ...simulation, status: "CANCELED" },
-      },
-    }));
-  }
+    let active = true;
+    setSimulation(null);
+    setError("");
+    if (!Number.isSafeInteger(simulationId) || simulationId <= 0) {
+      setError("SIMULATION_NOT_FOUND");
+      return () => {
+        active = false;
+      };
+    }
+    backend
+      .aiSimulation(simulationId)
+      .then((result) => active && setSimulation(result))
+      .catch(
+        (requestError) =>
+          active && setError(requestError?.code || "SIMULATION_UNAVAILABLE"),
+      );
+    return () => {
+      active = false;
+    };
+  }, [simulationId]);
+
+  if (error)
+    return (
+      <EmptyState
+        icon="!"
+        title="시뮬레이션을 불러오지 못했어요"
+        description="잠시 후 다시 시도해주세요."
+        action={
+          <PixelButton onClick={() => navigate("/home")}>
+            홈으로 가기
+          </PixelButton>
+        }
+      />
+    );
+  if (!simulation)
+    return (
+      <EmptyState
+        icon="✦"
+        title="시뮬레이션 결과를 불러오고 있어요"
+        description="잠시만 기다려주세요."
+      />
+    );
+
+  const partner = simulation.partner || {};
+  const me = simulation.me || {};
   return (
     <>
       <ScreenHeader
-        title={person?.nickname || "시뮬레이션"}
+        title={partner.nickname || "시뮬레이션"}
         onBack={() => navigate("/home")}
         right={<Icon name="ai-avatar.svg" />}
       />
@@ -3422,10 +3914,10 @@ function Simulation({ person, data, setData, navigate }) {
         <button type="button" className="active">
           시뮬레이션
         </button>
-        <button type="button" onClick={() => navigate(`/ai/practice/${id}`)}>
+        <button type="button" onClick={() => navigate("/home")}>
           연습 대화
         </button>
-        <button type="button" onClick={() => navigate("/chats/101")}>
+        <button type="button" onClick={() => navigate("/chats")}>
           채팅
         </button>
       </div>
@@ -3437,111 +3929,124 @@ function Simulation({ person, data, setData, navigate }) {
           <div>
             <Icon name="ai-avatar.svg" />
             <span>
-              {person?.nickname || "상대"} AI
-              <small>
-                {person?.mbti || "ENFP"} · {person?.job || "개발자"}
-              </small>
+              {partner.nickname || "상대"} AI
+              <small>{partner.headline || "상대의 성향을 반영했어요"}</small>
             </span>
           </div>
           <b>↔</b>
           <div>
             <Icon name="ai-avatar.svg" />
             <span>
-              나의 AI<small>내 성향 반영</small>
+              {me.nickname || "나"}의 AI
+              <small>{me.headline || "내 성향을 반영했어요"}</small>
             </span>
           </div>
         </div>
-        {simulation.status === "READY" ? (
-          <EmptyState
-            icon="✦"
-            title="AI끼리 먼저 만나볼까요?"
-            description="서로의 AI가 대화하고 대화 호흡을 살펴봐요."
-          />
-        ) : (
-          <>
-            <div className="simulation-live">
-              ●　{simulation.status === "PROCESSING" ? "실시간 · " : ""}대화{" "}
-              {simulation.messages.length} / {simulationScript.length}
-            </div>
-            <div className="simulation-messages">
-              {simulation.messages.map((message) => (
-                <MessageBubble key={message.id} message={message} />
-              ))}
-            </div>
-          </>
-        )}
+        <div className="simulation-live">
+          ●　대화 {simulation.turns || simulation.transcript?.length || 0}턴
+        </div>
+        <div className="simulation-messages">
+          {(simulation.transcript || []).map((message) => (
+            <MessageBubble
+              key={message.index}
+              message={{
+                id: message.index,
+                mine: message.speaker === "a",
+                text: message.text,
+              }}
+            />
+          ))}
+        </div>
       </div>
       <div className="simulation-footer">
         <div>
-          대화 진행률{" "}
-          <span>
-            {simulation.messages.length} / {simulationScript.length} 라운드
-          </span>
+          AI 시뮬레이션이 완료됐어요.
+          <span>{simulation.report?.overall?.gradeLabel || "궁합 결과"}</span>
         </div>
         <div className="progress-track">
-          <span
-            style={{
-              width: `${(simulation.messages.length / simulationScript.length) * 100}%`,
-            }}
-          />
+          <span style={{ width: "100%" }} />
         </div>
-        {simulation.status === "READY" && (
-          <PixelButton onClick={start}>시뮬레이션 시작</PixelButton>
-        )}
-        {simulation.status === "PROCESSING" && (
-          <PixelButton onClick={stop}>시뮬레이션 중단</PixelButton>
-        )}
-        {simulation.status === "COMPLETED" && (
-          <PixelButton onClick={() => navigate(`/ai/report/${id}`)}>
-            리포트 확인하기 ↗
-          </PixelButton>
-        )}
-        {simulation.status === "CANCELED" && (
-          <PixelButton onClick={start}>다시 시작하기</PixelButton>
-        )}
+        <PixelButton
+          onClick={() => navigate(`/ai/simulations/${simulationId}/report`)}
+        >
+          리포트 확인하기 ↗
+        </PixelButton>
       </div>
     </>
   );
 }
 
-function messagesId() {
-  return Date.now() + Math.random();
-}
-
-function Report({ person, navigate }) {
+function Report({ simulationId, navigate }) {
+  const [report, setReport] = useState(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let active = true;
+    backend
+      .aiSimulationReport(simulationId)
+      .then((result) => active && setReport(result))
+      .catch(
+        (requestError) =>
+          active &&
+          setError(requestError?.code || "SIMULATION_REPORT_UNAVAILABLE"),
+      );
+    return () => {
+      active = false;
+    };
+  }, [simulationId]);
+  if (error)
+    return (
+      <EmptyState
+        icon="!"
+        title="리포트를 불러오지 못했어요"
+        description="잠시 후 다시 시도해주세요."
+        action={
+          <PixelButton
+            onClick={() => navigate(`/ai/simulations/${simulationId}`)}
+          >
+            시뮬레이션으로 돌아가기
+          </PixelButton>
+        }
+      />
+    );
+  if (!report)
+    return (
+      <EmptyState
+        icon="✦"
+        title="리포트를 불러오고 있어요"
+        description="잠시만 기다려주세요."
+      />
+    );
   return (
     <>
       <ScreenHeader
         title="궁합 리포트"
-        onBack={() => navigate(`/ai/simulation/${person?.id || 12}`)}
+        onBack={() => navigate(`/ai/simulations/${simulationId}`)}
       />
       <main className="main-scroll report-main">
         <div className="report-intro">
           <span>AI SIMULATION REPORT</span>
           <h1>
-            {person?.nickname || "상대"}님과의
+            AI가 분석한
             <br />
-            대화 호흡은?
+            대화 호흡이에요
           </h1>
-          <p>AI가 나눈 대화를 바탕으로 살펴봤어요.</p>
+          <p>
+            {report.overall?.headline ||
+              "AI가 나눈 대화를 바탕으로 살펴봤어요."}
+          </p>
         </div>
         <div className="score-card">
-          <strong>82</strong>
+          <strong>{report.overall?.score ?? "-"}</strong>
           <span>/ 100</span>
-          <p>질문을 자연스럽게 주고받으며 대화가 편안하게 이어졌어요.</p>
+          <p>{report.overall?.summary || "분석 결과를 준비하지 못했어요."}</p>
         </div>
-        {[
-          ["대화 흐름", "A", "서로의 이야기를 자연스럽게 이어갔어요."],
-          ["질문 주고받기", "A", "궁금한 점을 균형 있게 나눴어요."],
-          ["호감 표현", "B", "차분하게 관심을 표현했어요."],
-          ["주도권 균형", "B", "한쪽에 치우치지 않았어요."],
-        ].map(([label, grade, body]) => (
-          <div className="report-metric" key={label}>
+        {(report.areas || []).map((area) => (
+          <div className="report-metric" key={area.area || area.label}>
             <span>
-              {label}
-              <small>{body}</small>
+              {area.label || area.area}
+              <small>{area.comment || "분석 결과를 확인해주세요."}</small>
             </span>
-            <b>{grade}</b>
+            <b>{area.gradeLabel || area.grade || "-"}</b>
           </div>
         ))}
         <p className="report-disclaimer">
@@ -3718,7 +4223,7 @@ function MyProfile({ data, setData, navigate, toast }) {
   );
 }
 
-function Persona({ data, navigate }) {
+function Persona({ navigate }) {
   return (
     <>
       <ScreenHeader title="내 페르소나" onBack={() => navigate("/my")} />
@@ -3742,7 +4247,7 @@ function Persona({ data, navigate }) {
             <strong>{value}</strong>
           </div>
         ))}
-        <small>답변 {data.answers.length}개가 반영되어 있어요.</small>
+        <small>온보딩에서 확정한 가치관이 반영되어 있어요.</small>
       </main>
     </>
   );
@@ -3961,7 +4466,17 @@ export default function App() {
     DEMO_MODE ? "ready" : "idle",
   );
   const [recommendationError, setRecommendationError] = useState("");
+  const [recommendationPage, setRecommendationPage] = useState({
+    batchId: null,
+    nextCursor: null,
+    hasNext: false,
+  });
+  const [recommendationIndex, setRecommendationIndex] = useState(0);
+  const [practiceSessions, setPracticeSessions] = useState({});
+  const [simulationStartingFor, setSimulationStartingFor] = useState(null);
   const recommendationRequestRef = useRef(0);
+  const recommendationMoreRequestRef = useRef(false);
+  const simulationStartRef = useRef(false);
   const loadRecommendations = useCallback(async () => {
     const requestId = recommendationRequestRef.current + 1;
     recommendationRequestRef.current = requestId;
@@ -3981,8 +4496,15 @@ export default function App() {
       }
 
       if (!batchId) {
-        if (requestId === recommendationRequestRef.current)
+        if (requestId === recommendationRequestRef.current) {
           setRecommendations([]);
+          setRecommendationPage({
+            batchId: null,
+            nextCursor: null,
+            hasNext: false,
+          });
+          setRecommendationIndex(0);
+        }
         return;
       }
 
@@ -3991,8 +4513,15 @@ export default function App() {
       const nextRecommendations = items
         .map(mapRecommendationItem)
         .filter(Boolean);
-      if (requestId === recommendationRequestRef.current)
+      if (requestId === recommendationRequestRef.current) {
         setRecommendations(nextRecommendations);
+        setRecommendationPage({
+          batchId,
+          nextCursor: result?.pageInfo?.nextCursor || null,
+          hasNext: Boolean(result?.pageInfo?.hasNext),
+        });
+        setRecommendationIndex(0);
+      }
     } catch (error) {
       if (requestId === recommendationRequestRef.current)
         setRecommendationError(error?.code || "RECOMMENDATIONS_UNAVAILABLE");
@@ -4001,6 +4530,38 @@ export default function App() {
         setRecommendationStatus("ready");
     }
   }, []);
+  const loadMoreRecommendations = useCallback(async () => {
+    if (
+      DEMO_MODE ||
+      recommendationMoreRequestRef.current ||
+      !recommendationPage.batchId ||
+      !recommendationPage.hasNext ||
+      !recommendationPage.nextCursor
+    )
+      return false;
+    recommendationMoreRequestRef.current = true;
+    try {
+      const result = await backend.recommendationItems(
+        recommendationPage.batchId,
+        recommendationPage.nextCursor,
+      );
+      const items = (result?.items || [])
+        .map(mapRecommendationItem)
+        .filter(Boolean);
+      setRecommendations((current) => [...current, ...items]);
+      setRecommendationPage((current) => ({
+        ...current,
+        nextCursor: result?.pageInfo?.nextCursor || null,
+        hasNext: Boolean(result?.pageInfo?.hasNext),
+      }));
+      return items.length > 0;
+    } catch (error) {
+      setRecommendationError(error?.code || "RECOMMENDATIONS_UNAVAILABLE");
+      return false;
+    } finally {
+      recommendationMoreRequestRef.current = false;
+    }
+  }, [recommendationPage]);
   useEffect(() => {
     const hasConfirmedIdentity =
       data.registrationInfoConfirmed || data.onboarded;
@@ -4046,11 +4607,22 @@ export default function App() {
           ...old,
           session: true,
           onboarded: status?.userStatus === "ACTIVE",
+          onboardingStep:
+            status?.userStatus === "ACTIVE"
+              ? "complete"
+              : onboardingStepFromStatus(status),
         }));
       })
       .catch((error) => {
-        if (error?.code === "AUTH_REQUIRED") {
-          setData((old) => ({ ...old, session: false }));
+        // A stale access-token cookie can point to a user that no longer exists
+        // in a freshly reset local database. Treat it like a signed-out session
+        // so the user can start the Kakao login flow again instead of being
+        // blocked on the splash screen.
+        if (
+          error?.code === "AUTH_REQUIRED" ||
+          error?.code === "USER_NOT_FOUND"
+        ) {
+          setData((old) => ({ ...old, session: false, onboarded: false }));
           return;
         }
         setSessionCheckError(true);
@@ -4086,6 +4658,48 @@ export default function App() {
   function toast(message) {
     setToastText(message);
   }
+  async function startSimulation(targetMemberId) {
+    const memberId = Number(targetMemberId);
+    if (!Number.isSafeInteger(memberId) || memberId <= 0) {
+      toast("시뮬레이션할 상대 정보를 찾을 수 없어요.");
+      return false;
+    }
+    if (simulationStartRef.current) return false;
+
+    simulationStartRef.current = true;
+    setSimulationStartingFor(memberId);
+    try {
+      if (DEMO_MODE) {
+        toast("데모 모드에서는 AI 시뮬레이션을 실행할 수 없어요.");
+        return false;
+      }
+      const simulation = await backend.createAiSimulation(memberId);
+      if (!simulation?.simulationId) {
+        const error = new Error("SIMULATION_CREATE_FAILED");
+        error.code = "SIMULATION_CREATE_FAILED";
+        throw error;
+      }
+      navigate(`/ai/simulations/${simulation.simulationId}`);
+      return true;
+    } catch (error) {
+      const messages = {
+        ME_PERSONA_NOT_FOUND:
+          "내 AI 성향 정보가 없어 시뮬레이션을 만들 수 없어요.",
+        TARGET_PERSONA_NOT_FOUND:
+          "상대의 AI 성향 정보가 없어 시뮬레이션을 만들 수 없어요.",
+        SIMULATION_ALREADY_RUNNING:
+          "시뮬레이션을 만들고 있어요. 잠시만 기다려주세요.",
+        AI_SERVER_NOT_CONFIGURED: "AI 서버가 아직 연결되지 않았어요.",
+        AI_SERVER_UNAVAILABLE:
+          "AI 서버에 연결하지 못했어요. 잠시 후 다시 시도해주세요.",
+      };
+      toast(messages[error?.code] || "시뮬레이션을 만들지 못했어요.");
+      return false;
+    } finally {
+      simulationStartRef.current = false;
+      setSimulationStartingFor(null);
+    }
+  }
   async function loginWithLocalTestAccount(memberId, practiceTargetMemberId) {
     if (!import.meta.env.DEV || DEMO_MODE) {
       throw new Error("LOCAL_TEST_LOGIN_DISABLED");
@@ -4108,6 +4722,8 @@ export default function App() {
     navigate(`/ai/practice/${practiceTargetMemberId}`);
   }
   const personId = Number(path.split("/").pop());
+  const simulationRoute = path.match(/^\/ai\/simulations\/(\d+)(?:\/report)?$/);
+  const simulationId = simulationRoute ? Number(simulationRoute[1]) : null;
   const person = useMemo(
     () => recommendations.find((item) => item.id === personId),
     [personId, recommendations],
@@ -4173,6 +4789,8 @@ export default function App() {
         data={data}
         setData={setData}
         navigate={navigate}
+        onStartSimulation={startSimulation}
+        simulationStartingFor={simulationStartingFor}
       />
     );
   else if (!data.session || path === "/login")
@@ -4205,29 +4823,37 @@ export default function App() {
   else if (path === "/home" || path === "/")
     page = (
       <Home
-        data={data}
-        setData={setData}
+        key={recommendations[recommendationIndex]?.id || "recommendation-empty"}
         navigate={navigate}
         toast={toast}
         recommendations={recommendations}
+        currentIndex={recommendationIndex}
+        hasNext={recommendationPage.hasNext}
         recommendationStatus={recommendationStatus}
         recommendationError={recommendationError}
         onRetryRecommendations={loadRecommendations}
+        onAdvance={() => setRecommendationIndex((current) => current + 1)}
+        onLoadMore={loadMoreRecommendations}
+        onPracticeStarted={(memberId, session) =>
+          setPracticeSessions((current) => ({
+            ...current,
+            [memberId]: session,
+          }))
+        }
+        onStartSimulation={startSimulation}
       />
     );
   else if (path.startsWith("/profiles/"))
-    page = (
-      <ProfileDetail
-        person={person}
-        data={data}
-        setData={setData}
-        navigate={navigate}
-        toast={toast}
-      />
-    );
+    page = <LegacyProfileRedirect navigate={navigate} />;
   else if (path === "/likes")
     page = (
-      <Likes data={data} setData={setData} navigate={navigate} toast={toast} />
+      <Likes
+        toast={toast}
+        onFindMatch={() => {
+          navigate("/home");
+          void loadRecommendations();
+        }}
+      />
     );
   else if (path === "/chats")
     page = <ChatList data={data} setData={setData} navigate={navigate} />;
@@ -4239,6 +4865,8 @@ export default function App() {
         setData={setData}
         navigate={navigate}
         toast={toast}
+        onStartSimulation={startSimulation}
+        simulationStartingFor={simulationStartingFor}
       />
     );
   else if (path.startsWith("/ai/practice/"))
@@ -4246,22 +4874,18 @@ export default function App() {
       <Practice
         person={person}
         targetMemberId={personId}
+        initialSession={practiceSessions[personId]}
         data={data}
         setData={setData}
         navigate={navigate}
+        onStartSimulation={startSimulation}
+        simulationStartingFor={simulationStartingFor}
       />
     );
-  else if (path.startsWith("/ai/simulation/"))
-    page = (
-      <Simulation
-        person={person}
-        data={data}
-        setData={setData}
-        navigate={navigate}
-      />
-    );
-  else if (path.startsWith("/ai/report/"))
-    page = <Report person={person} navigate={navigate} />;
+  else if (simulationRoute && !path.endsWith("/report"))
+    page = <Simulation simulationId={simulationId} navigate={navigate} />;
+  else if (simulationRoute && path.endsWith("/report"))
+    page = <Report simulationId={simulationId} navigate={navigate} />;
   else if (path === "/my") page = <MyPage data={data} navigate={navigate} />;
   else if (path === "/my/profile")
     page = (
@@ -4308,7 +4932,13 @@ export default function App() {
     <div className="app-shell">
       <div className="app-screen">
         {page}
-        {showNav && <BottomNav path={path} navigate={navigate} />}
+        {showNav && (
+          <BottomNav
+            path={path}
+            navigate={navigate}
+            onRefreshHome={loadRecommendations}
+          />
+        )}
         {toastText && (
           <div className="toast" role="status">
             {toastText}

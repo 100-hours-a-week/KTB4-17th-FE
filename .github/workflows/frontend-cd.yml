@@ -39,6 +39,8 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
 
       - name: Frontend Build
+        env:
+          VITE_DEMO_MODE: "false"
         run: |
           npm ci
           npm run build
