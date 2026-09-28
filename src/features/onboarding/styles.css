@@ -1,0 +1,378 @@
+.onboarding-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.onboarding-top {
+  height: 78px;
+  padding: 42px 20px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.onboarding-top .plain-back {
+  font-size: 21px;
+}
+
+.onboarding-page > .progress-track {
+  margin: 0 20px;
+  flex: none;
+}
+
+.onboarding-body {
+  padding: 30px 20px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.onboarding-body h1 {
+  margin-bottom: 10px;
+}
+
+.onboarding-action {
+  padding: 12px 20px max(28px, env(safe-area-inset-bottom));
+  background: var(--canvas);
+}
+
+.agreement {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  border-bottom: 1px solid #e8ddf2;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.agreement.all {
+  border: 1px solid #38205f;
+  background: var(--soft-lavender);
+  padding: 14px;
+  font-weight: bold;
+  margin: 28px 0 12px;
+}
+
+.agreement input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--purple);
+}
+
+.agreement span {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 20px;
+}
+
+.region-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.region-search-state {
+  margin: -8px 3px 8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.region-search-state.field-error {
+  color: #ba386d;
+}
+
+.region-list button {
+  border: 0;
+  border-bottom: 1px solid #e6deea;
+  background: transparent;
+  padding: 15px 3px;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.region-list button.selected {
+  color: #6133a4;
+}
+
+.selected-region,
+.info-panel {
+  margin-top: 20px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.selected-region strong {
+  margin-left: 10px;
+}
+
+.question-progress {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 0 15px;
+}
+
+.question-progress strong {
+  font-size: 18px;
+}
+
+.question-progress span {
+  font-size: 12px;
+  color: var(--purple);
+}
+
+.question-bubble {
+  display: flex;
+  gap: 12px;
+  margin: 34px 0;
+  align-items: flex-start;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.question-bubble .icon {
+  width: 32px;
+  height: 32px;
+}
+
+.question-bubble::first-letter {
+  color: var(--purple);
+}
+
+.photo-upload {
+  display: flex;
+  width: 100%;
+  height: 340px;
+  border: 2px dashed #bda6d0;
+  background: var(--paper);
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 9px;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.photo-upload > span {
+  font-size: 42px;
+  color: var(--purple);
+}
+
+.photo-upload > small {
+  color: var(--muted);
+}
+
+.photo-upload img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-upload input,
+.edit-avatar input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.persona-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.persona-actions button,
+.persona-retry {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--purple);
+  min-height: 38px;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.persona-retry {
+  margin-top: 20px;
+}
+
+.persona-summary-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.persona-summary-card {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  padding: 16px;
+}
+
+.persona-summary-card h2 {
+  margin: 4px 0 8px;
+  font-size: 16px;
+}
+
+.persona-summary-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.persona-summary-card small {
+  color: var(--purple);
+}
+
+.persona-traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.persona-traits span {
+  border: 1px solid #bda6d0;
+  background: var(--soft-lavender);
+  padding: 4px 7px;
+  font-size: 11px;
+}
+
+.photo-guide,
+.photo-front-upload {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  padding: 20px;
+}
+
+.photo-guide > span {
+  display: block;
+  color: var(--purple);
+  font-size: 34px;
+  margin-bottom: 14px;
+}
+
+.photo-guide strong,
+.photo-front-upload strong {
+  display: block;
+  font-size: 15px;
+}
+
+.photo-guide ul {
+  margin: 16px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.9;
+}
+
+.photo-front-upload {
+  display: flex;
+  min-height: 180px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  border-style: dashed;
+  cursor: pointer;
+  text-align: center;
+}
+
+.photo-front-upload span,
+.photo-front-upload small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.photo-front-upload input,
+.onboarding-photo-add input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.onboarding-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.onboarding-photo-tile,
+.onboarding-photo-add {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.onboarding-photo-tile {
+  cursor: grab;
+}
+
+.onboarding-photo-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.onboarding-photo-tile b,
+.photo-uploading {
+  position: absolute;
+  left: 5px;
+  bottom: 5px;
+  padding: 3px 5px;
+  background: #2e1949d9;
+  color: #fff;
+  font-size: 10px;
+}
+
+.photo-uploading {
+  right: 5px;
+  left: auto;
+}
+
+.onboarding-photo-tile button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 23px;
+  height: 23px;
+  border: 0;
+  border-radius: 50%;
+  background: #2e1949d9;
+  color: #fff;
+  font-size: 18px;
+  line-height: 20px;
+}
+
+.onboarding-photo-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  border-style: dashed;
+  color: var(--purple);
+  cursor: pointer;
+}
+
+.onboarding-photo-add span {
+  font-size: 32px;
+}
+
+.onboarding-photo-add small {
+  font-size: 11px;
+}
+
+/* Home and profile */

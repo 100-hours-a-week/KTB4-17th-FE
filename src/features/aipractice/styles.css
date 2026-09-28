@@ -1,0 +1,144 @@
+.ai-notice {
+  min-height: 52px;
+  padding: 12px 20px;
+  font-size: 11px;
+  line-height: 1.6;
+  background: #faf7fd;
+  color: var(--muted);
+}
+
+.ai-notice span {
+  display: block;
+  text-align: right;
+}
+
+.practice-messages {
+  top: 192px;
+}
+
+.typing-indicator {
+  padding: 8px 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.practice-turn {
+  display: contents;
+}
+
+.practice-state {
+  align-self: center;
+  margin: auto 20px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+div.practice-state button.practice-inline-button,
+div.practice-retry button.practice-retry-button {
+  border: 1px solid #d8c5e7;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 8px 12px;
+}
+
+.practice-retry {
+  align-self: flex-start;
+  max-width: 82%;
+  margin-left: 33px;
+  color: var(--muted);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+div.practice-retry button.practice-retry-button:disabled {
+  opacity: 0.55;
+}
+
+.practice-composer {
+  flex-direction: column;
+  gap: 6px;
+}
+
+.practice-compose-row input {
+  min-width: 0;
+  flex: 1;
+}
+
+.practice-compose-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  width: 100%;
+}
+
+form.practice-composer .practice-compose-row button.practice-send-button {
+  flex: 0 0 42px;
+}
+
+.practice-send-error {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 16px;
+  width: calc(100% - 32px);
+  margin: 0;
+  color: #9c3554;
+  font-size: 11px;
+  background: var(--paper);
+}
+
+.practice-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #21172f75;
+}
+
+.practice-dialog {
+  width: min(100%, 330px);
+  padding: 22px 20px 18px;
+  border: 1px solid #d8c5e7;
+  background: var(--paper);
+  box-shadow: 4px 5px 0 #8758cf46;
+}
+
+.practice-dialog h2 {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+
+.practice-dialog p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.practice-dialog > div {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+section.practice-dialog button.practice-dialog-button {
+  flex: 1;
+  min-height: 42px;
+  border: 1px solid #d8c5e7;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+}
+
+section.practice-dialog button.practice-dialog-button.is-primary {
+  border-color: var(--purple);
+  background: var(--purple);
+  color: white;
+}

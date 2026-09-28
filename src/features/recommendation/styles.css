@@ -1,0 +1,360 @@
+.home-header {
+  position: relative;
+  z-index: 6;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  background: var(--paper);
+  border-bottom: 2px solid var(--line);
+}
+
+.home-brand-logo {
+  display: block;
+  width: 66px;
+  height: 30px;
+  flex: 0 0 66px;
+  object-fit: contain;
+}
+
+.home-mode-label {
+  color: var(--muted);
+  font-family: "Galmuri11", "Apple SD Gothic Neo", sans-serif;
+  font-size: 18px;
+  line-height: 26px;
+  white-space: nowrap;
+}
+
+.home-header-spacer {
+  flex: 1;
+}
+
+.home-menu-button {
+  width: 22px;
+  height: 30px;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--ink);
+  font-family: "Galmuri11", "Apple SD Gothic Neo", sans-serif;
+  font-size: 18px;
+  line-height: 26px;
+  text-align: right;
+}
+
+.home-menu {
+  position: absolute;
+  z-index: 10;
+  top: 50px;
+  right: 10px;
+  min-width: 132px;
+  padding: 5px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  box-shadow: 3px 4px 0 #352a4826;
+}
+
+.home-menu button {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  text-align: left;
+}
+
+.home-main {
+  top: 56px;
+  padding: 0 16px 8px;
+}
+
+.recommendation-card {
+  width: 100%;
+  height: min(600px, calc(100dvh - 144px));
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #b398d1;
+  border-radius: 8px;
+  box-shadow: 4px 4px 0 #38205f29;
+  background: #ddc8e7;
+  touch-action: pan-y;
+}
+
+.recommendation-photo {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  object-fit: cover;
+  object-position: center 35%;
+}
+
+.recommendation-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(145deg, #e9d7ff, #fbc6e8);
+  color: #8658ca;
+  font-size: 150px;
+}
+
+.photo-steps {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  gap: 4px;
+  z-index: 4;
+}
+
+.photo-steps button {
+  flex: 1;
+  min-width: 0;
+  height: 3px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: #fffdfe99;
+}
+
+.photo-steps button.active {
+  background: #fff;
+}
+
+.recommendation-gradient {
+  position: absolute;
+  inset: auto 0 0;
+  height: 47%;
+  background: linear-gradient(
+    0deg,
+    #1a0d29e0 0%,
+    #1a0d29a0 55%,
+    transparent 100%
+  );
+}
+
+.recommendation-info {
+  position: absolute;
+  left: 15px;
+  right: 15px;
+  bottom: 7px;
+  z-index: 3;
+  color: var(--paper);
+  font-family: "Galmuri14", "Apple SD Gothic Neo", sans-serif;
+}
+
+.online-badge {
+  background: #fff0a9;
+  color: #352a48;
+  border: 1px solid #38205f;
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.recommendation-info .online-badge {
+  display: inline-block;
+  margin-bottom: 9px;
+}
+
+.action-key .icon {
+  width: 24px;
+  height: 24px;
+}
+
+.recommendation-info h1 {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-family: "Galmuri11", "Apple SD Gothic Neo", sans-serif;
+  font-size: 23px;
+  margin-bottom: 5px;
+  line-height: 1.25;
+}
+
+.recommendation-info p {
+  font-size: 14px;
+  margin: 2px 0;
+}
+
+.recommendation-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 18px;
+}
+
+.card-action {
+  border: 0;
+  background: none;
+  color: var(--paper);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 70px;
+  padding: 0;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.action-key {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  background-repeat: no-repeat;
+  background-size: 56px 56px;
+}
+
+.card-detail-link {
+  position: absolute;
+  inset: 4% 0 35%;
+  z-index: 2;
+  background: transparent;
+  border: 0;
+  width: 100%;
+}
+
+.home-tip {
+  color: var(--muted);
+  text-align: center;
+  font-size: 11px;
+  margin: 10px 0;
+}
+
+.detail-main {
+  top: 96px;
+  bottom: 0;
+}
+
+.profile-detail-main {
+  inset: 0;
+  padding: 0 0 24px;
+  background: var(--canvas);
+}
+
+.detail-photo {
+  height: clamp(360px, 59.25dvh, 500px);
+  position: relative;
+  background: #e9d7ff;
+}
+
+.detail-photo .detail-photo-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.detail-photo .recommendation-placeholder {
+  font-size: 120px;
+}
+
+.detail-back-button {
+  position: absolute;
+  z-index: 5;
+  top: 4px;
+  left: 10px;
+  width: 34px;
+  height: 38px;
+  border: 0;
+  background: transparent;
+  color: var(--paper);
+  font-family: "Galmuri11", "Apple SD Gothic Neo", sans-serif;
+  font-size: 32px;
+  line-height: 32px;
+  text-shadow: 0 1px 4px #21172f99;
+}
+
+.detail-photo-steps {
+  top: 52px;
+  left: 16px;
+  right: 16px;
+}
+
+.detail-content {
+  min-height: 344px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 18px 20px 24px;
+  color: var(--ink);
+}
+
+.detail-content h1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-family: "Galmuri11", "Apple SD Gothic Neo", sans-serif;
+  font-size: 24px;
+  line-height: 32px;
+}
+
+.profile-detail-row {
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: "Galmuri14", "Apple SD Gothic Neo", sans-serif;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.profile-detail-row img.icon {
+  width: 20px;
+  height: 20px;
+}
+
+.profile-detail-bio {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 18px;
+  background: #faf7fd;
+  font-family: "Galmuri14", "Apple SD Gothic Neo", sans-serif;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.profile-detail-bio p {
+  margin: 0;
+}
+
+.detail-actions {
+  width: 100%;
+  display: flex;
+  gap: 10px;
+  margin: 18px 0 0;
+}
+
+/* Likes */
+.segmented-tabs {
+  height: 92px;
+  padding-top: 43px;
+  border-bottom: 2px solid #38205f;
+  display: flex;
+}
+
+.segmented-tabs button {
+  width: 50%;
+  border: 0;
+  background: none;
+  font-size: 16px;
+}
+
+.segmented-tabs button.active {
+  background: #f1e8ff;
+  box-shadow: inset 0 -3px 0 var(--purple);
+}

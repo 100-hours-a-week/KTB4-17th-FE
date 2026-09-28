@@ -1,0 +1,153 @@
+.likes-main {
+  top: 92px;
+  padding: 15px 20px;
+}
+
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.section-heading h1 {
+  font-size: 17px;
+  margin: 0;
+}
+
+.section-heading span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.like-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.like-card {
+  border: 1px solid #d8c5e7;
+  box-shadow: 3px 4px 0 #8758cf46;
+  padding: 15px 14px;
+  background: var(--paper);
+}
+
+.like-person {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  display: flex;
+  gap: 16px;
+  width: 100%;
+  align-items: center;
+  text-align: left;
+}
+
+.person-avatar {
+  border: 1px solid #bda6d0;
+  display: inline-grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  flex: none;
+  background: #e8d9fb;
+  color: var(--purple);
+  font-size: 26px;
+}
+
+.person-avatar.large {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+}
+
+.person-avatar.generated {
+  box-shadow:
+    inset 5px 5px 0 #f9e5ff,
+    inset -5px -5px 0 #c99fe8;
+}
+
+:where(.like-person) span:not(.person-avatar) {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.like-person strong {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.like-person small {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.like-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.like-actions .pixel-button {
+  min-height: 39px;
+  padding: 7px;
+}
+
+.like-status {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 16px 0 0 72px;
+}
+
+.like-confirm-backdrop {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: #24183399;
+}
+
+.like-confirm-dialog {
+  width: min(100%, 330px);
+  padding: 24px 20px 18px;
+  border: 2px solid var(--line);
+  background: var(--paper);
+  box-shadow: 5px 6px 0 #27103f80;
+  text-align: center;
+}
+
+.like-confirm-dialog h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.like-confirm-dialog p {
+  margin: 12px 0 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.like-confirm-dialog > div {
+  display: flex;
+  gap: 8px;
+}
+
+.like-confirm-dialog button {
+  flex: 1;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+
+.like-confirm-dialog button.is-primary {
+  background: var(--pink);
+}
+
+/* Chat and AI */
