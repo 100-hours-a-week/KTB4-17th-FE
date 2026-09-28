@@ -57,12 +57,11 @@ export const localTestAccounts = async () => {
   return result || { accounts: [], practiceTargetMemberId: null };
 };
 
-export const localTestLogin = async (memberId) => {
-  if (!localTestAuthEnabled)
-    throw new Error("LOCAL_TEST_LOGIN_DISABLED");
+export async function localTestLogin(memberId) {
+  if (!localTestAuthEnabled) throw new Error("LOCAL_TEST_LOGIN_DISABLED");
 
   const response = await apiRequest(
-    "/api/v1/dev/test-auth/" + memberId + "/login",
+    `/api/v1/dev/test-auth/${memberId}/login`,
     {
       method: "POST",
       skipAuth: true,
@@ -70,4 +69,4 @@ export const localTestLogin = async (memberId) => {
   );
   storeBearerToken(response);
   return response;
-};
+}

@@ -6,44 +6,56 @@ import {
 
 const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
+function requestError(response, result) {
+  const code =
+    result?.errorCode ||
+    (response.status === 401 ? "AUTH_REQUIRED" : `HTTP_${response.status}`);
+  const error = new Error(code);
+  error.code = code;
+  error.fields = result?.errors || [];
+  return error;
+}
+
+async function readJson(response) {
+  const contentType = response.headers.get("content-type") || "";
+  return contentType.includes("application/json") ? response.json() : null;
+}
+
 export async function apiRequest(path, options = {}) {
   const { skipAuth = false, ...requestOptions } = options;
-  const method = requestOptions.method || "GET";
-  const headers = { Accept: "application/json", ...requestOptions.headers };
+  const method = (requestOptions.method || "GET").toUpperCase();
+  const hasBody = requestOptions.body != null;
+  const isFormData =
+    typeof FormData !== "undefined" && requestOptions.body instanceof FormData;
+  const headers = {
+    Accept: "application/json",
+    ...requestOptions.headers,
+  };
   const accessToken = skipAuth ? null : getAccessToken();
 
   if (accessToken) headers.Authorization = "Bearer " + accessToken;
-  if (requestOptions.body && !(requestOptions.body instanceof FormData))
-    headers["Content-Type"] = "application/json";
+  if (hasBody && !isFormData) headers["Content-Type"] = "application/json";
 
-  const response = await fetch(baseUrl + path, {
-    credentials: "include",
+  const response = await fetch(`${baseUrl}${path}`, {
     ...requestOptions,
+    credentials: "include",
     method,
     headers,
     body:
-      requestOptions.body && !(requestOptions.body instanceof FormData)
+      hasBody && !isFormData
         ? JSON.stringify(requestOptions.body)
         : requestOptions.body,
   });
 
   if (response.status === 204) return null;
-  const contentType = response.headers.get("content-type") || "";
-  const result = contentType.includes("application/json")
-    ? await response.json()
-    : null;
 
+  const result = await readJson(response);
   if (!response.ok) {
-    const code = result?.errorCode || "HTTP_" + response.status;
-    const error = new Error(code);
-    error.code = code;
-    error.fields = result?.errors || [];
-
+    const error = requestError(response, result);
     if (response.status === 401 && accessToken) {
       clearAccessToken();
       window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
     }
-
     throw error;
   }
 
