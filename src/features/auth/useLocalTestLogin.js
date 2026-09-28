@@ -1,6 +1,9 @@
 import { useAppState } from "../../shared/appState.jsx";
 import { onboarding } from "../user/api.js";
-import { localTestLogin } from "./api.js";
+import {
+  localTestAuthEnabled,
+  localTestLogin,
+} from "./api.js";
 
 export function useLocalTestLogin({ navigate }) {
   const { setData } = useAppState();
@@ -9,7 +12,7 @@ export function useLocalTestLogin({ navigate }) {
     memberId,
     practiceTargetMemberId,
   ) {
-    if (!import.meta.env.DEV) throw new Error("LOCAL_TEST_LOGIN_DISABLED");
+    if (!localTestAuthEnabled) throw new Error("LOCAL_TEST_LOGIN_DISABLED");
     await localTestLogin(memberId);
     const status = await onboarding();
     if (status?.userStatus !== "ACTIVE") {

@@ -1,3 +1,9 @@
+import {
+  AUTH_EXPIRED_EVENT,
+  clearAccessToken,
+  getAccessToken,
+} from "../../shared/api/authToken.js";
+
 const FRAME_END = "\0";
 const SUBSCRIPTION_ID = "ai-practice-updates";
 
@@ -55,6 +61,17 @@ export function connectAiPracticeSocket({ onMessage, onStatus = () => {} }) {
     reconnectDelay = Math.min(reconnectDelay * 2, 15000);
   }
 
+  function failAuthentication() {
+    if (stopped) return;
+    stopped = true;
+    if (reconnectTimer) window.clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+    clearAccessToken();
+    window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
+    onStatus("unauthenticated");
+    socket?.close();
+  }
+
   function processFrames(payload) {
     buffer += payload;
     const frames = buffer.split(FRAME_END);
@@ -81,22 +98,40 @@ export function connectAiPracticeSocket({ onMessage, onStatus = () => {} }) {
           onStatus("error");
         }
       } else if (frame.command === "ERROR") {
-        onStatus("error");
+        const message = frame.body.toLowerCase();
+        if (
+          message.includes("authorization") ||
+          message.includes("bearer") ||
+          message.includes("token")
+        ) {
+          failAuthentication();
+        } else {
+          onStatus("error");
+        }
       }
     }
   }
 
   function connect() {
     if (stopped) return;
+    const accessToken = getAccessToken();
+    if (!accessToken) {
+      failAuthentication();
+      return;
+    }
+
     connected = false;
     buffer = "";
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    socket = new WebSocket(`${protocol}//${window.location.host}/ws/chat`);
+    socket = new WebSocket(
+      protocol + "//" + window.location.host + "/ws/chat",
+    );
     socket.onopen = () => {
       sendFrame("CONNECT", {
         "accept-version": "1.2",
         host: window.location.host,
         "heart-beat": "10000,10000",
+        Authorization: "Bearer " + accessToken,
       });
     };
     socket.onmessage = async (event) => {
