@@ -24,10 +24,9 @@ export const localTestAccounts = async () => {
   return result || { accounts: [], practiceTargetMemberId: null };
 };
 
-export const localTestLogin = (memberId) =>
-  localTestAuthEnabled
-    ? apiRequest(`/api/v1/dev/test-auth/${memberId}/login`, {
-        method: "POST",
-        skipCsrf: true,
-      })
-    : Promise.reject(new Error("LOCAL_TEST_LOGIN_DISABLED"));
+export async function localTestLogin(memberId) {
+  if (!localTestAuthEnabled) throw new Error("LOCAL_TEST_LOGIN_DISABLED");
+  await apiRequest(`/api/v1/dev/test-auth/${memberId}/login`, {
+    method: "POST",
+  });
+}
