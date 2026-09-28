@@ -1,84 +1,43 @@
 const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
-function csrfToken() {
-  const cookie = document.cookie
-    .split("; ")
-    .find((cookie) => cookie.startsWith("XSRF-TOKEN="))
-    ?.slice("XSRF-TOKEN=".length);
-  return cookie ? decodeURIComponent(cookie) : null;
+function requestError(response, result) {
+  const code =
+    result?.errorCode ||
+    (response.status === 401 ? "AUTH_REQUIRED" : `HTTP_${response.status}`);
+  const error = new Error(code);
+  error.code = code;
+  error.fields = result?.errors || [];
+  return error;
 }
 
-function maskedCsrfToken(token) {
-  const tokenBytes = new TextEncoder().encode(token);
-  const randomBytes = crypto.getRandomValues(new Uint8Array(tokenBytes.length));
-  const maskedBytes = new Uint8Array(tokenBytes.length * 2);
-  for (let index = 0; index < tokenBytes.length; index += 1) {
-    maskedBytes[index] = randomBytes[index];
-    maskedBytes[randomBytes.length + index] =
-      randomBytes[index] ^ tokenBytes[index];
-  }
-  const binary = Array.from(maskedBytes, (byte) =>
-    String.fromCharCode(byte),
-  ).join("");
-  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_");
+async function readJson(response) {
+  const contentType = response.headers.get("content-type") || "";
+  return contentType.includes("application/json") ? response.json() : null;
 }
 
-let csrfBootstrap;
-async function ensureCsrfToken() {
-  if (csrfToken()) return;
-  if (!csrfBootstrap) {
-    csrfBootstrap = fetch(`${baseUrl}/api/v1/csrf`, {
-      credentials: "include",
-      headers: { Accept: "application/json" },
-    })
-      .then((response) => {
-        if (response.status === 404) return;
-        if (!response.ok)
-          throw new Error(
-            response.status === 401
-              ? "AUTH_REQUIRED"
-              : `HTTP_${response.status}`,
-          );
-        if (!csrfToken()) throw new Error("CSRF_TOKEN_MISSING");
-      })
-      .finally(() => {
-        csrfBootstrap = null;
-      });
-  }
-  await csrfBootstrap;
-}
+export async function apiRequest(path, requestOptions = {}) {
+  const method = (requestOptions.method || "GET").toUpperCase();
+  const hasBody = requestOptions.body != null;
+  const isFormData =
+    typeof FormData !== "undefined" && requestOptions.body instanceof FormData;
+  const headers = {
+    Accept: "application/json",
+    ...requestOptions.headers,
+  };
+  if (hasBody && !isFormData) headers["Content-Type"] = "application/json";
 
-export async function apiRequest(path, options = {}) {
-  const { skipCsrf = false, ...requestOptions } = options;
-  const method = requestOptions.method || "GET";
-  const headers = { Accept: "application/json", ...requestOptions.headers };
-  if (requestOptions.body && !(requestOptions.body instanceof FormData))
-    headers["Content-Type"] = "application/json";
-  const isUnsafeMethod = !["GET", "HEAD", "OPTIONS"].includes(method);
-  if (isUnsafeMethod && !skipCsrf && !csrfToken()) await ensureCsrfToken();
-  const csrf = csrfToken();
-  if (csrf && isUnsafeMethod && !skipCsrf)
-    headers["X-XSRF-TOKEN"] = maskedCsrfToken(csrf);
   const response = await fetch(`${baseUrl}${path}`, {
-    credentials: "include",
     ...requestOptions,
+    credentials: "include",
     method,
     headers,
     body:
-      requestOptions.body && !(requestOptions.body instanceof FormData)
+      hasBody && !isFormData
         ? JSON.stringify(requestOptions.body)
         : requestOptions.body,
   });
   if (response.status === 204) return null;
-  const contentType = response.headers.get("content-type") || "";
-  const result = contentType.includes("application/json")
-    ? await response.json()
-    : null;
-  if (!response.ok) {
-    const error = new Error(result?.errorCode || `HTTP_${response.status}`);
-    error.code = result?.errorCode || `HTTP_${response.status}`;
-    error.fields = result?.errors || [];
-    throw error;
-  }
+  const result = await readJson(response);
+  if (!response.ok) throw requestError(response, result);
   return result?.data ?? null;
 }

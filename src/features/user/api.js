@@ -13,7 +13,6 @@ export const identity = (body) =>
   apiRequest("/api/v1/registration/identity", {
     method: "PUT",
     body,
-    skipCsrf: true,
   });
 
 export const nickname = (nickname) =>
