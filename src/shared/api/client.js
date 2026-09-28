@@ -1,3 +1,9 @@
+import {
+  AUTH_EXPIRED_EVENT,
+  clearAccessToken,
+  getAccessToken,
+} from "./authToken.js";
+
 const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
 function requestError(response, result) {
@@ -15,7 +21,8 @@ async function readJson(response) {
   return contentType.includes("application/json") ? response.json() : null;
 }
 
-export async function apiRequest(path, requestOptions = {}) {
+export async function apiRequest(path, options = {}) {
+  const { skipAuth = false, ...requestOptions } = options;
   const method = (requestOptions.method || "GET").toUpperCase();
   const hasBody = requestOptions.body != null;
   const isFormData =
@@ -24,6 +31,9 @@ export async function apiRequest(path, requestOptions = {}) {
     Accept: "application/json",
     ...requestOptions.headers,
   };
+  const accessToken = skipAuth ? null : getAccessToken();
+
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
   if (hasBody && !isFormData) headers["Content-Type"] = "application/json";
 
   const response = await fetch(`${baseUrl}${path}`, {
@@ -36,8 +46,20 @@ export async function apiRequest(path, requestOptions = {}) {
         ? JSON.stringify(requestOptions.body)
         : requestOptions.body,
   });
+
   if (response.status === 204) return null;
+
   const result = await readJson(response);
-  if (!response.ok) throw requestError(response, result);
-  return result?.data ?? null;
+  if (!response.ok) {
+    const error = requestError(response, result);
+    if (response.status === 401 && accessToken) {
+      clearAccessToken();
+      window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
+    }
+    throw error;
+  }
+
+  if (result && typeof result === "object" && Object.hasOwn(result, "data"))
+    return result.data;
+  return result ?? null;
 }

@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Practice } from "../features/aipractice/Practice.jsx";
 import { Report, Simulation } from "../features/aisimulation/pages.jsx";
 import { useSimulationLaunch } from "../features/aisimulation/useSimulationLaunch.js";
-import { beginKakaoLogin } from "../features/auth/api.js";
+import {
+  beginKakaoLogin,
+  completeOAuthCallback,
+} from "../features/auth/api.js";
 import { Login, RegistrationRestricted } from "../features/auth/pages.jsx";
 import { useLocalTestLogin } from "../features/auth/useLocalTestLogin.js";
 import { ChatList, ChatRoom } from "../features/chat/Chat.jsx";
@@ -17,6 +20,11 @@ import {
 } from "../features/recommendation/Home.jsx";
 import { useRecommendationFeed } from "../features/recommendation/useRecommendationFeed.js";
 import * as userApi from "../features/user/api.js";
+import {
+  AUTH_EXPIRED_EVENT,
+  clearAccessToken,
+  getAccessToken,
+} from "../shared/api/authToken.js";
 import { AppStateProvider, useAppState } from "../shared/appState.jsx";
 import { asset } from "../shared/assets.js";
 import {
@@ -32,6 +40,11 @@ function AppRouter() {
   const [toastText, setToastText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sessionCheckError, setSessionCheckError] = useState(false);
+  const navigate = useCallback((to) => {
+    if (window.location.pathname !== to) window.history.pushState({}, "", to);
+    setPath(to);
+    window.scrollTo(0, 0);
+  }, []);
   const { startSimulation, simulationStartingFor } = useSimulationLaunch({
     navigate: (to) => navigate(to),
     toast: (message) => toast(message),
@@ -60,22 +73,35 @@ function AppRouter() {
   }, []);
 
   useEffect(() => {
-    if (window.location.pathname.startsWith("/registration")) {
-      if (window.location.pathname === "/registration") {
-        setData((old) => ({
-          ...old,
-          onboardingStep: "identity",
-          registrationInfoConfirmed: false,
-        }));
-      }
-      setLoading(false);
-      return undefined;
-    }
-
     let active = true;
-    userApi
-      .onboarding()
-      .then((status) => {
+    const registrationPath =
+      window.location.pathname.startsWith("/registration");
+
+    async function bootstrapSession() {
+      try {
+        if (registrationPath) {
+          clearAccessToken();
+          if (window.location.pathname === "/registration") {
+            setData((old) => ({
+              ...old,
+              session: false,
+              onboarded: false,
+              onboardingStep: "identity",
+              registrationInfoConfirmed: false,
+            }));
+          }
+          return;
+        }
+
+        await completeOAuthCallback();
+        if (!active) return;
+
+        if (!getAccessToken()) {
+          setData((old) => ({ ...old, session: false, onboarded: false }));
+          return;
+        }
+
+        const status = await userApi.onboarding();
         if (!active) return;
         setData((old) => ({
           ...old,
@@ -86,37 +112,45 @@ function AppRouter() {
               ? "complete"
               : onboardingStepFromStatus(status),
         }));
-      })
-      .catch((error) => {
+      } catch (error) {
         if (!active) return;
         if (
           error?.code === "AUTH_REQUIRED" ||
           error?.code === "USER_NOT_FOUND"
         ) {
+          clearAccessToken();
           setData((old) => ({ ...old, session: false, onboarded: false }));
           return;
         }
         setSessionCheckError(true);
-      })
-      .finally(() => {
+      } finally {
         if (active) setLoading(false);
-      });
+      }
+    }
+
+    void bootstrapSession();
     return () => {
       active = false;
     };
   }, [setData]);
 
   useEffect(() => {
+    function handleAuthExpired() {
+      clearAccessToken();
+      setData((old) => ({ ...old, session: false, onboarded: false }));
+      navigate("/login");
+    }
+
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+    return () =>
+      window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+  }, [setData, navigate]);
+
+  useEffect(() => {
     if (!toastText) return undefined;
     const timer = window.setTimeout(() => setToastText(""), 3200);
     return () => window.clearTimeout(timer);
   }, [toastText]);
-
-  function navigate(to) {
-    if (window.location.pathname !== to) window.history.pushState({}, "", to);
-    setPath(to);
-    window.scrollTo(0, 0);
-  }
 
   function toast(message) {
     setToastText(message);
