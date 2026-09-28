@@ -791,6 +791,197 @@ small {
   opacity: 0;
 }
 
+.persona-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.persona-actions button,
+.persona-retry {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--purple);
+  min-height: 38px;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.persona-retry {
+  margin-top: 20px;
+}
+
+.persona-summary-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.persona-summary-card {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  padding: 16px;
+}
+
+.persona-summary-card h2 {
+  margin: 4px 0 8px;
+  font-size: 16px;
+}
+
+.persona-summary-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.persona-summary-card small {
+  color: var(--purple);
+}
+
+.persona-traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.persona-traits span {
+  border: 1px solid #bda6d0;
+  background: var(--soft-lavender);
+  padding: 4px 7px;
+  font-size: 11px;
+}
+
+.photo-guide,
+.photo-front-upload {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  padding: 20px;
+}
+
+.photo-guide > span {
+  display: block;
+  color: var(--purple);
+  font-size: 34px;
+  margin-bottom: 14px;
+}
+
+.photo-guide strong,
+.photo-front-upload strong {
+  display: block;
+  font-size: 15px;
+}
+
+.photo-guide ul {
+  margin: 16px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.9;
+}
+
+.photo-front-upload {
+  display: flex;
+  min-height: 180px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  border-style: dashed;
+  cursor: pointer;
+  text-align: center;
+}
+
+.photo-front-upload span,
+.photo-front-upload small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.photo-front-upload input,
+.onboarding-photo-add input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.onboarding-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.onboarding-photo-tile,
+.onboarding-photo-add {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.onboarding-photo-tile {
+  cursor: grab;
+}
+
+.onboarding-photo-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.onboarding-photo-tile b,
+.photo-uploading {
+  position: absolute;
+  left: 5px;
+  bottom: 5px;
+  padding: 3px 5px;
+  background: #2e1949d9;
+  color: #fff;
+  font-size: 10px;
+}
+
+.photo-uploading {
+  right: 5px;
+  left: auto;
+}
+
+.onboarding-photo-tile button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 23px;
+  height: 23px;
+  border: 0;
+  border-radius: 50%;
+  background: #2e1949d9;
+  color: #fff;
+  font-size: 18px;
+  line-height: 20px;
+}
+
+.onboarding-photo-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  border-style: dashed;
+  color: var(--purple);
+  cursor: pointer;
+}
+
+.onboarding-photo-add span {
+  font-size: 32px;
+}
+
+.onboarding-photo-add small {
+  font-size: 11px;
+}
+
 /* Home and profile */
 .home-header {
   position: relative;
@@ -874,6 +1065,7 @@ small {
   border-radius: 8px;
   box-shadow: 4px 4px 0 #38205f29;
   background: #ddc8e7;
+  touch-action: pan-y;
 }
 
 .recommendation-photo {
@@ -1254,6 +1446,54 @@ small {
   font-size: 12px;
   color: var(--muted);
   margin: 16px 0 0 72px;
+}
+
+.like-confirm-backdrop {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: #24183399;
+}
+
+.like-confirm-dialog {
+  width: min(100%, 330px);
+  padding: 24px 20px 18px;
+  border: 2px solid var(--line);
+  background: var(--paper);
+  box-shadow: 5px 6px 0 #27103f80;
+  text-align: center;
+}
+
+.like-confirm-dialog h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.like-confirm-dialog p {
+  margin: 12px 0 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.like-confirm-dialog > div {
+  display: flex;
+  gap: 8px;
+}
+
+.like-confirm-dialog button {
+  flex: 1;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+
+.like-confirm-dialog button.is-primary {
+  background: var(--pink);
 }
 
 /* Chat and AI */
@@ -3034,4 +3274,9 @@ section.practice-dialog button.practice-dialog-button.is-primary {
   width: 220px;
   height: 100px;
   margin-top: 0;
+}
+
+.bottom-nav button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
 }
