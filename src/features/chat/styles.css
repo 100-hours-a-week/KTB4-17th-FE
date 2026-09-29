@@ -205,6 +205,21 @@
   -ms-overflow-style: none;
 }
 
+.chat-date-divider {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.chat-date-divider > span {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #d4deea;
+  color: #40566e;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
 .chat-room-messages::-webkit-scrollbar {
   display: none;
 }
@@ -525,12 +540,18 @@
 .message-text-input {
   width: 100%;
   min-width: 0;
+  height: 42px;
+  min-height: 42px;
+  max-height: 120px;
   flex: 1;
   border: 0;
   border-radius: 0;
   background: var(--canvas);
   padding: 12px 14px;
   font-size: 13px;
+  line-height: 18px;
+  overflow-y: hidden;
+  resize: none;
   clip-path: var(--pixel-step-shape);
 }
 
