@@ -441,6 +441,10 @@ small {
   text-align: center;
 }
 
+.toast-home {
+  top: 88px;
+}
+
 .empty-state {
   min-height: 280px;
   padding: 44px 28px;
