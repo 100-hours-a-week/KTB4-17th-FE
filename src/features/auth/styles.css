@@ -1,4 +1,8 @@
 .login-page {
+  --login-viewport-height: 100vh;
+  --login-gap: clamp(12px, 2.5vh, 20px);
+  --login-top-space-height: clamp(0px, 1.5vh, 14px);
+  --login-illustration-height: clamp(140px, 26vh, 240px);
   min-height: 100%;
   position: relative;
   overflow-y: auto;
@@ -14,27 +18,19 @@
   grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   justify-items: center;
-  row-gap: clamp(12px, 2.5vh, 20px);
-  row-gap: clamp(12px, 2.5dvh, 20px);
-}
-
-.login-page:not(.local-test-login-page) .login-top-space {
-  display: none;
+  row-gap: var(--login-gap);
 }
 
 .login-top-space {
-  height: clamp(0px, 1.5vh, 14px);
-  flex: 0 0 clamp(0px, 1.5vh, 14px);
-  height: clamp(0px, 1.5dvh, 14px);
-  flex-basis: clamp(0px, 1.5dvh, 14px);
+  display: none;
+  height: var(--login-top-space-height);
+  flex: 0 0 var(--login-top-space-height);
 }
 
 .login-illustration {
   width: 100%;
-  height: clamp(140px, 26vh, 240px);
-  flex: 0 0 clamp(140px, 26vh, 240px);
-  height: clamp(140px, 26dvh, 240px);
-  flex-basis: clamp(140px, 26dvh, 240px);
+  height: var(--login-illustration-height);
+  flex: 0 0 var(--login-illustration-height);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -81,17 +77,25 @@
 
 @media (width < 600px) {
   .login-page {
-    min-height: 100vh;
-    min-height: 100dvh;
+    min-height: var(--login-viewport-height);
   }
 
   .login-page:not(.local-test-login-page) {
-    height: 100vh;
-    height: 100dvh;
+    height: var(--login-viewport-height);
+  }
+}
+
+@supports (height: 100dvh) {
+  .login-page {
+    --login-viewport-height: 100dvh;
+    --login-gap: clamp(12px, 2.5dvh, 20px);
+    --login-top-space-height: clamp(0px, 1.5dvh, 14px);
+    --login-illustration-height: clamp(140px, 26dvh, 240px);
   }
 }
 
 .local-test-login-page .login-top-space {
+  display: block;
   height: 12px;
   flex-basis: 12px;
 }
