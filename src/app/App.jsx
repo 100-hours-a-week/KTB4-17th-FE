@@ -82,6 +82,8 @@ function AppRouter() {
     loadMore: loadMoreRecommendations,
     refresh: refreshRecommendations,
     advance: advanceRecommendation,
+    retreat: retreatRecommendation,
+    dismiss: dismissRecommendation,
   } = feed;
 
   useEffect(() => {
@@ -248,6 +250,8 @@ function AppRouter() {
         onRetryRecommendations={loadRecommendations}
         onRefreshRecommendations={refreshRecommendations}
         onAdvance={advanceRecommendation}
+        onRetreat={retreatRecommendation}
+        onDismiss={dismissRecommendation}
         onLoadMore={loadMoreRecommendations}
         onStartSimulation={startSimulation}
       />

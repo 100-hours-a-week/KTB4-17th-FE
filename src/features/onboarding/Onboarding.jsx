@@ -32,6 +32,12 @@ const ONBOARDING_STEPS = [
   "photo-intro",
   "photo",
 ];
+const PERSONA_FLOW_STEPS = new Set([
+  "questions",
+  "persona-summary",
+  "photo-intro",
+  "photo",
+]);
 const CHAT_IMAGE_MIME_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -416,12 +422,13 @@ export function Onboarding({ navigate, toast }) {
   const [personaBusy, setPersonaBusy] = useState(false);
   const [photoItems, setPhotoItems] = useState([]);
   const [photoSaving, setPhotoSaving] = useState(false);
-  const [draggedPhotoId, setDraggedPhotoId] = useState(null);
+  const draggedPhotoId = useRef(null);
   const profileSaveInFlight = useRef(false);
   const personaStartInFlight = useRef(false);
   const profile = data.profile;
   const step = data.onboardingStep;
   const stepIndex = ONBOARDING_STEPS.indexOf(step);
+  const isPersonaFlowStep = PERSONA_FLOW_STEPS.has(step);
   const updateProfile = (key, value) =>
     setData((old) => ({ ...old, profile: { ...old.profile, [key]: value } }));
   function applyKoreanName(rawName) {
@@ -806,7 +813,12 @@ export function Onboarding({ navigate, toast }) {
       if (sourceIndex < 0 || targetIndex < 0) return current;
       const next = [...current];
       const [moved] = next.splice(sourceIndex, 1);
-      next.splice(targetIndex, 0, moved);
+      const targetIndexAfterRemoval = next.findIndex(
+        (item) => item.localId === targetId,
+      );
+      const insertIndex =
+        targetIndexAfterRemoval + (sourceIndex < targetIndex ? 1 : 0);
+      next.splice(insertIndex, 0, moved);
       return next;
     });
   }
@@ -898,14 +910,21 @@ export function Onboarding({ navigate, toast }) {
       {!isRegistrationInfoStep && (
         <>
           <header className="onboarding-top">
-            <button
-              type="button"
-              className="plain-back"
-              onClick={back}
-              aria-label="뒤로가기"
-            >
-              ←
-            </button>
+            {isPersonaFlowStep ? (
+              <span
+                className="onboarding-back-placeholder"
+                aria-hidden="true"
+              />
+            ) : (
+              <button
+                type="button"
+                className="plain-back"
+                onClick={back}
+                aria-label="뒤로가기"
+              >
+                ←
+              </button>
+            )}
             <span>
               {stepIndex + 1} / {ONBOARDING_STEPS.length}
             </span>
@@ -1336,23 +1355,51 @@ export function Onboarding({ navigate, toast }) {
                   data-photo-id={item.localId}
                   draggable={!item.uploading}
                   key={item.localId}
-                  onDragStart={() => setDraggedPhotoId(item.localId)}
-                  onDragOver={(event) => event.preventDefault()}
-                  onDrop={() => {
-                    reorderPhotos(draggedPhotoId, item.localId);
-                    setDraggedPhotoId(null);
+                  onDragStart={(event) => {
+                    draggedPhotoId.current = item.localId;
+                    event.dataTransfer.effectAllowed = "move";
+                    event.dataTransfer.setData("text/plain", item.localId);
                   }}
-                  onPointerDown={() => {
-                    if (!item.uploading) setDraggedPhotoId(item.localId);
+                  onDragEnd={() => {
+                    draggedPhotoId.current = null;
+                  }}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    const sourceId =
+                      draggedPhotoId.current ||
+                      event.dataTransfer.getData("text/plain");
+                    reorderPhotos(sourceId, item.localId);
+                    draggedPhotoId.current = null;
+                  }}
+                  onPointerDown={(event) => {
+                    if (
+                      event.pointerType === "mouse" ||
+                      item.uploading ||
+                      event.target.closest("button")
+                    )
+                      return;
+                    draggedPhotoId.current = item.localId;
+                    event.currentTarget.setPointerCapture(event.pointerId);
                   }}
                   onPointerUp={(event) => {
+                    if (event.pointerType === "mouse") return;
                     const target = document
                       .elementFromPoint(event.clientX, event.clientY)
                       ?.closest("[data-photo-id]");
-                    reorderPhotos(draggedPhotoId, target?.dataset.photoId);
-                    setDraggedPhotoId(null);
+                    reorderPhotos(
+                      draggedPhotoId.current,
+                      target?.dataset.photoId,
+                    );
+                    draggedPhotoId.current = null;
+                    if (event.currentTarget.hasPointerCapture(event.pointerId))
+                      event.currentTarget.releasePointerCapture(
+                        event.pointerId,
+                      );
                   }}
-                  onPointerCancel={() => setDraggedPhotoId(null)}
+                  onPointerCancel={() => {
+                    draggedPhotoId.current = null;
+                  }}
                 >
                   <img src={item.previewUrl} alt="등록한 프로필 사진" />
                   {item.isFrontal && <b>정면 사진</b>}
