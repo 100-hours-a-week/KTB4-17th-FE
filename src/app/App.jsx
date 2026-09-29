@@ -46,13 +46,19 @@ import { onboardingStepFromStatus } from "../shared/utils.js";
 function AppRouter() {
   const { data, setData } = useAppState();
   const [path, setPath] = useState(window.location.pathname);
+  const [search, setSearch] = useState(window.location.search);
   const [toastText, setToastText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sessionCheckError, setSessionCheckError] = useState(false);
   const [logoutPending, setLogoutPending] = useState(false);
   const navigate = useCallback((to) => {
-    if (window.location.pathname !== to) window.history.pushState({}, "", to);
-    setPath(to);
+    const destination = new URL(to, window.location.origin);
+    const destinationUrl = `${destination.pathname}${destination.search}${destination.hash}`;
+    const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    if (currentUrl !== destinationUrl)
+      window.history.pushState({}, "", destinationUrl);
+    setPath(destination.pathname);
+    setSearch(destination.search);
     window.scrollTo(0, 0);
   }, []);
   const { startSimulation, simulationStartingFor } = useSimulationLaunch({
@@ -81,7 +87,10 @@ function AppRouter() {
   } = feed;
 
   useEffect(() => {
-    const pop = () => setPath(window.location.pathname);
+    const pop = () => {
+      setPath(window.location.pathname);
+      setSearch(window.location.search);
+    };
     window.addEventListener("popstate", pop);
     return () => window.removeEventListener("popstate", pop);
   }, []);
@@ -181,6 +190,14 @@ function AppRouter() {
   }
 
   const personId = Number(path.split("/").pop());
+  const chatRoomIdParam = new URLSearchParams(search).get("chatRoomId");
+  const parsedChatRoomId = Number(chatRoomIdParam);
+  const chatRoomId =
+    chatRoomIdParam !== null &&
+    Number.isSafeInteger(parsedChatRoomId) &&
+    parsedChatRoomId > 0
+      ? parsedChatRoomId
+      : null;
   const simulationRoute = path.match(/^\/ai\/simulations\/(\d+)(?:\/report)?$/);
   const simulationId = simulationRoute ? Number(simulationRoute[1]) : null;
   const showNav =
@@ -265,15 +282,28 @@ function AppRouter() {
     page = (
       <Practice
         targetMemberId={personId}
+        chatRoomId={chatRoomId}
         navigate={navigate}
         onStartSimulation={startSimulation}
         simulationStartingFor={simulationStartingFor}
       />
     );
   else if (simulationRoute && !path.endsWith("/report"))
-    page = <Simulation simulationId={simulationId} navigate={navigate} />;
+    page = (
+      <Simulation
+        simulationId={simulationId}
+        chatRoomId={chatRoomId}
+        navigate={navigate}
+      />
+    );
   else if (simulationRoute && path.endsWith("/report"))
-    page = <Report simulationId={simulationId} navigate={navigate} />;
+    page = (
+      <Report
+        simulationId={simulationId}
+        chatRoomId={chatRoomId}
+        navigate={navigate}
+      />
+    );
   else if (path === "/my") page = <MyPage navigate={navigate} />;
   else if (path === "/settings")
     page = (

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  BrandHeader,
   EmptyState,
   PersonAvatar,
   PixelButton,
@@ -126,6 +127,7 @@ export function Likes({ toast, onFindMatch }) {
   }
   return (
     <>
+      <BrandHeader />
       <div className="segmented-tabs">
         <button
           type="button"

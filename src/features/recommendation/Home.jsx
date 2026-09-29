@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { asset } from "../../shared/assets.js";
 import {
+  BrandHeader,
   EmptyState,
   Icon,
   PhotoSegments,
@@ -227,12 +228,7 @@ export function Home({
   }
   return (
     <>
-      <header className="home-header">
-        <img
-          className="home-brand-logo"
-          src={asset("logo-login.png")}
-          alt="*23#"
-        />
+      <BrandHeader className="home-header">
         <span className="home-mode-label">AI 분석모드</span>
         <span className="home-header-spacer" />
         <button
@@ -254,7 +250,7 @@ export function Home({
             </button>
           </nav>
         )}
-      </header>
+      </BrandHeader>
       <main className="main-scroll home-main">
         {recommendationStatus === "loading" ? (
           <EmptyState
