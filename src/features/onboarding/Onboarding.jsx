@@ -7,7 +7,6 @@ import {
   Icon,
   PixelButton,
 } from "../../shared/ui/components.jsx";
-import { dateAge } from "../../shared/utils.js";
 import { regions as searchActivityRegions } from "../activity-region/api.js";
 import * as personaApi from "../persona/api.js";
 import * as profileApi from "../profile/api.js";
@@ -21,6 +20,7 @@ import {
 } from "../profile/data.js";
 import { profilePayload } from "../profile/serialize.js";
 import * as userApi from "../user/api.js";
+import { getRegistrationAgeRestriction } from "../user/registrationAge.js";
 
 const ONBOARDING_STEPS = [
   "identity",
@@ -587,7 +587,7 @@ export function Onboarding({ navigate, toast }) {
       setNameHelper("이름은 한글 2~8자 이내로 입력해주세요");
       return;
     }
-    if (dateAge(profile.birthDate) < 19) {
+    if (getRegistrationAgeRestriction(profile.birthDate)) {
       setError("");
       navigate("/registration/restricted");
       return;
@@ -603,6 +603,11 @@ export function Onboarding({ navigate, toast }) {
       });
       storeBearerToken(authResponse);
     } catch (e) {
+      if (e.code === "USER_AGE_REQUIREMENT_NOT_MET") {
+        setError("");
+        navigate("/registration/restricted");
+        return;
+      }
       return setError(e.code || "기본 정보를 저장하지 못했어요.");
     }
     setData((old) => ({
@@ -857,8 +862,9 @@ export function Onboarding({ navigate, toast }) {
 
   const progress = (Math.max(0, stepIndex) / ONBOARDING_STEPS.length) * 100;
   const isRegistrationInfoStep = step === "identity";
-  const isUnderage =
-    isValidBirthDate(profile.birthDate) && dateAge(profile.birthDate) < 19;
+  const ageRestriction = isValidBirthDate(profile.birthDate)
+    ? getRegistrationAgeRestriction(profile.birthDate)
+    : null;
   function handleIdentityEnter(event) {
     if (
       !isRegistrationInfoStep ||
@@ -934,7 +940,7 @@ export function Onboarding({ navigate, toast }) {
             {[
               "[필수] 서비스 이용약관",
               "[필수] 개인정보 처리방침",
-              "[필수] 만 19세 이상 확인",
+              "[필수] 만 19세 이상, 만 40세 미만 확인",
               "[선택] 알림 및 이벤트 수신",
             ].map((item, index) => (
               <label className="agreement" key={item}>
@@ -972,9 +978,9 @@ export function Onboarding({ navigate, toast }) {
                 setError("");
               }}
             />
-            {isUnderage && (
+            {ageRestriction && (
               <p className="identity-age-helper" role="alert">
-                만 19세 미만은 이용할 수 없어요. 생년월일이 맞는지 확인해주세요
+                {ageRestriction.helperMessage}
               </p>
             )}
             <div className="registration-info-fields">
