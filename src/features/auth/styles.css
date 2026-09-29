@@ -3,6 +3,7 @@
   --login-gap: clamp(12px, 2.5vh, 20px);
   --login-top-space-height: clamp(0px, 1.5vh, 14px);
   --login-illustration-height: clamp(140px, 26vh, 240px);
+
   min-height: 100%;
   position: relative;
   overflow-y: auto;
@@ -16,8 +17,7 @@
   display: grid;
   height: 100%;
   grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
-  justify-items: center;
+  place-items: center;
   row-gap: var(--login-gap);
 }
 
