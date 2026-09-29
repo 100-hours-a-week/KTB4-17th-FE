@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAppState } from "../../shared/appState.jsx";
 import { asset } from "../../shared/assets.js";
+import { getRegistrationAgeRestriction } from "../user/registrationAge.js";
 import { localTestAccounts, localTestAuthEnabled } from "./api.js";
 
 export function Login({ onLogin, onLocalTestLogin }) {
@@ -110,6 +111,7 @@ export function Login({ onLogin, onLocalTestLogin }) {
 export function RegistrationRestricted({ onConfirm }) {
   const { data } = useAppState();
   const profile = data.profile;
+  const ageRestriction = getRegistrationAgeRestriction(profile.birthDate);
   const birthDate = /^\d{4}-\d{2}-\d{2}$/.test(profile.birthDate || "")
     ? profile.birthDate.replace(/^(\d{4})-(\d{2})-(\d{2})$/, "$1. $2. $3")
     : "-";
@@ -118,12 +120,13 @@ export function RegistrationRestricted({ onConfirm }) {
     <main className="registration-restricted-page">
       <div className="registration-restricted-top-space" aria-hidden="true" />
       <h1>
-        만 19세 이상만
+        {ageRestriction?.heading || "가입 연령을 확인해주세요"}
         <br />
-        이용할 수 있어요
+        {ageRestriction ? "이용할 수 있어요" : "다시 입력해주세요"}
       </h1>
       <p className="registration-restricted-subtitle">
-        이 서비스는 청소년유해매체물로 분류되어 만 19세 미만은 가입할 수 없어요.
+        {ageRestriction?.description ||
+          "만 19세 이상, 만 40세 미만만 가입할 수 있어요."}
       </p>
       <dl className="registration-restricted-card">
         <div className="registration-restricted-row">
