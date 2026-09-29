@@ -56,6 +56,11 @@
   padding: 16px 16px 8px;
 }
 
+.recommendation-empty-refresh {
+  min-height: 100%;
+  touch-action: none;
+}
+
 .recommendation-card {
   width: 100%;
   height: min(600px, calc(100dvh - 160px));
