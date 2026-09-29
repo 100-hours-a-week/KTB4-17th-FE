@@ -74,20 +74,29 @@
 }
 
 .recommendation-stack.has-next {
-  padding-bottom: 16px;
+  padding-bottom: 20px;
 }
 
 .recommendation-card-current {
   z-index: 2;
+  will-change: transform;
 }
 
-.recommendation-card-next {
+.recommendation-card-current.is-settling {
+  transition: transform 180ms cubic-bezier(0.22, 0.8, 0.36, 1);
+}
+
+.recommendation-card-preview {
   position: absolute;
   z-index: 1;
-  top: 16px;
+  top: 0;
   left: 0;
   right: 0;
   pointer-events: none;
+}
+
+.recommendation-card-preview.is-next {
+  top: 20px;
 }
 
 .recommendation-photo {
