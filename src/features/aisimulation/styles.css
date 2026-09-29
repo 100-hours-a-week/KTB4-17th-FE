@@ -1,3 +1,11 @@
+.ai-screen-state-main {
+  top: 96px;
+  bottom: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
 .simulation-body {
   position: absolute;
   inset: 192px 0 122px;

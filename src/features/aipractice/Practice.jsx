@@ -77,6 +77,8 @@ export function Practice({
   const refreshRef = useRef(() => Promise.resolve());
   const requestRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const composerInputRef = useRef(null);
+  const focusAfterSendRef = useRef(false);
   chatsRef.current = chats;
 
   useEffect(() => {
@@ -87,6 +89,7 @@ export function Practice({
     setLoadError("");
     setInput("");
     setSendError("");
+    focusAfterSendRef.current = false;
     requestRef.current = null;
     setSession(null);
     setChats([]);
@@ -214,6 +217,7 @@ export function Practice({
     setSendError("");
     try {
       const accepted = await aiPracticeApi.aiPracticeSend(session.id, request);
+      focusAfterSendRef.current = true;
       requestRef.current = null;
       setChats((current) =>
         mergePracticeChats(current, [
@@ -299,6 +303,11 @@ export function Practice({
     sending ||
     hasGenerating ||
     count >= dailyLimit;
+  useEffect(() => {
+    if (!focusAfterSendRef.current || inputDisabled) return;
+    focusAfterSendRef.current = false;
+    composerInputRef.current?.focus({ preventScroll: true });
+  }, [inputDisabled]);
   const partnerTitle = "AI 연습 대화";
   const backPath = chatRoomId ? `/chats/${chatRoomId}` : "/home";
   const inputPlaceholder =
@@ -315,6 +324,7 @@ export function Practice({
     <>
       <ScreenHeader
         title={partnerTitle}
+        brandLogo
         onBack={() => navigate(backPath)}
         right={
           session?.status === "ACTIVE" ? (
@@ -448,6 +458,7 @@ export function Practice({
         )}
         <div className="practice-compose-row">
           <input
+            ref={composerInputRef}
             value={input}
             onChange={(event) => setInput(event.target.value)}
             placeholder={inputPlaceholder}

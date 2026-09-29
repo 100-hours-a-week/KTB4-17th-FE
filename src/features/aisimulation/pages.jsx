@@ -33,26 +33,35 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
     };
   }, [simulationId]);
 
-  if (error)
+  if (error || !simulation)
     return (
-      <EmptyState
-        icon="!"
-        title="시뮬레이션을 불러오지 못했어요"
-        description="잠시 후 다시 시도해주세요."
-        action={
-          <PixelButton onClick={() => navigate("/home")}>
-            홈으로 가기
-          </PixelButton>
-        }
-      />
-    );
-  if (!simulation)
-    return (
-      <EmptyState
-        icon="✦"
-        title="시뮬레이션 결과를 불러오고 있어요"
-        description="잠시만 기다려주세요."
-      />
+      <>
+        <ScreenHeader
+          title="시뮬레이션"
+          brandLogo
+          onBack={() => navigate("/home")}
+        />
+        <main className="main-scroll ai-screen-state-main">
+          {error ? (
+            <EmptyState
+              icon="!"
+              title="시뮬레이션을 불러오지 못했어요"
+              description="잠시 후 다시 시도해주세요."
+              action={
+                <PixelButton onClick={() => navigate("/home")}>
+                  홈으로 가기
+                </PixelButton>
+              }
+            />
+          ) : (
+            <EmptyState
+              icon="✦"
+              title="시뮬레이션 결과를 불러오고 있어요"
+              description="잠시만 기다려주세요."
+            />
+          )}
+        </main>
+      </>
     );
 
   const partner = simulation.partner || {};
@@ -71,6 +80,7 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
     <>
       <ScreenHeader
         title={partner.nickname || "시뮬레이션"}
+        brandLogo
         onBack={() => navigate("/home")}
         right={<Icon name="ai-avatar.svg" />}
       />
@@ -168,31 +178,41 @@ export function Report({ simulationId, chatRoomId, navigate }) {
     Number.isSafeInteger(roomId) && roomId > 0
       ? `/ai/simulations/${simulationId}?chatRoomId=${roomId}`
       : `/ai/simulations/${simulationId}`;
-  if (error)
+  if (error || !report)
     return (
-      <EmptyState
-        icon="!"
-        title="리포트를 불러오지 못했어요"
-        description="잠시 후 다시 시도해주세요."
-        action={
-          <PixelButton onClick={() => navigate(simulationPath)}>
-            시뮬레이션으로 돌아가기
-          </PixelButton>
-        }
-      />
-    );
-  if (!report)
-    return (
-      <EmptyState
-        icon="✦"
-        title="리포트를 불러오고 있어요"
-        description="잠시만 기다려주세요."
-      />
+      <>
+        <ScreenHeader
+          title="궁합 리포트"
+          brandLogo
+          onBack={() => navigate(simulationPath)}
+        />
+        <main className="main-scroll ai-screen-state-main">
+          {error ? (
+            <EmptyState
+              icon="!"
+              title="리포트를 불러오지 못했어요"
+              description="잠시 후 다시 시도해주세요."
+              action={
+                <PixelButton onClick={() => navigate(simulationPath)}>
+                  시뮬레이션으로 돌아가기
+                </PixelButton>
+              }
+            />
+          ) : (
+            <EmptyState
+              icon="✦"
+              title="리포트를 불러오고 있어요"
+              description="잠시만 기다려주세요."
+            />
+          )}
+        </main>
+      </>
     );
   return (
     <>
       <ScreenHeader
         title="궁합 리포트"
+        brandLogo
         onBack={() => navigate(simulationPath)}
       />
       <main className="main-scroll report-main">

@@ -70,6 +70,12 @@ export function MyPage({ navigate }) {
             <Icon name="bell.svg" />
             {data.notifications.some((item) => !item.read) && <i />}
           </button>
+        </div>
+      </BrandHeader>
+      <main className="main-scroll my-main">
+        <div
+          className={`my-identity${isProfileLoading ? " my-identity-loading" : ""}`}
+        >
           <button
             type="button"
             className="my-settings-button"
@@ -78,43 +84,41 @@ export function MyPage({ navigate }) {
           >
             <span aria-hidden="true">⚙︎</span>
           </button>
+          {isProfileLoading ? (
+            <div
+              className="my-identity-loading-content"
+              role="status"
+              aria-label="프로필 불러오는 중"
+              aria-busy="true"
+            >
+              <span className="my-profile-skeleton-avatar" aria-hidden="true" />
+              <div className="my-identity-copy" aria-hidden="true">
+                <span className="my-profile-skeleton my-profile-skeleton-kicker" />
+                <span className="my-profile-skeleton my-profile-skeleton-name" />
+                <span className="my-profile-skeleton my-profile-skeleton-age" />
+                <span className="my-profile-skeleton my-profile-skeleton-region" />
+              </div>
+            </div>
+          ) : (
+            <>
+              <PersonAvatar
+                person={{ photo: profile.photo || asset("user-avatar.png") }}
+                size="large"
+              />
+              <div className="my-identity-copy">
+                <span className="my-profile-kicker">MY PLAYER CARD</span>
+                <h1>{profile.nickname || "닉네임 미등록"}</h1>
+                <p className="my-profile-age">
+                  {age > 0 ? `${age}세` : "나이 정보 없음"}
+                </p>
+                <p className="my-profile-region">
+                  <Icon name="detail-location.svg" />
+                  {profile.regionName || "활동 지역 미설정"}
+                </p>
+              </div>
+            </>
+          )}
         </div>
-      </BrandHeader>
-      <main className="main-scroll my-main">
-        {isProfileLoading ? (
-          <div
-            className="my-identity my-identity-loading"
-            role="status"
-            aria-label="프로필 불러오는 중"
-            aria-busy="true"
-          >
-            <span className="my-profile-skeleton-avatar" aria-hidden="true" />
-            <div className="my-identity-copy" aria-hidden="true">
-              <span className="my-profile-skeleton my-profile-skeleton-kicker" />
-              <span className="my-profile-skeleton my-profile-skeleton-name" />
-              <span className="my-profile-skeleton my-profile-skeleton-age" />
-              <span className="my-profile-skeleton my-profile-skeleton-region" />
-            </div>
-          </div>
-        ) : (
-          <div className="my-identity">
-            <PersonAvatar
-              person={{ photo: profile.photo || asset("user-avatar.png") }}
-              size="large"
-            />
-            <div className="my-identity-copy">
-              <span className="my-profile-kicker">MY PLAYER CARD</span>
-              <h1>{profile.nickname || "닉네임 미등록"}</h1>
-              <p className="my-profile-age">
-                {age > 0 ? `${age}세` : "나이 정보 없음"}
-              </p>
-              <p className="my-profile-region">
-                <Icon name="detail-location.svg" />
-                {profile.regionName || "활동 지역 미설정"}
-              </p>
-            </div>
-          </div>
-        )}
         {profileLoadFailed && (
           <p className="my-profile-message" role="status">
             최신 프로필을 불러오지 못해 저장된 정보를 표시하고 있어요.
@@ -149,7 +153,7 @@ export function Settings({ navigate, onLogout, isLoggingOut = false }) {
       <ScreenHeader title="설정" onBack={() => navigate("/my")} />
       <main className="main-scroll settings-main">
         <div className="settings-intro">
-          <span className="settings-kicker">OPTION MENU / 01</span>
+          <span className="settings-kicker">내 설정 노트</span>
           <h1>계정 설정</h1>
           <p>프로필과 로그인 상태를 관리해요.</p>
         </div>
@@ -222,9 +226,6 @@ export function Settings({ navigate, onLogout, isLoggingOut = false }) {
             </fieldset>
           )}
         </section>
-        <p className="settings-footer">
-          *23# · LITTLE PIXELS, REAL CONNECTIONS.
-        </p>
       </main>
     </>
   );
