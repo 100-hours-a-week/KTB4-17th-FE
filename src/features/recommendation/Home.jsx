@@ -18,7 +18,9 @@ export function Home({
   hasNext,
   recommendationStatus,
   recommendationError,
+  recommendationRefreshing,
   onRetryRecommendations,
+  onRefreshRecommendations,
   onAdvance,
   onLoadMore,
   onStartSimulation,
@@ -40,22 +42,58 @@ export function Home({
       onAdvance();
     }
   }
+  async function refreshRecommendations() {
+    if (recommendationRefreshing) return;
+    try {
+      const count = await onRefreshRecommendations();
+      toast(
+        count > 0
+          ? "새로운 인연을 찾았어요."
+          : "지금은 새로운 인연을 찾지 못했어요.",
+      );
+    } catch (error) {
+      toast(error?.code || "추천 목록을 새로고침하지 못했어요.");
+    }
+  }
   function cyclePhoto(direction) {
     const count = Math.max(profilePhotoUrls(person).length, 1);
     setPhotoIndex((current) => (current + direction + count) % count);
   }
   function handlePointerDown(event) {
-    gestureStart.current = { x: event.clientX, y: event.clientY };
+    if (
+      event.isPrimary === false ||
+      (event.pointerType === "mouse" && event.button !== 0) ||
+      event.target.closest?.("button")
+    )
+      return;
+
+    event.currentTarget.setPointerCapture(event.pointerId);
+    gestureStart.current = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+    };
   }
   function handlePointerUp(event) {
     const start = gestureStart.current;
     gestureStart.current = null;
-    if (!start || !person || actionBusy) return;
+    if (!start || start.pointerId !== event.pointerId) return;
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId))
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    if (!person || actionBusy) return;
+
     const x = event.clientX - start.x;
     const y = event.clientY - start.y;
     if (Math.abs(x) >= 48 && Math.abs(x) > Math.abs(y))
       cyclePhoto(x < 0 ? 1 : -1);
     else if (y <= -64 && Math.abs(y) > Math.abs(x)) void advance();
+  }
+  function handlePointerCancel(event) {
+    if (gestureStart.current?.pointerId !== event.pointerId) return;
+    gestureStart.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId))
+      event.currentTarget.releasePointerCapture(event.pointerId);
   }
   async function like() {
     if (!person || actionBusy) return;
@@ -114,6 +152,23 @@ export function Home({
         )}
       </header>
       <main className="main-scroll home-main">
+        <section
+          className="recommendation-refresh"
+          aria-label="추천 목록 새로고침"
+        >
+          <span>인연을 찾아보세요</span>
+          <button
+            type="button"
+            className="recommendation-refresh-button"
+            onClick={() => void refreshRecommendations()}
+            disabled={
+              recommendationStatus === "loading" || recommendationRefreshing
+            }
+            aria-label="추천 목록 새로고침"
+          >
+            <Icon name="refresh.svg" />
+          </button>
+        </section>
         {recommendationStatus === "loading" ? (
           <EmptyState
             icon="✦"
@@ -146,6 +201,8 @@ export function Home({
             className="recommendation-card"
             onPointerDown={handlePointerDown}
             onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+            onDragStart={(event) => event.preventDefault()}
           >
             <ProfilePhoto
               className="recommendation-photo"
