@@ -34,6 +34,19 @@ export function PixelButton({
   );
 }
 
+export function BrandHeader({ children, className = "" }) {
+  return (
+    <header className={`brand-header ${className}`}>
+      <img
+        className="brand-header-logo"
+        src={asset("logo-login.png")}
+        alt="*23#"
+      />
+      {children}
+    </header>
+  );
+}
+
 export function ScreenHeader({ title, onBack, right, className = "" }) {
   return (
     <header className={`screen-header ${className}`}>

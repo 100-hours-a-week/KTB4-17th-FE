@@ -10,6 +10,12 @@ export const rooms = ({ cursor, size = 20 } = {}) => {
 export const messages = (roomId) =>
   apiRequest(`/api/v1/chat-rooms/${roomId}/messages?size=20`);
 
+export const markAsRead = (roomId, lastReadMessageId) =>
+  apiRequest(`/api/v1/chat-rooms/${roomId}/read`, {
+    method: "POST",
+    body: { lastReadMessageId },
+  });
+
 export const sendMessage = (roomId, text) =>
   apiRequest(`/api/v1/chat-rooms/${roomId}/messages`, {
     method: "POST",
