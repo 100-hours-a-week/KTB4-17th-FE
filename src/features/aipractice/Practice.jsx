@@ -48,6 +48,7 @@ export function practiceErrorMessage(error) {
 
 export function Practice({
   targetMemberId,
+  chatRoomId,
   navigate,
   onStartSimulation,
   simulationStartingFor,
@@ -330,7 +331,7 @@ export function Practice({
       <div className="mode-tabs">
         <button
           type="button"
-          onClick={() => void onStartSimulation(id)}
+          onClick={() => void onStartSimulation(id, chatRoomId)}
           disabled={
             !Number.isSafeInteger(id) ||
             id <= 0 ||
@@ -344,7 +345,12 @@ export function Practice({
         <button type="button" className="active">
           연습 대화
         </button>
-        <button type="button" onClick={() => navigate("/chats")}>
+        <button
+          type="button"
+          onClick={() =>
+            navigate(chatRoomId ? `/chats/${chatRoomId}` : "/chats")
+          }
+        >
           채팅
         </button>
       </div>

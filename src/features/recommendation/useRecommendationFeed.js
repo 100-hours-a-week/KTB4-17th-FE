@@ -150,6 +150,16 @@ export function useRecommendationFeed({ enabled }) {
     setCurrentIndex((current) => current + 1);
   }, []);
 
+  const retreat = useCallback(() => {
+    setCurrentIndex((current) => Math.max(current - 1, 0));
+  }, []);
+
+  const dismiss = useCallback(() => {
+    setRecommendations((current) =>
+      current.filter((_, index) => index !== currentIndex),
+    );
+  }, [currentIndex]);
+
   return {
     recommendations,
     currentIndex,
@@ -161,5 +171,7 @@ export function useRecommendationFeed({ enabled }) {
     loadMore,
     refresh,
     advance,
+    retreat,
+    dismiss,
   };
 }

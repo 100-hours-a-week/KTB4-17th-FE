@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { asset } from "../../shared/assets.js";
 import {
+  BrandHeader,
   EmptyState,
   Icon,
   PhotoSegments,
@@ -9,6 +10,13 @@ import {
 } from "../../shared/ui/components.jsx";
 import { profilePhotoUrls } from "../../shared/utils.js";
 import * as matchingApi from "../matching/api.js";
+
+const NEXT_CARD_DISTANCE = 64;
+const PREVIOUS_CARD_DISTANCE = 64;
+const REFRESH_DISTANCE = 360;
+const WHEEL_NEXT_DISTANCE = 80;
+const WHEEL_PREVIOUS_DISTANCE = 80;
+const WHEEL_REFRESH_DISTANCE = 360;
 
 export function Home({
   navigate,
@@ -22,6 +30,8 @@ export function Home({
   onRetryRecommendations,
   onRefreshRecommendations,
   onAdvance,
+  onRetreat,
+  onDismiss,
   onLoadMore,
   onStartSimulation,
 }) {
@@ -83,11 +93,15 @@ export function Home({
     }
   }
   function handleVerticalGesture(distance) {
-    if (distance <= -64) {
+    if (distance <= -NEXT_CARD_DISTANCE) {
       void advance();
       return;
     }
-    if (distance >= 120) void refreshRecommendations();
+    if (distance >= REFRESH_DISTANCE) {
+      void refreshRecommendations();
+      return;
+    }
+    if (distance >= PREVIOUS_CARD_DISTANCE) onRetreat();
   }
   function cyclePhoto(direction) {
     const count = Math.max(profilePhotoUrls(person).length, 1);
@@ -123,6 +137,14 @@ export function Home({
       cyclePhoto(x < 0 ? 1 : -1);
     else if (Math.abs(y) > Math.abs(x)) handleVerticalGesture(y);
   }
+  function handlePointerMove(event) {
+    const start = gestureStart.current;
+    if (!start || start.pointerId !== event.pointerId) return;
+
+    const x = event.clientX - start.x;
+    const y = event.clientY - start.y;
+    if (Math.abs(y) > Math.abs(x)) event.preventDefault();
+  }
   function handlePointerCancel(event) {
     if (gestureStart.current?.pointerId !== event.pointerId) return;
     gestureStart.current = null;
@@ -147,19 +169,36 @@ export function Home({
     gesture.direction = direction;
     gesture.delta += Math.abs(event.deltaY);
     if (gesture.resetTimer) window.clearTimeout(gesture.resetTimer);
-    gesture.resetTimer = window.setTimeout(() => {
+    if (direction > 0 && gesture.delta >= WHEEL_NEXT_DISTANCE) {
+      gesture.locked = true;
       gesture.delta = 0;
-      gesture.direction = 0;
-    }, 160);
+      void advance();
+      window.setTimeout(() => {
+        gesture.locked = false;
+      }, 450);
+      return;
+    }
 
-    if (gesture.delta < 80) return;
-    gesture.locked = true;
-    gesture.delta = 0;
-    if (direction > 0) void advance();
-    else void refreshRecommendations();
-    window.setTimeout(() => {
-      gesture.locked = false;
-    }, 450);
+    if (direction < 0) {
+      gesture.resetTimer = window.setTimeout(() => {
+        const distance = gesture.delta;
+        gesture.delta = 0;
+        gesture.direction = 0;
+        if (gesture.locked) return;
+        if (distance >= WHEEL_REFRESH_DISTANCE) {
+          gesture.locked = true;
+          void refreshRecommendations();
+        } else if (distance >= WHEEL_PREVIOUS_DISTANCE) {
+          gesture.locked = true;
+          onRetreat();
+        } else {
+          return;
+        }
+        window.setTimeout(() => {
+          gesture.locked = false;
+        }, 450);
+      }, 160);
+    }
   }
   async function like() {
     if (!person || actionBusy) return;
@@ -167,7 +206,7 @@ export function Home({
     try {
       await matchingApi.sendLike(person.id);
       toast(`${person.nickname}님에게 좋아요를 보냈어요`);
-      await advance();
+      onDismiss();
     } catch (error) {
       toast(error?.code || "좋아요를 보내지 못했어요.");
     } finally {
@@ -189,12 +228,7 @@ export function Home({
   }
   return (
     <>
-      <header className="home-header">
-        <img
-          className="home-brand-logo"
-          src={asset("logo-login.png")}
-          alt="*23#"
-        />
+      <BrandHeader className="home-header">
         <span className="home-mode-label">AI 분석모드</span>
         <span className="home-header-spacer" />
         <button
@@ -216,7 +250,7 @@ export function Home({
             </button>
           </nav>
         )}
-      </header>
+      </BrandHeader>
       <main className="main-scroll home-main">
         {recommendationStatus === "loading" ? (
           <EmptyState
@@ -263,6 +297,7 @@ export function Home({
             <article
               className="recommendation-card recommendation-card-current"
               onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerCancel}
               onWheel={handleWheel}

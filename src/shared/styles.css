@@ -142,6 +142,26 @@ button:focus-visible {
   box-shadow: 0 0 30px #3b26541a;
 }
 
+.brand-header {
+  position: relative;
+  z-index: 6;
+  height: 56px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--paper);
+  border-bottom: 2px solid var(--line);
+}
+
+.brand-header-logo {
+  display: block;
+  width: 66px;
+  height: 30px;
+  flex: 0 0 66px;
+  object-fit: contain;
+}
+
 .main-scroll {
   position: absolute;
   inset: 0 0 72px;

@@ -3,6 +3,7 @@ import { useAppState } from "../../shared/appState.jsx";
 import { asset } from "../../shared/assets.js";
 import { readPhoto } from "../../shared/fileUtils.js";
 import {
+  BrandHeader,
   ChoiceGroup,
   Field,
   Icon,
@@ -24,6 +25,7 @@ import { profilePayload } from "./serialize.js";
 export function MyPage({ navigate }) {
   const { data } = useAppState();
   const [serverProfile, setServerProfile] = useState(null);
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
   const [profileLoadFailed, setProfileLoadFailed] = useState(false);
 
   useEffect(() => {
@@ -36,6 +38,9 @@ export function MyPage({ navigate }) {
       })
       .catch(() => {
         if (active) setProfileLoadFailed(true);
+      })
+      .finally(() => {
+        if (active) setIsProfileLoading(false);
       });
 
     return () => {
@@ -55,12 +60,7 @@ export function MyPage({ navigate }) {
   const age = dateAge(profile.birthDate);
   return (
     <>
-      <header className="my-topbar">
-        <img
-          className="my-topbar-logo"
-          src={asset("logo-login.png")}
-          alt="*23#"
-        />
+      <BrandHeader className="my-topbar">
         <div className="my-header-actions">
           <button
             type="button"
@@ -79,25 +79,42 @@ export function MyPage({ navigate }) {
             <span aria-hidden="true">⚙︎</span>
           </button>
         </div>
-      </header>
+      </BrandHeader>
       <main className="main-scroll my-main">
-        <div className="my-identity">
-          <PersonAvatar
-            person={{ photo: profile.photo || asset("user-avatar.png") }}
-            size="large"
-          />
-          <div className="my-identity-copy">
-            <span className="my-profile-kicker">MY PLAYER CARD</span>
-            <h1>{profile.nickname || "닉네임 미등록"}</h1>
-            <p className="my-profile-age">
-              {age > 0 ? `${age}세` : "나이 정보 없음"}
-            </p>
-            <p className="my-profile-region">
-              <Icon name="detail-location.svg" />
-              {profile.regionName || "활동 지역 미설정"}
-            </p>
+        {isProfileLoading ? (
+          <div
+            className="my-identity my-identity-loading"
+            role="status"
+            aria-label="프로필 불러오는 중"
+            aria-busy="true"
+          >
+            <span className="my-profile-skeleton-avatar" aria-hidden="true" />
+            <div className="my-identity-copy" aria-hidden="true">
+              <span className="my-profile-skeleton my-profile-skeleton-kicker" />
+              <span className="my-profile-skeleton my-profile-skeleton-name" />
+              <span className="my-profile-skeleton my-profile-skeleton-age" />
+              <span className="my-profile-skeleton my-profile-skeleton-region" />
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="my-identity">
+            <PersonAvatar
+              person={{ photo: profile.photo || asset("user-avatar.png") }}
+              size="large"
+            />
+            <div className="my-identity-copy">
+              <span className="my-profile-kicker">MY PLAYER CARD</span>
+              <h1>{profile.nickname || "닉네임 미등록"}</h1>
+              <p className="my-profile-age">
+                {age > 0 ? `${age}세` : "나이 정보 없음"}
+              </p>
+              <p className="my-profile-region">
+                <Icon name="detail-location.svg" />
+                {profile.regionName || "활동 지역 미설정"}
+              </p>
+            </div>
+          </div>
+        )}
         {profileLoadFailed && (
           <p className="my-profile-message" role="status">
             최신 프로필을 불러오지 못해 저장된 정보를 표시하고 있어요.
@@ -216,6 +233,50 @@ export function Settings({ navigate, onLogout, isLoggingOut = false }) {
 export function MyProfile({ navigate, toast }) {
   const { data, setData } = useAppState();
   const profile = data.profile;
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [profileLoadFailed, setProfileLoadFailed] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setIsLoadingProfile(true);
+    setProfileLoadFailed(false);
+
+    getMyProfile()
+      .then((serverProfile) => {
+        if (!active) return;
+        setData((old) => ({
+          ...old,
+          profile: {
+            ...old.profile,
+            nickname: serverProfile.nickname ?? "",
+            birthDate: serverProfile.birthDate ?? old.profile.birthDate,
+            activityRegionId: serverProfile.activityRegionId ?? null,
+            regionName: serverProfile.activityRegionName ?? "",
+            height:
+              serverProfile.height == null ? "" : String(serverProfile.height),
+            bodyType: serverProfile.bodyType ?? "",
+            educationLevel: serverProfile.educationLevel ?? "",
+            job: serverProfile.job ?? "",
+            religion: serverProfile.religion ?? "",
+            drinking: serverProfile.drinking ?? "",
+            smoking: serverProfile.smoking ?? "",
+            mbti: serverProfile.mbti ?? "",
+            photo: serverProfile.profileImageUrl ?? "",
+          },
+        }));
+      })
+      .catch(() => {
+        if (active) setProfileLoadFailed(true);
+      })
+      .finally(() => {
+        if (active) setIsLoadingProfile(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [setData]);
+
   const set = (key, value) =>
     setData((old) => ({ ...old, profile: { ...old.profile, [key]: value } }));
   async function save() {
@@ -230,88 +291,107 @@ export function MyProfile({ navigate, toast }) {
   return (
     <>
       <ScreenHeader title="프로필 수정" onBack={() => navigate("/settings")} />
-      <main className="main-scroll edit-main">
-        <label className="edit-avatar">
-          <PersonAvatar
-            person={{ photo: profile.photo || asset("user-avatar.png") }}
-            size="large"
-          />
-          <span>사진 변경</span>
-          <input
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            onChange={(e) =>
-              readPhoto(e.target.files?.[0], (url) => set("photo", url), toast)
-            }
-          />
-        </label>
-        <Field label="닉네임">
-          <input
-            value={profile.nickname}
-            onChange={(e) => set("nickname", e.target.value)}
-            maxLength={10}
-          />
-        </Field>
-        <Field label="활동 지역">
-          <input
-            value={profile.regionName}
-            onChange={(e) => set("regionName", e.target.value)}
-          />
-        </Field>
-        <Field label="키 (cm)">
-          <input
-            type="number"
-            value={profile.height}
-            onChange={(e) => set("height", e.target.value)}
-            min="130"
-            max="220"
-          />
-        </Field>
-        <Field label="체형">
-          <ChoiceGroup
-            options={bodyTypes}
-            value={profile.bodyType}
-            onChange={(v) => set("bodyType", v)}
-          />
-        </Field>
-        <Field label="학력">
-          <ChoiceGroup
-            options={educationLevels}
-            value={profile.educationLevel}
-            onChange={(v) => set("educationLevel", v)}
-          />
-        </Field>
-        <Field label="직업">
-          <input
-            value={profile.job}
-            onChange={(e) => set("job", e.target.value)}
-            maxLength={50}
-          />
-        </Field>
-        <Field label="종교">
-          <ChoiceGroup
-            options={religions}
-            value={profile.religion}
-            onChange={(v) => set("religion", v)}
-          />
-        </Field>
-        <Field label="음주">
-          <ChoiceGroup
-            options={drinkings}
-            value={profile.drinking}
-            onChange={(v) => set("drinking", v)}
-          />
-        </Field>
-        <Field label="흡연">
-          <ChoiceGroup
-            options={smokings}
-            value={profile.smoking}
-            onChange={(v) => set("smoking", v)}
-          />
-        </Field>
-        <div className="edit-actions">
-          <PixelButton onClick={save}>저장하기</PixelButton>
-        </div>
+      <main className="main-scroll edit-main" aria-busy={isLoadingProfile}>
+        {isLoadingProfile ? (
+          <p className="profile-load-state" role="status">
+            저장된 프로필을 불러오는 중이에요.
+          </p>
+        ) : profileLoadFailed ? (
+          <div className="profile-load-error" role="alert">
+            <p>
+              프로필을 불러오지 못했어요. 이전 화면으로 돌아갔다가 다시
+              시도해주세요.
+            </p>
+          </div>
+        ) : (
+          <>
+            <label className="edit-avatar">
+              <PersonAvatar
+                person={{ photo: profile.photo || asset("user-avatar.png") }}
+                size="large"
+              />
+              <span>사진 변경</span>
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(e) =>
+                  readPhoto(
+                    e.target.files?.[0],
+                    (url) => set("photo", url),
+                    toast,
+                  )
+                }
+              />
+            </label>
+            <Field label="닉네임">
+              <input
+                value={profile.nickname}
+                onChange={(e) => set("nickname", e.target.value)}
+                maxLength={10}
+              />
+            </Field>
+            <Field label="활동 지역">
+              <input
+                value={profile.regionName}
+                onChange={(e) => set("regionName", e.target.value)}
+              />
+            </Field>
+            <Field label="키 (cm)">
+              <input
+                type="number"
+                value={profile.height}
+                onChange={(e) => set("height", e.target.value)}
+                min="130"
+                max="220"
+              />
+            </Field>
+            <Field label="체형">
+              <ChoiceGroup
+                options={bodyTypes}
+                value={profile.bodyType}
+                onChange={(v) => set("bodyType", v)}
+              />
+            </Field>
+            <Field label="학력">
+              <ChoiceGroup
+                options={educationLevels}
+                value={profile.educationLevel}
+                onChange={(v) => set("educationLevel", v)}
+              />
+            </Field>
+            <Field label="직업">
+              <input
+                value={profile.job}
+                onChange={(e) => set("job", e.target.value)}
+                maxLength={50}
+              />
+            </Field>
+            <Field label="종교">
+              <ChoiceGroup
+                options={religions}
+                value={profile.religion}
+                onChange={(v) => set("religion", v)}
+              />
+            </Field>
+            <Field label="음주">
+              <ChoiceGroup
+                options={drinkings}
+                value={profile.drinking}
+                onChange={(v) => set("drinking", v)}
+              />
+            </Field>
+            <Field label="흡연">
+              <ChoiceGroup
+                options={smokings}
+                value={profile.smoking}
+                onChange={(v) => set("smoking", v)}
+              />
+            </Field>
+            <div className="edit-actions">
+              <PixelButton onClick={save}>저장하기</PixelButton>
+            </div>
+          </>
+        )}
       </main>
     </>
   );
