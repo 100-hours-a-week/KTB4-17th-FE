@@ -205,9 +205,7 @@ function applyRoomMessageEvent(room, event) {
     time: isNewerPreview ? formatChatActivity(event.createdAt) : room.time,
     activityAt: isNewerPreview ? event.createdAt : room.activityAt,
     activityTimestamp: Math.max(room.activityTimestamp, eventTimestamp),
-    unread:
-      room.unread +
-      (!event.mine && isBeyondServerSnapshot ? 1 : 0),
+    unread: room.unread + (!event.mine && isBeyondServerSnapshot ? 1 : 0),
   };
 }
 
@@ -281,7 +279,9 @@ export function ChatList({ navigate }) {
         );
         if (roomIndex < 0) continue;
         const eventTimestamp = parseChatDate(event.createdAt)?.getTime() || 0;
-        if (eventTimestamp > refreshedRooms[roomIndex].syncedActivityTimestamp) {
+        if (
+          eventTimestamp > refreshedRooms[roomIndex].syncedActivityTimestamp
+        ) {
           refreshedRooms[roomIndex] = applyRoomMessageEvent(
             refreshedRooms[roomIndex],
             event,
@@ -363,16 +363,12 @@ export function ChatList({ navigate }) {
           );
           if (roomIndex < 0) return current;
           const updated = [...current];
-          updated[roomIndex] = applyRoomMessageEvent(
-            updated[roomIndex],
-            event,
-          );
+          updated[roomIndex] = applyRoomMessageEvent(updated[roomIndex], event);
           return sortChatRooms(updated);
         });
       },
       onConnected: () => {
-        if (active)
-          void loadRooms({ silent: roomsLoadedRef.current });
+        if (active) void loadRooms({ silent: roomsLoadedRef.current });
       },
     });
     return () => {
@@ -613,7 +609,6 @@ export function ChatRoom({
   const readInFlightRef = useRef(false);
   const readRetryTimerRef = useRef(null);
   const readRetryCountRef = useRef(0);
-  const [visibilityVersion, setVisibilityVersion] = useState(0);
   const [messagesLoadedRoomId, setMessagesLoadedRoomId] = useState(null);
   const activeRoom = serverRoom;
   const messages = serverMessages;
@@ -625,10 +620,7 @@ export function ChatRoom({
       const targetMessageId = Number(messageId);
       if (!Number.isSafeInteger(targetMessageId) || targetMessageId <= 0)
         return;
-      readTargetRef.current = Math.max(
-        readTargetRef.current,
-        targetMessageId,
-      );
+      readTargetRef.current = Math.max(readTargetRef.current, targetMessageId);
       if (
         document.visibilityState === "hidden" ||
         readInFlightRef.current ||
@@ -686,25 +678,22 @@ export function ChatRoom({
   );
 
   useEffect(() => {
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "visible")
-        setVisibilityVersion((current) => current + 1);
+    const syncReadCursor = () => {
+      if (
+        !latestMessageKey ||
+        !messagesRoomReadyRef.current ||
+        messagesLoadedRoomId !== roomId ||
+        document.visibilityState === "hidden"
+      )
+        return;
+      requestReadThrough(latestMessageKey);
     };
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    return () =>
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-  }, []);
 
-  useEffect(() => {
-    if (
-      !latestMessageKey ||
-      !messagesRoomReadyRef.current ||
-      messagesLoadedRoomId !== roomId ||
-      document.visibilityState === "hidden"
-    )
-      return;
-    requestReadThrough(latestMessageKey);
-  }, [latestMessageKey, messagesLoadedRoomId, requestReadThrough, roomId, visibilityVersion]);
+    syncReadCursor();
+    document.addEventListener("visibilitychange", syncReadCursor);
+    return () =>
+      document.removeEventListener("visibilitychange", syncReadCursor);
+  }, [latestMessageKey, messagesLoadedRoomId, requestReadThrough, roomId]);
 
   useEffect(() => {
     if (
@@ -867,9 +856,7 @@ export function ChatRoom({
           );
         }
         if (!active) return;
-        setServerMessages((current) =>
-          mergeChatMessages(current, [message]),
-        );
+        setServerMessages((current) => mergeChatMessages(current, [message]));
       },
     });
     return () => {
@@ -992,9 +979,7 @@ export function ChatRoom({
           type="button"
           disabled={!targetMemberId}
           onClick={() =>
-            navigate(
-              `/ai/practice/${targetMemberId}?chatRoomId=${roomId}`,
-            )
+            navigate(`/ai/practice/${targetMemberId}?chatRoomId=${roomId}`)
           }
         >
           연습 대화

@@ -59,13 +59,9 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
   const me = simulation.me || {};
   const roomId = Number(chatRoomId);
   const chatPath =
-    Number.isSafeInteger(roomId) && roomId > 0
-      ? `/chats/${roomId}`
-      : "/chats";
+    Number.isSafeInteger(roomId) && roomId > 0 ? `/chats/${roomId}` : "/chats";
   const chatRoomQuery =
-    Number.isSafeInteger(roomId) && roomId > 0
-      ? `?chatRoomId=${roomId}`
-      : "";
+    Number.isSafeInteger(roomId) && roomId > 0 ? `?chatRoomId=${roomId}` : "";
   return (
     <>
       <ScreenHeader
@@ -131,9 +127,7 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
         </div>
         <PixelButton
           onClick={() =>
-            navigate(
-              `/ai/simulations/${simulationId}/report${chatRoomQuery}`,
-            )
+            navigate(`/ai/simulations/${simulationId}/report${chatRoomQuery}`)
           }
         >
           리포트 확인하기 ↗
@@ -172,9 +166,7 @@ export function Report({ simulationId, chatRoomId, navigate }) {
         title="리포트를 불러오지 못했어요"
         description="잠시 후 다시 시도해주세요."
         action={
-          <PixelButton
-            onClick={() => navigate(simulationPath)}
-          >
+          <PixelButton onClick={() => navigate(simulationPath)}>
             시뮬레이션으로 돌아가기
           </PixelButton>
         }

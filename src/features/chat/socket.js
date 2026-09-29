@@ -40,7 +40,11 @@ function parseFrame(rawFrame) {
   return { command, headers, body: content.slice(separator + 2) };
 }
 
-export function connectChatSocket({ onMessage, onStatus = () => {}, onConnected = () => {} }) {
+export function connectChatSocket({
+  onMessage,
+  onStatus = () => {},
+  onConnected = () => {},
+}) {
   let socket;
   let stopped = false;
   let buffer = "";

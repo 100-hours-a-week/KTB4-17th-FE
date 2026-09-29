@@ -17,9 +17,7 @@ export function useSimulationLaunch({ navigate, toast }) {
     setSimulationStartingFor(memberId);
     const roomId = Number(chatRoomId);
     const chatRoomQuery =
-      Number.isSafeInteger(roomId) && roomId > 0
-        ? `?chatRoomId=${roomId}`
-        : "";
+      Number.isSafeInteger(roomId) && roomId > 0 ? `?chatRoomId=${roomId}` : "";
     try {
       const simulation = await createAiSimulation(memberId);
       if (!simulation?.simulationId) {
