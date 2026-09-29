@@ -13,6 +13,7 @@
     "typecheck": "node --check src/shared/api/client.js && node --check src/shared/api/files.js && node --check src/shared/utils.js && node --check src/features/auth/api.js && node --check src/features/auth/useLocalTestLogin.js && node --check src/features/user/api.js && node --check src/features/activity-region/api.js && node --check src/features/profile/api.js && node --check src/features/profile/serialize.js && node --check src/features/persona/api.js && node --check src/features/recommendation/api.js && node --check src/features/recommendation/mapRecommendationItem.js && node --check src/features/recommendation/useRecommendationFeed.js && node --check src/features/matching/api.js && node --check src/features/chat/api.js && node --check src/features/aipractice/api.js && node --check src/features/aipractice/socket.js && node --check src/features/aisimulation/api.js && node --check src/features/aisimulation/useSimulationLaunch.js && node --check src/features/notifications/api.js"
   },
   "dependencies": {
+    "@sentry/react": "^11.1.0",
     "galmuri": "^2.40.3",
     "react": "19.2.8",
     "react-dom": "19.2.8"
