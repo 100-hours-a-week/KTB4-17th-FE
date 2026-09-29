@@ -60,8 +60,10 @@ function AppRouter() {
     hasNext,
     status: recommendationStatus,
     error: recommendationError,
+    refreshing: recommendationRefreshing,
     load: loadRecommendations,
     loadMore: loadMoreRecommendations,
+    refresh: refreshRecommendations,
     advance: advanceRecommendation,
   } = feed;
 
@@ -200,7 +202,9 @@ function AppRouter() {
         hasNext={hasNext}
         recommendationStatus={recommendationStatus}
         recommendationError={recommendationError}
+        recommendationRefreshing={recommendationRefreshing}
         onRetryRecommendations={loadRecommendations}
+        onRefreshRecommendations={refreshRecommendations}
         onAdvance={advanceRecommendation}
         onLoadMore={loadMoreRecommendations}
         onStartSimulation={startSimulation}

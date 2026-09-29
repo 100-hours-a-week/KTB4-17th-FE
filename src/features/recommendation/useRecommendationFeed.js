@@ -12,6 +12,7 @@ export function useRecommendationFeed({ enabled }) {
     hasNext: false,
   });
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   const requestRef = useRef(0);
   const moreRequestRef = useRef(false);
 
@@ -68,6 +69,7 @@ export function useRecommendationFeed({ enabled }) {
       !page.nextCursor
     )
       return false;
+    const requestId = requestRef.current;
     moreRequestRef.current = true;
     try {
       const result = await recommendationApi.recommendationItems(
@@ -77,20 +79,59 @@ export function useRecommendationFeed({ enabled }) {
       const items = (result?.items || [])
         .map(mapRecommendationItem)
         .filter(Boolean);
-      setRecommendations((current) => [...current, ...items]);
-      setPage((current) => ({
-        ...current,
-        nextCursor: result?.pageInfo?.nextCursor || null,
-        hasNext: Boolean(result?.pageInfo?.hasNext),
-      }));
+      if (requestId === requestRef.current) {
+        setRecommendations((current) => [...current, ...items]);
+        setPage((current) => ({
+          ...current,
+          nextCursor: result?.pageInfo?.nextCursor || null,
+          hasNext: Boolean(result?.pageInfo?.hasNext),
+        }));
+      }
       return items.length > 0;
     } catch (requestError) {
-      setError(requestError?.code || "RECOMMENDATIONS_UNAVAILABLE");
+      if (requestId === requestRef.current)
+        setError(requestError?.code || "RECOMMENDATIONS_UNAVAILABLE");
       return false;
     } finally {
       moreRequestRef.current = false;
     }
   }, [page]);
+
+  const refresh = useCallback(async () => {
+    const requestId = requestRef.current + 1;
+    requestRef.current = requestId;
+    setRefreshing(true);
+    setError("");
+    try {
+      const created = await recommendationApi.createRecommendationBatch();
+      const batchId = created?.batchId;
+      if (!batchId) {
+        if (requestId === requestRef.current) {
+          setRecommendations([]);
+          setPage({ batchId: null, nextCursor: null, hasNext: false });
+          setCurrentIndex(0);
+        }
+        return 0;
+      }
+
+      const result = await recommendationApi.recommendationItems(batchId);
+      const items = (Array.isArray(result?.items) ? result.items : [])
+        .map(mapRecommendationItem)
+        .filter(Boolean);
+      if (requestId === requestRef.current) {
+        setRecommendations(items);
+        setPage({
+          batchId,
+          nextCursor: result?.pageInfo?.nextCursor || null,
+          hasNext: Boolean(result?.pageInfo?.hasNext),
+        });
+        setCurrentIndex(0);
+      }
+      return items.length;
+    } finally {
+      if (requestId === requestRef.current) setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!enabled) {
@@ -115,8 +156,10 @@ export function useRecommendationFeed({ enabled }) {
     hasNext: page.hasNext,
     status,
     error,
+    refreshing,
     load,
     loadMore,
+    refresh,
     advance,
   };
 }
