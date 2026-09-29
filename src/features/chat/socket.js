@@ -107,9 +107,12 @@ export function connectChatSocket({
         onConnected();
       } else if (frame.command === "MESSAGE") {
         try {
-          const subscription = SUBSCRIPTIONS.find(
-            (candidate) => candidate.id === frame.headers.subscription,
-          );
+          const subscription =
+            SUBSCRIPTIONS.find(
+              (candidate) =>
+                candidate.id === frame.headers.subscription ||
+                candidate.destination === frame.headers.destination,
+            ) || (SUBSCRIPTIONS.length === 1 ? SUBSCRIPTIONS[0] : null);
           if (subscription?.onMessage === "message")
             onMessage(JSON.parse(frame.body));
         } catch {
