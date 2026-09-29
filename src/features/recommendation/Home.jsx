@@ -328,7 +328,6 @@ export function Home({
   return (
     <>
       <BrandHeader className="home-header">
-        <span className="home-mode-label">AI 분석모드</span>
         <span className="home-header-spacer" />
         <button
           className="home-menu-button"

@@ -47,9 +47,17 @@ export function BrandHeader({ children, className = "" }) {
   );
 }
 
-export function ScreenHeader({ title, onBack, right, className = "" }) {
+export function ScreenHeader({
+  title,
+  onBack,
+  right,
+  className = "",
+  brandLogo = false,
+}) {
   return (
-    <header className={`screen-header ${className}`}>
+    <header
+      className={`screen-header ${brandLogo ? "screen-header-branded" : ""} ${className}`}
+    >
       <button
         type="button"
         className="header-back"
@@ -58,6 +66,13 @@ export function ScreenHeader({ title, onBack, right, className = "" }) {
       >
         ‹
       </button>
+      {brandLogo && (
+        <img
+          className="screen-header-logo"
+          src={asset("logo-login.png")}
+          alt="*23#"
+        />
+      )}
       <strong>{title}</strong>
       <div className="header-right">{right}</div>
     </header>

@@ -3,14 +3,6 @@
   padding: 0 20px;
 }
 
-.home-mode-label {
-  color: var(--muted);
-  font-family: "Galmuri11", "Apple SD Gothic Neo", sans-serif;
-  font-size: 18px;
-  line-height: 26px;
-  white-space: nowrap;
-}
-
 .home-header-spacer {
   flex: 1;
 }
