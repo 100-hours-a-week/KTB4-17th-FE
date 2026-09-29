@@ -135,7 +135,7 @@ button:focus-visible {
   width: 100%;
   max-width: 390px;
   min-height: 100dvh;
-  height: 100dvh;
+  height: auto;
   position: relative;
   overflow: hidden;
   background: var(--canvas);
