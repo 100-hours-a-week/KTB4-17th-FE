@@ -40,10 +40,22 @@ jobs:
 
       - name: Frontend Build
         env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
           VITE_DEMO_MODE: "false"
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
         run: |
           npm ci
           npm run build
+
+      - name: Verify source maps were removed
+        run: |
+          if find "$FRONTEND_BUILD_DIR" -name '*.map' -print -quit | grep -q .; then
+            echo "Source maps remain in $FRONTEND_BUILD_DIR after the Sentry upload."
+            find "$FRONTEND_BUILD_DIR" -name '*.map' -print
+            exit 1
+          fi
 
       # CI 검사는 frontend-ci.yml에서 실행합니다.
       # - name: Biome Check

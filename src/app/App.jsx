@@ -36,6 +36,7 @@ import {
   useAppState,
 } from "../shared/appState.jsx";
 import { asset } from "../shared/assets.js";
+import { ErrorButton } from "../shared/ErrorButton.jsx";
 import {
   BottomNav,
   EmptyState,
@@ -337,6 +338,7 @@ function AppRouter() {
     <div className="app-shell">
       <div className="app-screen">
         {page}
+        <ErrorButton />
         {showNav && (
           <BottomNav
             path={path}
