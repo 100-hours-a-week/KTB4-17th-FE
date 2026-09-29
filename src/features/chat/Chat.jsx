@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { asset } from "../../shared/assets.js";
 import {
+  BrandHeader,
   EmptyState,
   Icon,
   PixelButton,
   ScreenHeader,
 } from "../../shared/ui/components.jsx";
 import * as chatApi from "./api.js";
+import { connectChatSocket } from "./socket.js";
 
 const CHAT_TIME_ZONE = "Asia/Seoul";
 const CHAT_IMAGE_MIME_TYPES = new Set([
@@ -171,6 +173,7 @@ export function mapChatRoom(item) {
     previewType === "IMAGE"
       ? "사진"
       : item.preview?.text || "아직 대화가 없어요.";
+  const activityTimestamp = parseChatDate(item.activityAt)?.getTime() || 0;
 
   return {
     id: item.chatRoomId,
@@ -178,9 +181,42 @@ export function mapChatRoom(item) {
     image: item.otherParticipant?.profileImageUrl || "",
     last: previewText,
     time: formatChatActivity(item.activityAt),
+    activityAt: item.activityAt || null,
+    activityTimestamp,
+    syncedActivityTimestamp: activityTimestamp,
     chatNotification: item.chatNotification,
     unread: Number(item.unreadCount) || 0,
   };
+}
+
+function applyRoomMessageEvent(room, event) {
+  const eventTimestamp = parseChatDate(event.createdAt)?.getTime() || 0;
+  const isNewerPreview = eventTimestamp > room.activityTimestamp;
+  const isBeyondServerSnapshot =
+    eventTimestamp > (room.syncedActivityTimestamp || 0);
+  const preview =
+    event.messageType === "IMAGE"
+      ? "사진"
+      : event.textContent || "아직 대화가 없어요.";
+
+  return {
+    ...room,
+    last: isNewerPreview ? preview : room.last,
+    time: isNewerPreview ? formatChatActivity(event.createdAt) : room.time,
+    activityAt: isNewerPreview ? event.createdAt : room.activityAt,
+    activityTimestamp: Math.max(room.activityTimestamp, eventTimestamp),
+    unread:
+      room.unread +
+      (!event.mine && isBeyondServerSnapshot ? 1 : 0),
+  };
+}
+
+function sortChatRooms(rooms) {
+  return [...rooms].sort(
+    (left, right) =>
+      right.activityTimestamp - left.activityTimestamp ||
+      Number(right.id) - Number(left.id),
+  );
 }
 
 export function mapChatMessage(item) {
@@ -216,23 +252,80 @@ export function ChatList({ navigate }) {
   const sentinelRef = useRef(null);
   const pagingRef = useRef(false);
   const roomRequestRef = useRef(0);
+  const roomEventSequenceRef = useRef(0);
+  const roomEventsRef = useRef([]);
+  const seenMessageIdsRef = useRef(new Set());
+  const roomsLoadedRef = useRef(false);
 
-  const loadRooms = useCallback(async () => {
+  const loadRooms = useCallback(async ({ silent = false } = {}) => {
     const requestId = roomRequestRef.current + 1;
     roomRequestRef.current = requestId;
-    setLoading(true);
+    const eventSequenceAtStart = roomEventSequenceRef.current;
+    if (!silent) setLoading(true);
     setError("");
     setPageError(false);
-    setNextCursor(null);
-    setHasNext(false);
+    if (!silent) {
+      setNextCursor(null);
+      setHasNext(false);
+    }
     try {
       const page = await chatApi.rooms({ size: 20 });
       if (requestId !== roomRequestRef.current) return;
-      setRooms((page?.items || []).map(mapChatRoom));
+      const refreshedRooms = (page?.items || []).map(mapChatRoom);
+      const eventsSinceRequest = roomEventsRef.current.filter(
+        (entry) => entry.sequence > eventSequenceAtStart,
+      );
+      for (const { event } of eventsSinceRequest) {
+        const roomIndex = refreshedRooms.findIndex(
+          (room) => String(room.id) === String(event.chatRoomId),
+        );
+        if (roomIndex < 0) continue;
+        const eventTimestamp = parseChatDate(event.createdAt)?.getTime() || 0;
+        if (eventTimestamp > refreshedRooms[roomIndex].syncedActivityTimestamp) {
+          refreshedRooms[roomIndex] = applyRoomMessageEvent(
+            refreshedRooms[roomIndex],
+            event,
+          );
+        }
+      }
+
+      setRooms((current) => {
+        const currentById = new Map(
+          current.map((room) => [String(room.id), room]),
+        );
+        const merged = refreshedRooms.map((room) => {
+          const localRoom = currentById.get(String(room.id));
+          if (
+            localRoom &&
+            localRoom.activityTimestamp > room.activityTimestamp
+          ) {
+            return {
+              ...room,
+              ...localRoom,
+              syncedActivityTimestamp: room.syncedActivityTimestamp,
+            };
+          }
+          return room;
+        });
+        if (silent) {
+          const refreshedIds = new Set(
+            refreshedRooms.map((room) => String(room.id)),
+          );
+          merged.push(
+            ...current.filter((room) => !refreshedIds.has(String(room.id))),
+          );
+        }
+        return sortChatRooms(merged);
+      });
+
       setNextCursor(page?.pageInfo?.nextCursor || null);
       setHasNext(Boolean(page?.pageInfo?.hasNext));
+      roomsLoadedRef.current = true;
+      roomEventsRef.current = roomEventsRef.current.filter(
+        (entry) => entry.sequence > roomEventSequenceRef.current,
+      );
     } catch (requestError) {
-      if (requestId === roomRequestRef.current)
+      if (requestId === roomRequestRef.current && !silent)
         setError(chatListErrorMessage(requestError));
     } finally {
       if (requestId === roomRequestRef.current) setLoading(false);
@@ -243,6 +336,48 @@ export function ChatList({ navigate }) {
     void loadRooms();
     return () => {
       roomRequestRef.current += 1;
+    };
+  }, [loadRooms]);
+
+  useEffect(() => {
+    let active = true;
+    const disconnect = connectChatSocket({
+      onMessage: (event) => {
+        if (!active || !event?.chatRoomId || !event?.messageId) return;
+        const eventKey = `${event.chatRoomId}:${event.messageId}`;
+        if (seenMessageIdsRef.current.has(eventKey)) return;
+        seenMessageIdsRef.current.add(eventKey);
+        if (seenMessageIdsRef.current.size > 1000) {
+          const oldest = seenMessageIdsRef.current.values().next().value;
+          seenMessageIdsRef.current.delete(oldest);
+        }
+
+        const sequence = roomEventSequenceRef.current + 1;
+        roomEventSequenceRef.current = sequence;
+        roomEventsRef.current.push({ sequence, event });
+        if (roomEventsRef.current.length > 500) roomEventsRef.current.shift();
+
+        setRooms((current) => {
+          const roomIndex = current.findIndex(
+            (room) => String(room.id) === String(event.chatRoomId),
+          );
+          if (roomIndex < 0) return current;
+          const updated = [...current];
+          updated[roomIndex] = applyRoomMessageEvent(
+            updated[roomIndex],
+            event,
+          );
+          return sortChatRooms(updated);
+        });
+      },
+      onConnected: () => {
+        if (active)
+          void loadRooms({ silent: roomsLoadedRef.current });
+      },
+    });
+    return () => {
+      active = false;
+      disconnect();
     };
   }, [loadRooms]);
 
@@ -295,13 +430,7 @@ export function ChatList({ navigate }) {
 
   return (
     <>
-      <header className="simple-topbar">
-        <img
-          className="chat-brand-logo"
-          src={asset("logo-login.png")}
-          alt="*23#"
-        />
-      </header>
+      <BrandHeader />
       <main ref={mainRef} className="main-scroll chat-list-main">
         {loading ? (
           <div className="chat-list-loading" role="status">
@@ -476,10 +605,106 @@ export function ChatRoom({
   const messagesScrollRef = useRef(null);
   const lastScrolledMessageIdRef = useRef(null);
   const imageUrlCacheRef = useRef(new Map());
+  const syncMessagesRef = useRef(null);
+  const messagesRoomReadyRef = useRef(false);
+  const roomGenerationRef = useRef(0);
+  const readCursorRef = useRef(0);
+  const readTargetRef = useRef(0);
+  const readInFlightRef = useRef(false);
+  const readRetryTimerRef = useRef(null);
+  const readRetryCountRef = useRef(0);
+  const [visibilityVersion, setVisibilityVersion] = useState(0);
+  const [messagesLoadedRoomId, setMessagesLoadedRoomId] = useState(null);
   const activeRoom = serverRoom;
   const messages = serverMessages;
   const latestMessage = messages[messages.length - 1];
   const latestMessageKey = latestMessage ? String(latestMessage.id) : "";
+
+  const requestReadThrough = useCallback(
+    (messageId) => {
+      const targetMessageId = Number(messageId);
+      if (!Number.isSafeInteger(targetMessageId) || targetMessageId <= 0)
+        return;
+      readTargetRef.current = Math.max(
+        readTargetRef.current,
+        targetMessageId,
+      );
+      if (
+        document.visibilityState === "hidden" ||
+        readInFlightRef.current ||
+        readTargetRef.current <= readCursorRef.current
+      )
+        return;
+
+      if (readRetryTimerRef.current) {
+        window.clearTimeout(readRetryTimerRef.current);
+        readRetryTimerRef.current = null;
+      }
+      readInFlightRef.current = true;
+      const generation = roomGenerationRef.current;
+      const requestedMessageId = readTargetRef.current;
+      let succeeded = false;
+
+      void chatApi
+        .markAsRead(roomId, requestedMessageId)
+        .then((result) => {
+          if (generation !== roomGenerationRef.current) return;
+          const confirmedMessageId =
+            Number(result?.lastReadMessageId) || requestedMessageId;
+          readCursorRef.current = Math.max(
+            readCursorRef.current,
+            confirmedMessageId,
+          );
+          readRetryCountRef.current = 0;
+          succeeded = true;
+        })
+        .catch(() => {
+          if (generation !== roomGenerationRef.current) return;
+          readRetryCountRef.current += 1;
+          if (
+            readRetryCountRef.current <= 3 &&
+            document.visibilityState !== "hidden"
+          ) {
+            readRetryTimerRef.current = window.setTimeout(() => {
+              readRetryTimerRef.current = null;
+              requestReadThrough(readTargetRef.current);
+            }, readRetryCountRef.current * 1000);
+          }
+        })
+        .finally(() => {
+          if (generation !== roomGenerationRef.current) return;
+          readInFlightRef.current = false;
+          if (
+            succeeded &&
+            readTargetRef.current > readCursorRef.current &&
+            document.visibilityState !== "hidden"
+          )
+            requestReadThrough(readTargetRef.current);
+        });
+    },
+    [roomId],
+  );
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible")
+        setVisibilityVersion((current) => current + 1);
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, []);
+
+  useEffect(() => {
+    if (
+      !latestMessageKey ||
+      !messagesRoomReadyRef.current ||
+      messagesLoadedRoomId !== roomId ||
+      document.visibilityState === "hidden"
+    )
+      return;
+    requestReadThrough(latestMessageKey);
+  }, [latestMessageKey, messagesLoadedRoomId, requestReadThrough, roomId, visibilityVersion]);
 
   useEffect(() => {
     if (
@@ -558,6 +783,19 @@ export function ChatRoom({
     if (!Number.isSafeInteger(roomId) || roomId <= 0) return undefined;
     let active = true;
     let hasLoaded = false;
+    messagesRoomReadyRef.current = false;
+    setMessagesLoadedRoomId(null);
+    setServerMessages([]);
+    readCursorRef.current = 0;
+    readTargetRef.current = 0;
+    readInFlightRef.current = false;
+    readRetryCountRef.current = 0;
+    roomGenerationRef.current += 1;
+    if (readRetryTimerRef.current) {
+      window.clearTimeout(readRetryTimerRef.current);
+      readRetryTimerRef.current = null;
+    }
+
     const loadMessages = async () => {
       try {
         const page = await chatApi.messages(roomId);
@@ -577,6 +815,9 @@ export function ChatRoom({
           }),
         );
         if (!active) return;
+        setRoomError("");
+        messagesRoomReadyRef.current = true;
+        setMessagesLoadedRoomId(roomId);
         setServerMessages((current) => mergeChatMessages(current, incoming));
         hasLoaded = true;
       } catch (error) {
@@ -588,13 +829,62 @@ export function ChatRoom({
         );
       }
     };
-    loadMessages();
-    const timer = window.setInterval(loadMessages, 2500);
+
+    syncMessagesRef.current = loadMessages;
+    void loadMessages();
     return () => {
       active = false;
-      window.clearInterval(timer);
+      if (syncMessagesRef.current === loadMessages)
+        syncMessagesRef.current = null;
+      messagesRoomReadyRef.current = false;
+      if (readRetryTimerRef.current) {
+        window.clearTimeout(readRetryTimerRef.current);
+        readRetryTimerRef.current = null;
+      }
     };
   }, [roomId]);
+
+  useEffect(() => {
+    if (!Number.isSafeInteger(roomId) || roomId <= 0) return undefined;
+    let active = true;
+    const disconnect = connectChatSocket({
+      onConnected: () => {
+        if (active) void syncMessagesRef.current?.();
+      },
+      onMessage: async (event) => {
+        if (
+          !active ||
+          Number(event?.chatRoomId) !== roomId ||
+          !event?.messageId
+        )
+          return;
+        const message = mapChatMessage(event);
+        if (message.type === "IMAGE" && message.imageFileId) {
+          message.imageUrl = await getChatImageAccessUrl(
+            imageUrlCacheRef.current,
+            roomId,
+            message.imageFileId,
+          );
+        }
+        if (!active) return;
+        setServerMessages((current) =>
+          mergeChatMessages(current, [message]),
+        );
+      },
+    });
+    return () => {
+      active = false;
+      disconnect();
+    };
+  }, [roomId]);
+
+  useEffect(
+    () => () => {
+      if (readRetryTimerRef.current)
+        window.clearTimeout(readRetryTimerRef.current);
+    },
+    [],
+  );
 
   function selectImage(event) {
     const file = event.currentTarget.files?.[0];
@@ -673,7 +963,9 @@ export function ChatRoom({
   }
   return (
     <>
+      <BrandHeader />
       <ScreenHeader
+        className="chat-room-header"
         title={activeRoom?.name || "채팅"}
         onBack={() => navigate("/chats")}
         right={
@@ -690,7 +982,7 @@ export function ChatRoom({
         <button
           type="button"
           disabled={!targetMemberId || simulationStartingFor != null}
-          onClick={() => void onStartSimulation(targetMemberId)}
+          onClick={() => void onStartSimulation(targetMemberId, roomId)}
         >
           {simulationStartingFor === targetMemberId
             ? "시뮬레이션 생성 중..."
@@ -699,7 +991,11 @@ export function ChatRoom({
         <button
           type="button"
           disabled={!targetMemberId}
-          onClick={() => navigate(`/ai/practice/${targetMemberId}`)}
+          onClick={() =>
+            navigate(
+              `/ai/practice/${targetMemberId}?chatRoomId=${roomId}`,
+            )
+          }
         >
           연습 대화
         </button>
