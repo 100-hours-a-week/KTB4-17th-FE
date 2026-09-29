@@ -11,6 +11,12 @@ export function beginKakaoLogin() {
   window.location.assign(`${baseUrl}/api/v1/auth/kakao`);
 }
 
+export const logout = () =>
+  apiRequest("/api/v1/auth/logout", {
+    method: "POST",
+    cache: "no-store",
+  });
+
 export function completeOAuthCallback() {
   if (oauthCallbackExchange) return oauthCallbackExchange;
 

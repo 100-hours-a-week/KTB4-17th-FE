@@ -5,6 +5,7 @@ import { useSimulationLaunch } from "../features/aisimulation/useSimulationLaunc
 import {
   beginKakaoLogin,
   completeOAuthCallback,
+  logout as logoutAuth,
 } from "../features/auth/api.js";
 import { Login, RegistrationRestricted } from "../features/auth/pages.jsx";
 import { useLocalTestLogin } from "../features/auth/useLocalTestLogin.js";
@@ -13,7 +14,12 @@ import { Likes } from "../features/matching/Likes.jsx";
 import { Notifications } from "../features/notifications/Notifications.jsx";
 import { Onboarding } from "../features/onboarding/Onboarding.jsx";
 import { Preferences } from "../features/preferences/Preferences.jsx";
-import { MyPage, MyProfile, Persona } from "../features/profile/pages.jsx";
+import {
+  MyPage,
+  MyProfile,
+  Persona,
+  Settings,
+} from "../features/profile/pages.jsx";
 import {
   Home,
   LegacyProfileRedirect,
@@ -24,7 +30,11 @@ import {
   AUTH_EXPIRED_EVENT,
   clearAccessToken,
 } from "../shared/api/authToken.js";
-import { AppStateProvider, useAppState } from "../shared/appState.jsx";
+import {
+  AppStateProvider,
+  makeInitialState,
+  useAppState,
+} from "../shared/appState.jsx";
 import { asset } from "../shared/assets.js";
 import {
   BottomNav,
@@ -39,6 +49,7 @@ function AppRouter() {
   const [toastText, setToastText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sessionCheckError, setSessionCheckError] = useState(false);
+  const [logoutPending, setLogoutPending] = useState(false);
   const navigate = useCallback((to) => {
     if (window.location.pathname !== to) window.history.pushState({}, "", to);
     setPath(to);
@@ -152,6 +163,21 @@ function AppRouter() {
     setToastText(message);
   }
 
+  async function handleLogout() {
+    if (logoutPending) return;
+    setLogoutPending(true);
+    try {
+      await logoutAuth();
+      clearAccessToken();
+      setData(makeInitialState());
+      navigate("/login");
+    } catch {
+      toast("로그아웃을 완료하지 못했어요. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setLogoutPending(false);
+    }
+  }
+
   const personId = Number(path.split("/").pop());
   const simulationRoute = path.match(/^\/ai\/simulations\/(\d+)(?:\/report)?$/);
   const simulationId = simulationRoute ? Number(simulationRoute[1]) : null;
@@ -245,6 +271,14 @@ function AppRouter() {
   else if (simulationRoute && path.endsWith("/report"))
     page = <Report simulationId={simulationId} navigate={navigate} />;
   else if (path === "/my") page = <MyPage navigate={navigate} />;
+  else if (path === "/settings")
+    page = (
+      <Settings
+        navigate={navigate}
+        onLogout={handleLogout}
+        isLoggingOut={logoutPending}
+      />
+    );
   else if (path === "/my/profile")
     page = <MyProfile navigate={navigate} toast={toast} />;
   else if (path === "/my/persona") page = <Persona navigate={navigate} />;
