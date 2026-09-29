@@ -62,6 +62,11 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
     Number.isSafeInteger(roomId) && roomId > 0 ? `/chats/${roomId}` : "/chats";
   const chatRoomQuery =
     Number.isSafeInteger(roomId) && roomId > 0 ? `?chatRoomId=${roomId}` : "";
+  const partnerMemberId = Number(partner.userId);
+  const practicePath =
+    Number.isSafeInteger(partnerMemberId) && partnerMemberId > 0
+      ? `/ai/practice/${partnerMemberId}${chatRoomQuery}`
+      : null;
   return (
     <>
       <ScreenHeader
@@ -73,7 +78,11 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
         <button type="button" className="active">
           시뮬레이션
         </button>
-        <button type="button" onClick={() => navigate("/home")}>
+        <button
+          type="button"
+          disabled={!practicePath}
+          onClick={() => practicePath && navigate(practicePath)}
+        >
           연습 대화
         </button>
         <button type="button" onClick={() => navigate(chatPath)}>
