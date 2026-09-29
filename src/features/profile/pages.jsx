@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useAppState } from "../../shared/appState.jsx";
 import { asset } from "../../shared/assets.js";
 import { readPhoto } from "../../shared/fileUtils.js";
@@ -10,7 +11,7 @@ import {
   ScreenHeader,
 } from "../../shared/ui/components.jsx";
 import { dateAge } from "../../shared/utils.js";
-import { profile as saveProfile } from "./api.js";
+import { getMyProfile, profile as saveProfile } from "./api.js";
 import {
   bodyTypes,
   drinkings,
@@ -22,20 +23,62 @@ import { profilePayload } from "./serialize.js";
 
 export function MyPage({ navigate }) {
   const { data } = useAppState();
-  const profile = data.profile;
+  const [serverProfile, setServerProfile] = useState(null);
+  const [profileLoadFailed, setProfileLoadFailed] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    getMyProfile()
+      .then((profile) => {
+        if (!active) return;
+        if (profile) setServerProfile(profile);
+        else setProfileLoadFailed(true);
+      })
+      .catch(() => {
+        if (active) setProfileLoadFailed(true);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const profile = serverProfile
+    ? {
+        ...data.profile,
+        nickname: serverProfile.nickname || "",
+        birthDate: serverProfile.birthDate || "",
+        regionName: serverProfile.activityRegionName || "",
+        photo: serverProfile.profileImageUrl || "",
+      }
+    : data.profile;
   const age = dateAge(profile.birthDate);
   return (
     <>
       <header className="my-topbar">
-        <span>*23#</span>
-        <button
-          type="button"
-          onClick={() => navigate("/notifications")}
-          aria-label="알림"
-        >
-          <Icon name="bell.svg" />
-          {data.notifications.some((item) => !item.read) && <i />}
-        </button>
+        <img
+          className="my-topbar-logo"
+          src={asset("logo-login.png")}
+          alt="*23#"
+        />
+        <div className="my-header-actions">
+          <button
+            type="button"
+            onClick={() => navigate("/notifications")}
+            aria-label="알림"
+          >
+            <Icon name="bell.svg" />
+            {data.notifications.some((item) => !item.read) && <i />}
+          </button>
+          <button
+            type="button"
+            className="my-settings-button"
+            onClick={() => navigate("/settings")}
+            aria-label="설정"
+          >
+            <span aria-hidden="true">⚙︎</span>
+          </button>
+        </div>
       </header>
       <main className="main-scroll my-main">
         <div className="my-identity">
@@ -43,24 +86,23 @@ export function MyPage({ navigate }) {
             person={{ photo: profile.photo || asset("user-avatar.png") }}
             size="large"
           />
-          <div>
-            <h1>
-              {profile.nickname || "내 프로필"}
-              {age ? `, ${age}` : ""}
-            </h1>
-            <p>
-              {[profile.job, profile.regionName].filter(Boolean).join(" · ") ||
-                "프로필 수정에서 정보를 입력해주세요."}
+          <div className="my-identity-copy">
+            <span className="my-profile-kicker">MY PLAYER CARD</span>
+            <h1>{profile.nickname || "닉네임 미등록"}</h1>
+            <p className="my-profile-age">
+              {age > 0 ? `${age}세` : "나이 정보 없음"}
+            </p>
+            <p className="my-profile-region">
+              <Icon name="detail-location.svg" />
+              {profile.regionName || "활동 지역 미설정"}
             </p>
           </div>
         </div>
-        <PixelButton
-          secondary
-          className="my-edit"
-          onClick={() => navigate("/my/profile")}
-        >
-          프로필 수정
-        </PixelButton>
+        {profileLoadFailed && (
+          <p className="my-profile-message" role="status">
+            최신 프로필을 불러오지 못해 저장된 정보를 표시하고 있어요.
+          </p>
+        )}
         <div className="my-menu">
           <button type="button" onClick={() => navigate("/my/persona")}>
             <Icon name="ai-avatar.svg" />내 페르소나 <span>활성　›</span>
@@ -82,6 +124,95 @@ export function MyPage({ navigate }) {
   );
 }
 
+export function Settings({ navigate, onLogout, isLoggingOut = false }) {
+  const [confirmingLogout, setConfirmingLogout] = useState(false);
+
+  return (
+    <>
+      <ScreenHeader title="설정" onBack={() => navigate("/my")} />
+      <main className="main-scroll settings-main">
+        <div className="settings-intro">
+          <span className="settings-kicker">OPTION MENU / 01</span>
+          <h1>계정 설정</h1>
+          <p>프로필과 로그인 상태를 관리해요.</p>
+        </div>
+        <section className="settings-action-list" aria-label="계정 설정">
+          <button
+            type="button"
+            className="settings-action"
+            onClick={() => navigate("/my/profile")}
+          >
+            <span
+              className="settings-action-icon profile-action-icon"
+              aria-hidden="true"
+            >
+              ✎
+            </span>
+            <span className="settings-action-copy">
+              <strong>프로필 수정</strong>
+              <small>닉네임과 활동 정보를 관리해요.</small>
+            </span>
+            <span className="settings-action-chevron" aria-hidden="true">
+              ›
+            </span>
+          </button>
+
+          {!confirmingLogout ? (
+            <button
+              type="button"
+              className="settings-action settings-logout"
+              onClick={() => setConfirmingLogout(true)}
+            >
+              <span
+                className="settings-action-icon logout-action-icon"
+                aria-hidden="true"
+              >
+                ↗
+              </span>
+              <span className="settings-action-copy">
+                <strong>로그아웃</strong>
+                <small>계정에서 안전하게 나가요.</small>
+              </span>
+              <span className="settings-action-chevron" aria-hidden="true">
+                ›
+              </span>
+            </button>
+          ) : (
+            <fieldset
+              className="settings-logout-confirm"
+              aria-label="로그아웃 확인"
+            >
+              <legend>정말 로그아웃할까요?</legend>
+              <p>다음에 다시 로그인할 수 있어요.</p>
+              <div className="settings-confirm-actions">
+                <button
+                  type="button"
+                  className="settings-confirm-cancel"
+                  onClick={() => setConfirmingLogout(false)}
+                  disabled={isLoggingOut}
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  className="settings-confirm-submit"
+                  onClick={onLogout}
+                  disabled={isLoggingOut}
+                >
+                  {isLoggingOut ? "로그아웃 중…" : "로그아웃"}
+                </button>
+              </div>
+            </fieldset>
+          )}
+        </section>
+        <p className="settings-footer">
+          *23# · LITTLE PIXELS, REAL CONNECTIONS.
+        </p>
+      </main>
+    </>
+  );
+}
+
 export function MyProfile({ navigate, toast }) {
   const { data, setData } = useAppState();
   const profile = data.profile;
@@ -94,11 +225,11 @@ export function MyProfile({ navigate, toast }) {
       return toast(e.code || "프로필을 저장하지 못했어요.");
     }
     toast("프로필을 저장했어요.");
-    navigate("/my");
+    navigate("/settings");
   }
   return (
     <>
-      <ScreenHeader title="프로필 수정" onBack={() => navigate("/my")} />
+      <ScreenHeader title="프로필 수정" onBack={() => navigate("/settings")} />
       <main className="main-scroll edit-main">
         <label className="edit-avatar">
           <PersonAvatar
