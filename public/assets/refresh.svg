@@ -1,0 +1,10 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+  <defs>
+    <linearGradient id="refresh-gradient" x1="5" y1="4" x2="27" y2="29" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9869E3"/>
+      <stop offset="1" stop-color="#7744C4"/>
+    </linearGradient>
+  </defs>
+  <path d="M10 4H19V8H21V4H24V14H18V11H20V9H16V7H10V9H8V11H5V8H7V6H10V4Z" fill="url(#refresh-gradient)"/>
+  <path d="M22 18H27V23H25V25H23V27H19V29H10V27H8V25H6V23H4V14H8V20H10V23H12V25H19V23H21V21H18V18H22Z" fill="url(#refresh-gradient)"/>
+</svg>
