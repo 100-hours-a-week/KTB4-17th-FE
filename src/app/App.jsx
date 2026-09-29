@@ -156,7 +156,7 @@ function AppRouter() {
   const simulationRoute = path.match(/^\/ai\/simulations\/(\d+)(?:\/report)?$/);
   const simulationId = simulationRoute ? Number(simulationRoute[1]) : null;
   const showNav =
-    data.onboarded && ["/home", "/likes", "/chats", "/my"].includes(path);
+    data.onboarded && ["/", "/home", "/likes", "/chats", "/my"].includes(path);
 
   let page;
   if (loading)
@@ -194,7 +194,6 @@ function AppRouter() {
   else if (path === "/home" || path === "/")
     page = (
       <Home
-        key={recommendations[recommendationIndex]?.id || "recommendation-empty"}
         navigate={navigate}
         toast={toast}
         recommendations={recommendations}
