@@ -215,11 +215,11 @@ export function Report({ simulationId, chatRoomId, navigate }) {
         </div>
         {(report.areas || []).map((area) => (
           <div className="report-metric" key={area.area || area.label}>
-            <span>
-              {area.label || area.area}
-              <small>{area.comment || "분석 결과를 확인해주세요."}</small>
-            </span>
-            <b>{area.gradeLabel || area.grade || "-"}</b>
+            <div className="report-metric-heading">
+              <span>{area.label || area.area}</span>
+              <b>{area.gradeLabel || area.grade || "-"}</b>
+            </div>
+            <small>{area.comment || "분석 결과를 확인해주세요."}</small>
           </div>
         ))}
         <p className="report-disclaimer">
