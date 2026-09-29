@@ -19,8 +19,8 @@ import {
   smokings,
 } from "../profile/data.js";
 import { profilePayload } from "../profile/serialize.js";
-import { getRegistrationAgeRestriction } from "../user/registrationAge.js";
 import * as userApi from "../user/api.js";
+import { getRegistrationAgeRestriction } from "../user/registrationAge.js";
 
 const ONBOARDING_STEPS = [
   "identity",

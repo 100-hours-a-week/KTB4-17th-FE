@@ -125,7 +125,8 @@ export function RegistrationRestricted({ onConfirm }) {
         {ageRestriction ? "이용할 수 있어요" : "다시 입력해주세요"}
       </h1>
       <p className="registration-restricted-subtitle">
-        {ageRestriction?.description || "만 19세 이상, 만 40세 미만만 가입할 수 있어요."}
+        {ageRestriction?.description ||
+          "만 19세 이상, 만 40세 미만만 가입할 수 있어요."}
       </p>
       <dl className="registration-restricted-card">
         <div className="registration-restricted-row">
