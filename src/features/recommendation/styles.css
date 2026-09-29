@@ -1,21 +1,6 @@
 .home-header {
-  position: relative;
-  z-index: 6;
-  height: 56px;
-  display: flex;
-  align-items: center;
   gap: 12px;
   padding: 0 20px;
-  background: var(--paper);
-  border-bottom: 2px solid var(--line);
-}
-
-.home-brand-logo {
-  display: block;
-  width: 66px;
-  height: 30px;
-  flex: 0 0 66px;
-  object-fit: contain;
 }
 
 .home-mode-label {
@@ -363,10 +348,11 @@
 
 /* Likes */
 .segmented-tabs {
-  height: 92px;
-  padding-top: 43px;
+  height: 48px;
+  padding-top: 0;
   border-bottom: 2px solid #38205f;
   display: flex;
+  align-items: stretch;
 }
 
 .segmented-tabs button {

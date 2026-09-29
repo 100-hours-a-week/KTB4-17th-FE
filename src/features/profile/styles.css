@@ -1,18 +1,6 @@
 .my-topbar {
-  height: 72px;
-  background: var(--paper);
-  display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 12px 18px 0;
-}
-
-.my-topbar-logo {
-  display: block;
-  width: 88px;
-  height: 40px;
-  object-fit: contain;
-  image-rendering: pixelated;
+  padding: 0 18px;
 }
 
 .my-header-actions {
@@ -70,7 +58,7 @@
 }
 
 .my-main {
-  top: 72px;
+  top: 56px;
   padding: 20px 0;
 }
 
@@ -83,6 +71,65 @@
   border: 2px solid #38205f;
   background: var(--paper);
   box-shadow: 3px 4px 0 #8758cf38;
+}
+
+.my-identity-loading {
+  min-height: 128px;
+}
+
+.my-profile-skeleton-avatar,
+.my-profile-skeleton {
+  display: block;
+  flex: none;
+  background: linear-gradient(90deg, #eee6f7 25%, #f9f5ff 50%, #eee6f7 75%);
+  background-size: 200% 100%;
+  animation: my-profile-skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+.my-profile-skeleton-avatar {
+  width: 88px;
+  height: 88px;
+  border: 1px solid #bda6d0;
+  border-radius: 50%;
+}
+
+.my-profile-skeleton {
+  height: 10px;
+  border: 1px solid #e3d5ef;
+}
+
+.my-profile-skeleton-kicker {
+  width: 92px;
+  height: 8px;
+}
+
+.my-profile-skeleton-name {
+  width: min(150px, 80%);
+  height: 18px;
+}
+
+.my-profile-skeleton-age {
+  width: 44px;
+  height: 10px;
+}
+
+.my-profile-skeleton-region {
+  width: min(116px, 70%);
+  height: 22px;
+  margin-top: 3px;
+}
+
+@keyframes my-profile-skeleton-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .my-profile-skeleton-avatar,
+  .my-profile-skeleton {
+    animation: none;
+  }
 }
 
 .my-identity-copy {
@@ -344,6 +391,28 @@
   color: #a69bb2;
   font-size: 10px;
   text-align: center;
+}
+
+.profile-load-state,
+.profile-load-error {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.profile-load-state {
+  margin: 32px 0;
+}
+
+.profile-load-error {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  margin: 32px 0;
+}
+
+.profile-load-error p {
+  margin: 0;
 }
 
 .edit-main {
