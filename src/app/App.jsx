@@ -345,7 +345,10 @@ function AppRouter() {
           />
         )}
         {toastText && (
-          <div className="toast" role="status">
+          <div
+            className={`toast${path === "/" || path === "/home" ? " toast-home" : ""}`}
+            role="status"
+          >
             {toastText}
           </div>
         )}

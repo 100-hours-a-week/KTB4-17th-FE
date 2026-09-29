@@ -17,6 +17,8 @@ const REFRESH_DISTANCE = 360;
 const WHEEL_NEXT_DISTANCE = 80;
 const WHEEL_PREVIOUS_DISTANCE = 80;
 const WHEEL_REFRESH_DISTANCE = 360;
+const CARD_TRANSITION_MS = 180;
+const WHEEL_GESTURE_END_MS = 220;
 
 export function Home({
   navigate,
@@ -38,7 +40,11 @@ export function Home({
   const [photoIndex, setPhotoIndex] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [actionBusy, setActionBusy] = useState("");
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isCardSettling, setIsCardSettling] = useState(false);
+  const [previewDirection, setPreviewDirection] = useState("next");
   const gestureStart = useRef(null);
+  const cardTransitionTimer = useRef(null);
   const wheelGesture = useRef({
     delta: 0,
     direction: 0,
@@ -47,13 +53,22 @@ export function Home({
   });
   const person = recommendations[currentIndex] || null;
   const personId = person?.id;
+  const previousPerson = recommendations[currentIndex - 1] || null;
   const nextPerson = recommendations[currentIndex + 1] || null;
   const nextPersonId = nextPerson?.id;
+  const previewPerson =
+    previewDirection === "previous"
+      ? previousPerson
+      : previewDirection === "next"
+        ? nextPerson
+        : null;
 
   useEffect(
     () => () => {
       if (wheelGesture.current.resetTimer)
         window.clearTimeout(wheelGesture.current.resetTimer);
+      if (cardTransitionTimer.current)
+        window.clearTimeout(cardTransitionTimer.current);
     },
     [],
   );
@@ -92,15 +107,43 @@ export function Home({
       toast(error?.code || "추천 목록을 새로고침하지 못했어요.");
     }
   }
+  function resetCardPosition() {
+    setIsCardSettling(true);
+    setDragOffset(0);
+    if (cardTransitionTimer.current)
+      window.clearTimeout(cardTransitionTimer.current);
+    cardTransitionTimer.current = window.setTimeout(() => {
+      setIsCardSettling(false);
+      setPreviewDirection("next");
+      cardTransitionTimer.current = null;
+    }, CARD_TRANSITION_MS);
+  }
+  function transitionCard(direction, action) {
+    if (cardTransitionTimer.current) return;
+    setPreviewDirection(direction);
+    setIsCardSettling(true);
+    setDragOffset(
+      direction === "next" ? -window.innerHeight : window.innerHeight,
+    );
+    cardTransitionTimer.current = window.setTimeout(() => {
+      action();
+      setIsCardSettling(false);
+      setDragOffset(0);
+      setPreviewDirection("next");
+      cardTransitionTimer.current = null;
+    }, CARD_TRANSITION_MS);
+  }
   function handleVerticalGesture(distance) {
     if (distance <= -NEXT_CARD_DISTANCE) {
-      void advance();
+      if (nextPerson || hasNext) transitionCard("next", () => void advance());
+      else resetCardPosition();
       return;
     }
-    if (distance >= PREVIOUS_CARD_DISTANCE && currentIndex > 0) {
-      onRetreat();
+    if (distance >= PREVIOUS_CARD_DISTANCE && previousPerson) {
+      transitionCard("previous", onRetreat);
       return;
     }
+    resetCardPosition();
     if (distance >= REFRESH_DISTANCE) void refreshRecommendations();
   }
   function cyclePhoto(direction) {
@@ -109,6 +152,7 @@ export function Home({
   }
   function handlePointerDown(event) {
     if (
+      isCardSettling ||
       event.isPrimary === false ||
       (event.pointerType === "mouse" && event.button !== 0) ||
       event.target.closest?.("button")
@@ -121,6 +165,7 @@ export function Home({
       x: event.clientX,
       y: event.clientY,
     };
+    setPreviewDirection("next");
   }
   function handlePointerUp(event) {
     const start = gestureStart.current;
@@ -133,9 +178,11 @@ export function Home({
 
     const x = event.clientX - start.x;
     const y = event.clientY - start.y;
-    if (Math.abs(x) >= 48 && Math.abs(x) > Math.abs(y))
+    if (Math.abs(x) >= 48 && Math.abs(x) > Math.abs(y)) {
+      resetCardPosition();
       cyclePhoto(x < 0 ? 1 : -1);
-    else if (Math.abs(y) > Math.abs(x)) handleVerticalGesture(y);
+    } else if (Math.abs(y) > Math.abs(x)) handleVerticalGesture(y);
+    else resetCardPosition();
   }
   function handlePointerMove(event) {
     const start = gestureStart.current;
@@ -143,13 +190,19 @@ export function Home({
 
     const x = event.clientX - start.x;
     const y = event.clientY - start.y;
-    if (Math.abs(y) > Math.abs(x)) event.preventDefault();
+    if (Math.abs(y) > Math.abs(x)) {
+      event.preventDefault();
+      setDragOffset(Math.max(-240, Math.min(y, 240)));
+      if (y > 0) setPreviewDirection(previousPerson ? "previous" : "none");
+      else if (y < 0) setPreviewDirection("next");
+    }
   }
   function handlePointerCancel(event) {
     if (gestureStart.current?.pointerId !== event.pointerId) return;
     gestureStart.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId))
       event.currentTarget.releasePointerCapture(event.pointerId);
+    resetCardPosition();
   }
   function handleWheel(event) {
     if (
@@ -163,41 +216,64 @@ export function Home({
     event.preventDefault();
     const direction = Math.sign(event.deltaY);
     const gesture = wheelGesture.current;
-    if (gesture.locked) return;
+    const resetWheelGesture = () => {
+      gesture.locked = false;
+      gesture.delta = 0;
+      gesture.direction = 0;
+      gesture.resetTimer = null;
+    };
+    const finishWheelGestureAfterIdle = () => {
+      if (gesture.resetTimer) window.clearTimeout(gesture.resetTimer);
+      gesture.resetTimer = window.setTimeout(
+        resetWheelGesture,
+        WHEEL_GESTURE_END_MS,
+      );
+    };
+    if (gesture.locked) {
+      finishWheelGestureAfterIdle();
+      return;
+    }
     if (gesture.direction && gesture.direction !== direction) gesture.delta = 0;
 
     gesture.direction = direction;
     gesture.delta += Math.abs(event.deltaY);
     if (gesture.resetTimer) window.clearTimeout(gesture.resetTimer);
-    if (direction > 0 && gesture.delta >= WHEEL_NEXT_DISTANCE) {
+    if (direction < 0 && gesture.delta >= WHEEL_NEXT_DISTANCE) {
       gesture.locked = true;
       gesture.delta = 0;
-      void advance();
-      window.setTimeout(() => {
-        gesture.locked = false;
-      }, 450);
+      if (nextPerson || hasNext) transitionCard("next", () => void advance());
+      finishWheelGestureAfterIdle();
       return;
     }
 
-    if (direction < 0) {
+    if (
+      direction > 0 &&
+      currentIndex > 0 &&
+      gesture.delta >= WHEEL_PREVIOUS_DISTANCE
+    ) {
+      gesture.locked = true;
+      gesture.delta = 0;
+      transitionCard("previous", onRetreat);
+      finishWheelGestureAfterIdle();
+      return;
+    }
+
+    if (direction > 0 && currentIndex === 0) {
       gesture.resetTimer = window.setTimeout(() => {
         const distance = gesture.delta;
         gesture.delta = 0;
         gesture.direction = 0;
         if (gesture.locked) return;
-        if (distance >= WHEEL_PREVIOUS_DISTANCE && currentIndex > 0) {
+        if (distance >= WHEEL_REFRESH_DISTANCE) {
           gesture.locked = true;
-          onRetreat();
-        } else if (distance >= WHEEL_REFRESH_DISTANCE) {
-          gesture.locked = true;
+          finishWheelGestureAfterIdle();
           void refreshRecommendations();
         } else {
           return;
         }
-        window.setTimeout(() => {
-          gesture.locked = false;
-        }, 450);
-      }, 160);
+      }, WHEEL_GESTURE_END_MS);
+    } else {
+      finishWheelGestureAfterIdle();
     }
   }
   async function like() {
@@ -283,19 +359,20 @@ export function Home({
           <div
             className={`recommendation-stack${nextPerson ? " has-next" : ""}`}
           >
-            {nextPerson && (
+            {previewPerson && (
               <article
-                className="recommendation-card recommendation-card-next"
+                className={`recommendation-card recommendation-card-preview is-${previewDirection}`}
                 aria-hidden="true"
               >
                 <ProfilePhoto
                   className="recommendation-photo"
-                  person={nextPerson}
+                  person={previewPerson}
                 />
               </article>
             )}
             <article
-              className="recommendation-card recommendation-card-current"
+              className={`recommendation-card recommendation-card-current${isCardSettling ? " is-settling" : ""}`}
+              style={{ transform: `translate3d(0, ${dragOffset}px, 0)` }}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
