@@ -145,9 +145,6 @@ export function Likes({ toast, onFindMatch }) {
         </button>
       </div>
       <main className="main-scroll likes-main">
-        <div className="section-heading">
-          <h1>{tab === "received" ? "받은 좋아요" : "보낸 좋아요"}</h1>
-        </div>
         {page.loading && !page.loaded ? (
           <EmptyState
             icon="♡"
