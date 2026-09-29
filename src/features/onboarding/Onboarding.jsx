@@ -431,36 +431,17 @@ export function Onboarding({ navigate, toast }) {
   const isPersonaFlowStep = PERSONA_FLOW_STEPS.has(step);
   const updateProfile = (key, value) =>
     setData((old) => ({ ...old, profile: { ...old.profile, [key]: value } }));
-  function applyKoreanName(rawName) {
-    const characters = Array.from(rawName);
-    const hangulCharacters = characters.filter(isHangulSyllable);
-    const nextName = hangulCharacters.slice(0, 8).join("");
-    const hasInvalidCharacters = hangulCharacters.length !== characters.length;
-    const exceededLength = hangulCharacters.length > 8;
-
+  function handleNameChange(event) {
+    const nextName = event.currentTarget.value;
     updateProfile("name", nextName);
     setError("");
-    if (
-      hasInvalidCharacters ||
-      exceededLength ||
-      (nameTouched && nextName.length < 2)
-    )
-      setNameHelper("이름은 한글 2~8자 이내로 입력해주세요");
-    else setNameHelper("");
-  }
-
-  function handleNameChange(event) {
-    const rawName = event.currentTarget.value;
-    setError("");
-    if (event.nativeEvent.isComposing) {
-      updateProfile("name", rawName);
-      return;
+    if (nameTouched) {
+      setNameHelper(
+        isValidKoreanName(nextName)
+          ? ""
+          : "이름은 한글 2~8자 이내로 입력해주세요",
+      );
     }
-    applyKoreanName(rawName);
-  }
-
-  function handleNameCompositionEnd(event) {
-    applyKoreanName(event.currentTarget.value);
   }
 
   function handleNameBlur() {
@@ -1010,7 +991,6 @@ export function Onboarding({ navigate, toast }) {
                     autoComplete="name"
                     value={profile.name}
                     onChange={handleNameChange}
-                    onCompositionEnd={handleNameCompositionEnd}
                     onBlur={handleNameBlur}
                     aria-invalid={!isValidKoreanName(profile.name)}
                     aria-describedby={
