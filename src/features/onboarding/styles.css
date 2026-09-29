@@ -17,6 +17,11 @@
   font-size: 21px;
 }
 
+.onboarding-back-placeholder {
+  width: 32px;
+  height: 40px;
+}
+
 .onboarding-page > .progress-track {
   margin: 0 20px;
   flex: none;
@@ -318,6 +323,8 @@
 
 .onboarding-photo-tile {
   cursor: grab;
+  touch-action: none;
+  user-select: none;
 }
 
 .onboarding-photo-tile img {
