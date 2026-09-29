@@ -300,6 +300,7 @@ export function Practice({
     hasGenerating ||
     count >= dailyLimit;
   const partnerTitle = "AI 연습 대화";
+  const backPath = chatRoomId ? `/chats/${chatRoomId}` : "/home";
   const inputPlaceholder =
     count >= dailyLimit
       ? "오늘의 연습을 마쳤어요"
@@ -314,7 +315,7 @@ export function Practice({
     <>
       <ScreenHeader
         title={partnerTitle}
-        onBack={() => navigate("/chats")}
+        onBack={() => navigate(backPath)}
         right={
           session?.status === "ACTIVE" ? (
             <button
