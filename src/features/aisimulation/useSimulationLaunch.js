@@ -5,7 +5,7 @@ export function useSimulationLaunch({ navigate, toast }) {
   const [simulationStartingFor, setSimulationStartingFor] = useState(null);
   const simulationStartRef = useRef(false);
 
-  async function startSimulation(targetMemberId) {
+  async function startSimulation(targetMemberId, chatRoomId) {
     const memberId = Number(targetMemberId);
     if (!Number.isSafeInteger(memberId) || memberId <= 0) {
       toast("시뮬레이션할 상대 정보를 찾을 수 없어요.");
@@ -15,6 +15,11 @@ export function useSimulationLaunch({ navigate, toast }) {
 
     simulationStartRef.current = true;
     setSimulationStartingFor(memberId);
+    const roomId = Number(chatRoomId);
+    const chatRoomQuery =
+      Number.isSafeInteger(roomId) && roomId > 0
+        ? `?chatRoomId=${roomId}`
+        : "";
     try {
       const simulation = await createAiSimulation(memberId);
       if (!simulation?.simulationId) {
@@ -22,7 +27,7 @@ export function useSimulationLaunch({ navigate, toast }) {
         error.code = "SIMULATION_CREATE_FAILED";
         throw error;
       }
-      navigate(`/ai/simulations/${simulation.simulationId}`);
+      navigate(`/ai/simulations/${simulation.simulationId}${chatRoomQuery}`);
       return true;
     } catch (error) {
       const messages = {

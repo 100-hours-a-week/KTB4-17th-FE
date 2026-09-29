@@ -8,7 +8,7 @@ import {
 import { MessageBubble } from "../chat/Chat.jsx";
 import * as aiSimulationApi from "./api.js";
 
-export function Simulation({ simulationId, navigate }) {
+export function Simulation({ simulationId, chatRoomId, navigate }) {
   const [simulation, setSimulation] = useState(null);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -57,6 +57,15 @@ export function Simulation({ simulationId, navigate }) {
 
   const partner = simulation.partner || {};
   const me = simulation.me || {};
+  const roomId = Number(chatRoomId);
+  const chatPath =
+    Number.isSafeInteger(roomId) && roomId > 0
+      ? `/chats/${roomId}`
+      : "/chats";
+  const chatRoomQuery =
+    Number.isSafeInteger(roomId) && roomId > 0
+      ? `?chatRoomId=${roomId}`
+      : "";
   return (
     <>
       <ScreenHeader
@@ -71,7 +80,7 @@ export function Simulation({ simulationId, navigate }) {
         <button type="button" onClick={() => navigate("/home")}>
           연습 대화
         </button>
-        <button type="button" onClick={() => navigate("/chats")}>
+        <button type="button" onClick={() => navigate(chatPath)}>
           채팅
         </button>
       </div>
@@ -121,7 +130,11 @@ export function Simulation({ simulationId, navigate }) {
           <span style={{ width: "100%" }} />
         </div>
         <PixelButton
-          onClick={() => navigate(`/ai/simulations/${simulationId}/report`)}
+          onClick={() =>
+            navigate(
+              `/ai/simulations/${simulationId}/report${chatRoomQuery}`,
+            )
+          }
         >
           리포트 확인하기 ↗
         </PixelButton>
@@ -130,7 +143,7 @@ export function Simulation({ simulationId, navigate }) {
   );
 }
 
-export function Report({ simulationId, navigate }) {
+export function Report({ simulationId, chatRoomId, navigate }) {
   const [report, setReport] = useState(null);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -147,6 +160,11 @@ export function Report({ simulationId, navigate }) {
       active = false;
     };
   }, [simulationId]);
+  const roomId = Number(chatRoomId);
+  const simulationPath =
+    Number.isSafeInteger(roomId) && roomId > 0
+      ? `/ai/simulations/${simulationId}?chatRoomId=${roomId}`
+      : `/ai/simulations/${simulationId}`;
   if (error)
     return (
       <EmptyState
@@ -155,7 +173,7 @@ export function Report({ simulationId, navigate }) {
         description="잠시 후 다시 시도해주세요."
         action={
           <PixelButton
-            onClick={() => navigate(`/ai/simulations/${simulationId}`)}
+            onClick={() => navigate(simulationPath)}
           >
             시뮬레이션으로 돌아가기
           </PixelButton>
@@ -174,7 +192,7 @@ export function Report({ simulationId, navigate }) {
     <>
       <ScreenHeader
         title="궁합 리포트"
-        onBack={() => navigate(`/ai/simulations/${simulationId}`)}
+        onBack={() => navigate(simulationPath)}
       />
       <main className="main-scroll report-main">
         <div className="report-intro">
