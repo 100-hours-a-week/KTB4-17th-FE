@@ -45,17 +45,40 @@ export function Home({
     setPhotoIndex((current) => (current + direction + count) % count);
   }
   function handlePointerDown(event) {
-    gestureStart.current = { x: event.clientX, y: event.clientY };
+    if (
+      event.isPrimary === false ||
+      (event.pointerType === "mouse" && event.button !== 0) ||
+      event.target.closest?.("button")
+    )
+      return;
+
+    event.currentTarget.setPointerCapture(event.pointerId);
+    gestureStart.current = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+    };
   }
   function handlePointerUp(event) {
     const start = gestureStart.current;
     gestureStart.current = null;
-    if (!start || !person || actionBusy) return;
+    if (!start || start.pointerId !== event.pointerId) return;
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId))
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    if (!person || actionBusy) return;
+
     const x = event.clientX - start.x;
     const y = event.clientY - start.y;
     if (Math.abs(x) >= 48 && Math.abs(x) > Math.abs(y))
       cyclePhoto(x < 0 ? 1 : -1);
     else if (y <= -64 && Math.abs(y) > Math.abs(x)) void advance();
+  }
+  function handlePointerCancel(event) {
+    if (gestureStart.current?.pointerId !== event.pointerId) return;
+    gestureStart.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId))
+      event.currentTarget.releasePointerCapture(event.pointerId);
   }
   async function like() {
     if (!person || actionBusy) return;
@@ -146,6 +169,8 @@ export function Home({
             className="recommendation-card"
             onPointerDown={handlePointerDown}
             onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+            onDragStart={(event) => event.preventDefault()}
           >
             <ProfilePhoto
               className="recommendation-photo"

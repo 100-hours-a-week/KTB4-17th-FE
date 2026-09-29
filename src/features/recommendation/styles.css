@@ -80,7 +80,8 @@
   border-radius: 8px;
   box-shadow: 4px 4px 0 #38205f29;
   background: #ddc8e7;
-  touch-action: pan-y;
+  touch-action: none;
+  user-select: none;
 }
 
 .recommendation-photo {
