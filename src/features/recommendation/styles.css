@@ -53,12 +53,12 @@
 
 .home-main {
   top: 56px;
-  padding: 0 16px 8px;
+  padding: 16px 16px 8px;
 }
 
 .recommendation-card {
   width: 100%;
-  height: min(600px, calc(100dvh - 144px));
+  height: min(600px, calc(100dvh - 160px));
   position: relative;
   overflow: hidden;
   border: 1px solid #b398d1;

@@ -10,6 +10,6 @@
   }
 
   .recommendation-card {
-    height: min(600px, calc(100dvh - 192px));
+    height: min(600px, calc(100dvh - 208px));
   }
 }

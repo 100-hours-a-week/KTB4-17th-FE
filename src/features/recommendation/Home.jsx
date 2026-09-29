@@ -97,11 +97,11 @@ export function Home({
       void advance();
       return;
     }
-    if (distance >= REFRESH_DISTANCE) {
-      void refreshRecommendations();
+    if (distance >= PREVIOUS_CARD_DISTANCE && currentIndex > 0) {
+      onRetreat();
       return;
     }
-    if (distance >= PREVIOUS_CARD_DISTANCE) onRetreat();
+    if (distance >= REFRESH_DISTANCE) void refreshRecommendations();
   }
   function cyclePhoto(direction) {
     const count = Math.max(profilePhotoUrls(person).length, 1);
@@ -185,12 +185,12 @@ export function Home({
         gesture.delta = 0;
         gesture.direction = 0;
         if (gesture.locked) return;
-        if (distance >= WHEEL_REFRESH_DISTANCE) {
-          gesture.locked = true;
-          void refreshRecommendations();
-        } else if (distance >= WHEEL_PREVIOUS_DISTANCE) {
+        if (distance >= WHEEL_PREVIOUS_DISTANCE && currentIndex > 0) {
           gesture.locked = true;
           onRetreat();
+        } else if (distance >= WHEEL_REFRESH_DISTANCE) {
+          gesture.locked = true;
+          void refreshRecommendations();
         } else {
           return;
         }
