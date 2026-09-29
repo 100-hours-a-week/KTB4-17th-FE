@@ -62,7 +62,6 @@ export function BottomNav({ path, navigate, onRefreshHome }) {
   return (
     <nav className="bottom-nav" aria-label="주요 메뉴">
       {tabItems.map(([label, href, icon]) => {
-        const disabled = href === "/my";
         return (
           <button
             type="button"
@@ -76,7 +75,6 @@ export function BottomNav({ path, navigate, onRefreshHome }) {
               }
               navigate(href);
             }}
-            disabled={disabled}
             aria-current={path.startsWith(href) ? "page" : undefined}
           >
             <Icon name={icon} />
