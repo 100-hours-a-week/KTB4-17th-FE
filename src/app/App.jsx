@@ -338,7 +338,7 @@ function AppRouter() {
         navigate={navigate}
       />
     );
-  else if (path === "/my") page = <MyPage navigate={navigate} />;
+  else if (path === "/my") page = <MyPage navigate={navigate} toast={toast} />;
   else if (path === "/settings")
     page = (
       <Settings

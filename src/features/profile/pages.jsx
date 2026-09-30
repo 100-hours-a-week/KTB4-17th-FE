@@ -22,7 +22,7 @@ import {
 } from "./data.js";
 import { profilePayload } from "./serialize.js";
 
-export function MyPage({ navigate }) {
+export function MyPage({ navigate, toast }) {
   const { data } = useAppState();
   const [serverProfile, setServerProfile] = useState(null);
   const [isProfileLoading, setIsProfileLoading] = useState(true);
@@ -64,7 +64,8 @@ export function MyPage({ navigate }) {
         <div className="my-header-actions">
           <button
             type="button"
-            onClick={() => navigate("/notifications")}
+            aria-disabled="true"
+            onClick={() => toast("알림 기능은 준비 중이에요.")}
             aria-label="알림"
           >
             <Icon name="bell.svg" />
@@ -128,14 +129,22 @@ export function MyPage({ navigate }) {
           <button type="button" onClick={() => navigate("/my/persona")}>
             <Icon name="ai-avatar.svg" />내 페르소나 <span>활성　›</span>
           </button>
-          <button type="button" onClick={() => navigate("/notifications")}>
+          <button
+            type="button"
+            aria-disabled="true"
+            onClick={() => toast("알림 기능은 준비 중이에요.")}
+          >
             <Icon name="bell.svg" />
             알림{" "}
             <span>
               {data.notifications.filter((item) => !item.read).length || ""}　›
             </span>
           </button>
-          <button type="button" onClick={() => navigate("/preferences")}>
+          <button
+            type="button"
+            aria-disabled="true"
+            onClick={() => toast("선호 설정은 준비 중이에요.")}
+          >
             <span className="menu-glyph">⚙</span>선호 설정 <span>›</span>
           </button>
         </div>
