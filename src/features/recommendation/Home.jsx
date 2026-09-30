@@ -156,6 +156,13 @@ export function Home({
     const count = Math.max(profilePhotoUrls(person).length, 1);
     setPhotoIndex((current) => (current + direction + count) % count);
   }
+  function selectAdjacentPhoto(direction) {
+    const count = profilePhotoUrls(person).length;
+    if (count <= 1) return;
+    setPhotoIndex((current) =>
+      Math.max(0, Math.min(current + direction, count - 1)),
+    );
+  }
   function handlePointerDown(event) {
     if (
       isCardSettling ||
@@ -189,7 +196,12 @@ export function Home({
         void refreshRecommendations();
       return;
     }
-    if (Math.abs(x) >= 48 && Math.abs(x) > Math.abs(y)) {
+    if (Math.abs(x) <= 8 && Math.abs(y) <= 8) {
+      const bounds = event.currentTarget.getBoundingClientRect();
+      const direction = event.clientX < bounds.left + bounds.width / 2 ? -1 : 1;
+      resetCardPosition();
+      selectAdjacentPhoto(direction);
+    } else if (Math.abs(x) >= 48 && Math.abs(x) > Math.abs(y)) {
       resetCardPosition();
       cyclePhoto(x < 0 ? 1 : -1);
     } else if (Math.abs(y) > Math.abs(x)) handleVerticalGesture(y);
@@ -401,9 +413,7 @@ export function Home({
             />
           </div>
         ) : (
-          <div
-            className={`recommendation-stack${nextPerson ? " has-next" : ""}`}
-          >
+          <div className="recommendation-stack">
             {previewPerson && (
               <article
                 className={`recommendation-card recommendation-card-preview is-${previewDirection}`}
