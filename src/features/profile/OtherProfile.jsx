@@ -1,7 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PhotoSegments, ProfilePhoto } from "../../shared/ui/components.jsx";
 import { getMemberProfile } from "./api.js";
+import {
+  bodyTypes,
+  drinkings,
+  educationLevels,
+  religions,
+  smokings,
+} from "./data.js";
 import "./other-profile.css";
+
+function profileChoiceLabel(options, value) {
+  if (!value) return "정보 없음";
+  return options.find(([option]) => option === value)?.[1] || value;
+}
 
 export function OtherProfile({ memberId, returnTo, navigate }) {
   const [profile, setProfile] = useState(null);
@@ -101,6 +113,42 @@ export function OtherProfile({ memberId, returnTo, navigate }) {
   }
 
   const profileName = profile?.nickname || "상대 회원";
+  const profileDetails = profile
+    ? [
+        {
+          label: "키",
+          value:
+            profile.height == null || profile.height === ""
+              ? "정보 없음"
+              : `${profile.height} cm`,
+        },
+        {
+          label: "체형",
+          value: profileChoiceLabel(bodyTypes, profile.bodyType),
+        },
+        {
+          label: "학력",
+          value: profileChoiceLabel(educationLevels, profile.educationLevel),
+        },
+      ]
+    : [];
+  const lifestyleDetails = profile
+    ? [
+        {
+          label: "종교",
+          value: profileChoiceLabel(religions, profile.religion),
+        },
+        {
+          label: "음주",
+          value: profileChoiceLabel(drinkings, profile.drinking),
+        },
+        {
+          label: "흡연",
+          value: profileChoiceLabel(smokings, profile.smoking),
+        },
+        { label: "MBTI", value: profile.mbti || "정보 없음" },
+      ]
+    : [];
 
   return (
     <main className="other-profile-page">
@@ -184,6 +232,38 @@ export function OtherProfile({ memberId, returnTo, navigate }) {
               </p>
             )}
           </div>
+          <section
+            className="other-profile-detail-section"
+            aria-label="프로필 상세 정보"
+          >
+            <h2 className="other-profile-section-title">
+              <span aria-hidden="true">01</span> 기본 정보
+            </h2>
+            <dl className="other-profile-detail-grid">
+              {profileDetails.map(({ label, value }) => (
+                <div className="other-profile-detail-tile" key={label}>
+                  <dt>{label}</dt>
+                  <dd>{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+          <section
+            className="other-profile-detail-section"
+            aria-label="라이프스타일"
+          >
+            <h2 className="other-profile-section-title">
+              <span aria-hidden="true">02</span> 라이프스타일
+            </h2>
+            <dl className="other-profile-detail-grid other-profile-lifestyle-grid">
+              {lifestyleDetails.map(({ label, value }) => (
+                <div className="other-profile-detail-tile" key={label}>
+                  <dt>{label}</dt>
+                  <dd>{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
         </section>
       ) : (
         !loading && (
