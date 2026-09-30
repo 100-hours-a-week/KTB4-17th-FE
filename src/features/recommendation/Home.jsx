@@ -44,7 +44,6 @@ export function Home({
   const [isCardSettling, setIsCardSettling] = useState(false);
   const [previewDirection, setPreviewDirection] = useState("next");
   const gestureStart = useRef(null);
-  const suppressPhotoClick = useRef(false);
   const cardRef = useRef(null);
   const cardTransitionTimer = useRef(null);
   const wheelHandlerRef = useRef(null);
@@ -164,17 +163,6 @@ export function Home({
       Math.max(0, Math.min(current + direction, count - 1)),
     );
   }
-  function handleCardClick(event) {
-    if (suppressPhotoClick.current) {
-      suppressPhotoClick.current = false;
-      return;
-    }
-    if (!person || actionBusy || event.target.closest?.("button")) return;
-
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const direction = event.clientX < bounds.left + bounds.width / 2 ? -1 : 1;
-    selectAdjacentPhoto(direction);
-  }
   function handlePointerDown(event) {
     if (
       isCardSettling ||
@@ -184,7 +172,6 @@ export function Home({
     )
       return;
 
-    suppressPhotoClick.current = false;
     event.currentTarget.setPointerCapture(event.pointerId);
     gestureStart.current = {
       pointerId: event.pointerId,
@@ -204,13 +191,17 @@ export function Home({
 
     const x = event.clientX - start.x;
     const y = event.clientY - start.y;
-    suppressPhotoClick.current = Math.abs(x) > 8 || Math.abs(y) > 8;
     if (!person) {
       if (Math.abs(y) > Math.abs(x) && y >= REFRESH_DISTANCE)
         void refreshRecommendations();
       return;
     }
-    if (Math.abs(x) >= 48 && Math.abs(x) > Math.abs(y)) {
+    if (Math.abs(x) <= 8 && Math.abs(y) <= 8) {
+      const bounds = event.currentTarget.getBoundingClientRect();
+      const direction = event.clientX < bounds.left + bounds.width / 2 ? -1 : 1;
+      resetCardPosition();
+      selectAdjacentPhoto(direction);
+    } else if (Math.abs(x) >= 48 && Math.abs(x) > Math.abs(y)) {
       resetCardPosition();
       cyclePhoto(x < 0 ? 1 : -1);
     } else if (Math.abs(y) > Math.abs(x)) handleVerticalGesture(y);
@@ -442,7 +433,6 @@ export function Home({
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerCancel}
-              onClick={handleCardClick}
               onDragStart={(event) => event.preventDefault()}
             >
               <ProfilePhoto
