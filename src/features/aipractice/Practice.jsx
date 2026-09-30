@@ -457,9 +457,10 @@ export function Practice({
             종료된 대화의 기록을 보고 있어요.
           </p>
         )}
-        <div className="practice-compose-row">
+        <div className="message-composer-controls">
           <input
             ref={composerInputRef}
+            className="message-text-input"
             value={input}
             onChange={(event) => setInput(event.target.value)}
             placeholder={inputPlaceholder}
@@ -469,7 +470,6 @@ export function Practice({
           />
           <button
             type="submit"
-            className="practice-send-button"
             disabled={!input.trim() || inputDisabled}
             aria-label="보내기"
           >

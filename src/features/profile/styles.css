@@ -22,9 +22,12 @@
   box-shadow: 2px 2px 0 #352a4840;
 }
 
-.my-topbar button:where(:hover) {
-  transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 #352a4840;
+/* Only devices with a real hover pointer should receive hover movement. */
+@media (hover: hover) and (pointer: fine) {
+  .my-topbar button:where(:hover) {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 #352a4840;
+  }
 }
 
 .my-topbar button:where(:focus-visible) {
@@ -106,10 +109,12 @@
   color: var(--purple);
 }
 
-.my-identity > .my-settings-button:hover {
-  transform: translate(-1px, -1px);
-  background: #efe3fa;
-  box-shadow: none;
+@media (hover: hover) and (pointer: fine) {
+  .my-identity > .my-settings-button:hover {
+    transform: translate(-1px, -1px);
+    background: #efe3fa;
+    box-shadow: none;
+  }
 }
 
 .my-identity-loading {
@@ -128,8 +133,9 @@
   display: block;
   flex: none;
   background: linear-gradient(90deg, #eee6f7 25%, #f9f5ff 50%, #eee6f7 75%);
-  background-size: 200% 100%;
-  animation: my-profile-skeleton-shimmer 1.2s ease-in-out infinite;
+
+  /* Pulse opacity instead of repainting a moving gradient. */
+  animation: my-profile-skeleton-pulse 1.2s ease-in-out infinite alternate;
 }
 
 .my-profile-skeleton-avatar {
@@ -165,9 +171,9 @@
   margin-top: 3px;
 }
 
-@keyframes my-profile-skeleton-shimmer {
+@keyframes my-profile-skeleton-pulse {
   to {
-    background-position: -200% 0;
+    opacity: 0.56;
   }
 }
 
@@ -323,9 +329,11 @@
   text-align: left;
 }
 
-.settings-action:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 4px 5px 0 #8758cf38;
+@media (hover: hover) and (pointer: fine) {
+  .settings-action:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 5px 0 #8758cf38;
+  }
 }
 
 .settings-action:focus-visible,

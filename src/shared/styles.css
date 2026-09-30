@@ -57,6 +57,7 @@
   --lavender: #dcc7fa;
   --pink: #f6bde2;
   --soft-lavender: #f5ebff;
+  --motion-press-ease: cubic-bezier(0.23, 1, 0.32, 1);
   --pixel-step-shape: polygon(
     6px 0,
     calc(100% - 6px) 0,
@@ -92,6 +93,12 @@ body,
   min-height: 100%;
 }
 
+/* Let the screen's own scroller handle overscroll instead of browser refresh. */
+html,
+body {
+  overscroll-behavior-y: none;
+}
+
 body {
   min-width: 320px;
 }
@@ -103,9 +110,14 @@ select {
   font: inherit;
 }
 
+/* Keep touch taps immediate and make enabled buttons respond on press. */
 button {
   cursor: pointer;
   color: inherit;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  transition: transform 140ms var(--motion-press-ease);
 }
 
 button:disabled {
@@ -425,6 +437,10 @@ small {
   color: var(--muted);
   font-family: "Galmuri14", "Apple SD Gothic Neo", sans-serif;
   font-size: 14px;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .bottom-nav button.active {
