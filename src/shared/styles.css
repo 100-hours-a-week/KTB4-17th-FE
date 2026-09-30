@@ -116,13 +116,8 @@ button {
   color: inherit;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  -webkit-user-select: none;
   user-select: none;
   transition: transform 140ms var(--motion-press-ease);
-}
-
-button:active:not(:disabled) {
-  transform: scale(0.97);
 }
 
 button:disabled {
@@ -442,6 +437,10 @@ small {
   color: var(--muted);
   font-family: "Galmuri14", "Apple SD Gothic Neo", sans-serif;
   font-size: 14px;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .bottom-nav button.active {

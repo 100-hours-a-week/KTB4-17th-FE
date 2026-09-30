@@ -5,7 +5,7 @@
 
 /* Avoid iOS Safari zooming the viewport when a small text field is focused. */
 @media (hover: none) and (pointer: coarse) {
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  input:not([type="checkbox"], [type="radio"], [type="range"]),
   textarea,
   select {
     font-size: 16px;

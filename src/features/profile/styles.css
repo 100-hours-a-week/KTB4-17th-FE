@@ -133,6 +133,7 @@
   display: block;
   flex: none;
   background: linear-gradient(90deg, #eee6f7 25%, #f9f5ff 50%, #eee6f7 75%);
+
   /* Pulse opacity instead of repainting a moving gradient. */
   animation: my-profile-skeleton-pulse 1.2s ease-in-out infinite alternate;
 }

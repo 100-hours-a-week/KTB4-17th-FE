@@ -137,7 +137,7 @@
   line-height: 1.4;
 }
 
-.other-profile-info h1 > span:first-child {
+.other-profile-info h1 > span:where(:first-child) {
   color: var(--muted);
   font-size: 19px;
 }
