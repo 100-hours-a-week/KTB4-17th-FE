@@ -46,11 +46,18 @@
 .home-main {
   top: 56px;
   padding: 16px 16px 8px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.home-main::-webkit-scrollbar {
+  display: none;
 }
 
 .recommendation-empty-refresh {
   min-height: 100%;
   touch-action: none;
+  user-select: none;
 }
 
 .recommendation-card {
@@ -71,6 +78,7 @@
 }
 
 .recommendation-stack.has-next {
+  margin-top: -12px;
   padding-bottom: 20px;
 }
 
