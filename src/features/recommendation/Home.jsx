@@ -340,10 +340,24 @@ export function Home({
         </button>
         {menuOpen && (
           <nav className="home-menu" aria-label="홈 메뉴">
-            <button type="button" onClick={() => navigate("/preferences")}>
+            <button
+              type="button"
+              aria-disabled="true"
+              onClick={() => {
+                setMenuOpen(false);
+                toast("선호 설정은 준비 중이에요.");
+              }}
+            >
               선호 설정
             </button>
-            <button type="button" onClick={() => navigate("/notifications")}>
+            <button
+              type="button"
+              aria-disabled="true"
+              onClick={() => {
+                setMenuOpen(false);
+                toast("알림 기능은 준비 중이에요.");
+              }}
+            >
               알림
             </button>
           </nav>
