@@ -21,8 +21,13 @@ export function mapLikeItem(item, tab) {
   };
 }
 
-export function Likes({ toast, onFindMatch }) {
-  const [tab, setTab] = useState("received");
+export function Likes({
+  toast,
+  onFindMatch,
+  navigate,
+  initialTab = "received",
+}) {
+  const [tab, setTab] = useState(initialTab === "sent" ? "sent" : "received");
   const [rejectTarget, setRejectTarget] = useState(null);
   const [actionLikeId, setActionLikeId] = useState(null);
   const requestInFlight = useRef({ received: false, sent: false });
@@ -111,6 +116,14 @@ export function Likes({ toast, onFindMatch }) {
       setActionLikeId(null);
     }
   }
+  function openProfile(person) {
+    if (!person.memberId) return;
+    const returnTo = `/likes?tab=${tab}`;
+    navigate(
+      `/profiles/${person.memberId}?returnTo=${encodeURIComponent(returnTo)}`,
+    );
+  }
+
   async function rejectLike() {
     if (!rejectTarget || actionLikeId != null) return;
     setActionLikeId(rejectTarget.id);
@@ -183,7 +196,15 @@ export function Likes({ toast, onFindMatch }) {
             {page.items.map((person) => (
               <article className="like-card" key={person.id}>
                 <div className="like-person">
-                  <PersonAvatar person={person} />
+                  <button
+                    type="button"
+                    className="like-avatar-button"
+                    aria-label={`${person.nickname} 프로필 보기`}
+                    onClick={() => openProfile(person)}
+                    disabled={!person.memberId}
+                  >
+                    <PersonAvatar person={person} />
+                  </button>
                   <span>
                     <strong>
                       {person.nickname}

@@ -563,6 +563,7 @@ export function MessageBubble({
   chatRoom = false,
   onViewImage,
   onImageLoaded,
+  onViewProfile,
 }) {
   const isImage = message.type === "IMAGE";
   return (
@@ -572,16 +573,36 @@ export function MessageBubble({
       {ai && !message.mine && (
         <Icon name="ai-avatar.svg" className="bubble-avatar" />
       )}
-      {!ai && !message.mine && (
-        <img
-          className="bubble-avatar profile-bubble-avatar"
-          src={avatar || asset("chat-avatar-heart-terminal.svg")}
-          alt=""
-          onError={(event) => {
-            event.currentTarget.src = asset("chat-avatar-heart-terminal.svg");
-          }}
-        />
-      )}
+      {!ai &&
+        !message.mine &&
+        (onViewProfile ? (
+          <button
+            type="button"
+            className="profile-bubble-avatar-button"
+            aria-label={`${senderName || "상대 회원"} 프로필 보기`}
+            onClick={onViewProfile}
+          >
+            <img
+              className="bubble-avatar profile-bubble-avatar"
+              src={avatar || asset("chat-avatar-heart-terminal.svg")}
+              alt=""
+              onError={(event) => {
+                event.currentTarget.src = asset(
+                  "chat-avatar-heart-terminal.svg",
+                );
+              }}
+            />
+          </button>
+        ) : (
+          <img
+            className="bubble-avatar profile-bubble-avatar"
+            src={avatar || asset("chat-avatar-heart-terminal.svg")}
+            alt=""
+            onError={(event) => {
+              event.currentTarget.src = asset("chat-avatar-heart-terminal.svg");
+            }}
+          />
+        ))}
       <div className={`bubble-group ${chatRoom ? "chat-bubble-group" : ""}`}>
         {chatRoom && !message.mine && !ai && senderName && (
           <span className="message-sender-name">{senderName}</span>
@@ -1109,6 +1130,14 @@ export function ChatRoom({
                   senderName={activeRoom?.name || ""}
                   chatRoom
                   onViewImage={setViewingImage}
+                  onViewProfile={
+                    targetMemberId
+                      ? () =>
+                          navigate(
+                            `/profiles/${targetMemberId}?returnTo=${encodeURIComponent(`/chats/${roomId}`)}`,
+                          )
+                      : undefined
+                  }
                   onImageLoaded={
                     String(message.id) === latestMessageKey
                       ? scrollToLatestMessage

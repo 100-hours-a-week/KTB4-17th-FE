@@ -3,6 +3,9 @@ import { uploadFile } from "../../shared/api/files.js";
 
 export const getMyProfile = () => apiRequest("/api/v1/users/me/profile");
 
+export const getMemberProfile = (memberId) =>
+  apiRequest(`/api/v1/users/${encodeURIComponent(memberId)}/profile`);
+
 export const profile = (body) =>
   apiRequest("/api/v1/users/me/profile", { method: "PUT", body });
 

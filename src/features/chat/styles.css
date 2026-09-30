@@ -48,8 +48,11 @@
   cursor: pointer;
 }
 
-.chat-list-item:hover {
-  background: #f2ecf9;
+/* Ignore simulated sticky hover on touch-only input. */
+@media (hover: hover) and (pointer: fine) {
+  .chat-list-item:hover {
+    background: #f2ecf9;
+  }
 }
 
 .chat-room-avatar {

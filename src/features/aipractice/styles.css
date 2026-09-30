@@ -64,22 +64,6 @@ div.practice-retry button.practice-retry-button:disabled {
   gap: 6px;
 }
 
-.practice-compose-row input {
-  min-width: 0;
-  flex: 1;
-}
-
-.practice-compose-row {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 10px;
-  width: 100%;
-}
-
-form.practice-composer .practice-compose-row button.practice-send-button {
-  flex: 0 0 42px;
-}
-
 .practice-send-error {
   position: absolute;
   bottom: calc(100% + 4px);

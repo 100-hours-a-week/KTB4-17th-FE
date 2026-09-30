@@ -33,6 +33,17 @@
   background: var(--paper);
 }
 
+.like-avatar-button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 56px;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
 .like-person {
   border: 0;
   padding: 0;
