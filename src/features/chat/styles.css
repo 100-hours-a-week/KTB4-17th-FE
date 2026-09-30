@@ -1,7 +1,28 @@
 .chat-room-header {
+  position: relative;
   height: 40px;
   padding: 0 16px;
   border-bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-room-header .header-back {
+  position: absolute;
+  left: 16px;
+}
+
+.chat-room-header .header-right {
+  position: absolute;
+  right: 16px;
+}
+
+.chat-room-header strong {
+  max-width: calc(100% - 112px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chat-list-main {

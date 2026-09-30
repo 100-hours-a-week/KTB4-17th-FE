@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ScreenHeader } from "../../shared/ui/components.jsx";
+import { BrandHeader, ScreenHeader } from "../../shared/ui/components.jsx";
 import { MessageBubble } from "../chat/Chat.jsx";
 import * as aiPracticeApi from "./api.js";
 import { connectAiPracticeSocket } from "./socket.js";
@@ -322,9 +322,10 @@ export function Practice({
             : "메시지를 입력하세요";
   return (
     <>
+      <BrandHeader />
       <ScreenHeader
+        className="chat-room-header"
         title={partnerTitle}
-        brandLogo
         onBack={() => navigate(backPath)}
         right={
           session?.status === "ACTIVE" ? (

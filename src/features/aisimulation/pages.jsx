@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  BrandHeader,
   EmptyState,
   Icon,
   PixelButton,
@@ -36,9 +37,10 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
   if (error || !simulation)
     return (
       <>
+        <BrandHeader />
         <ScreenHeader
+          className="chat-room-header"
           title="시뮬레이션"
-          brandLogo
           onBack={() => navigate("/home")}
         />
         <main className="main-scroll ai-screen-state-main">
@@ -78,9 +80,10 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
       : null;
   return (
     <>
+      <BrandHeader />
       <ScreenHeader
+        className="chat-room-header"
         title={partner.nickname || "시뮬레이션"}
-        brandLogo
         onBack={() => navigate("/home")}
         right={<Icon name="ai-avatar.svg" />}
       />
@@ -181,9 +184,10 @@ export function Report({ simulationId, chatRoomId, navigate }) {
   if (error || !report)
     return (
       <>
+        <BrandHeader />
         <ScreenHeader
+          className="chat-room-header"
           title="궁합 리포트"
-          brandLogo
           onBack={() => navigate(simulationPath)}
         />
         <main className="main-scroll ai-screen-state-main">
@@ -210,9 +214,10 @@ export function Report({ simulationId, chatRoomId, navigate }) {
     );
   return (
     <>
+      <BrandHeader />
       <ScreenHeader
+        className="chat-room-header"
         title="궁합 리포트"
-        brandLogo
         onBack={() => navigate(simulationPath)}
       />
       <main className="main-scroll report-main">
