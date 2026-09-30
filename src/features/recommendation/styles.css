@@ -75,11 +75,9 @@
 
 .recommendation-stack {
   position: relative;
-}
-
-.recommendation-stack.has-next {
-  margin-top: -12px;
-  padding-bottom: 20px;
+  min-height: 100%;
+  display: grid;
+  place-items: center;
 }
 
 .recommendation-card-current {
@@ -94,14 +92,11 @@
 .recommendation-card-preview {
   position: absolute;
   z-index: 1;
-  top: 0;
+  top: 50%;
   left: 0;
   right: 0;
+  transform: translateY(-50%);
   pointer-events: none;
-}
-
-.recommendation-card-preview.is-next {
-  top: 20px;
 }
 
 .recommendation-photo {
@@ -137,7 +132,7 @@
 .photo-steps button {
   flex: 1;
   min-width: 0;
-  height: 3px;
+  height: 5px;
   margin: 0;
   padding: 0;
   border: 0;
