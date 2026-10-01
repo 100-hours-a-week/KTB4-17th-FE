@@ -212,7 +212,7 @@ export function ChatList({ navigate }) {
 
   return (
     <>
-      <BrandHeader />
+      <BrandHeader navigate={navigate} />
       <main ref={mainRef} className="main-scroll chat-list-main">
         {loading ? (
           <div className="chat-list-loading" role="status">

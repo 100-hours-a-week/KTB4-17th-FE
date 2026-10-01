@@ -55,18 +55,21 @@ export function MessageBubble({
       ? "사진 업로드 중"
       : pending
         ? "전송 중"
-        : message.unreadCount === 0
-          ? "읽음"
-          : "전송 완료";
+        : "";
+  const unread =
+    chatRoom && message.mine && !pending && !failed && message.unreadCount > 0;
+  const showStatus = chatRoom && message.mine && Boolean(status);
   const avatarElement = (
-    <img
-      className="bubble-avatar profile-bubble-avatar"
-      src={avatar || asset("chat-avatar-heart-terminal.svg")}
-      alt=""
-      onError={(event) => {
-        event.currentTarget.src = asset("chat-avatar-heart-terminal.svg");
-      }}
-    />
+    <span className="chat-avatar-crop">
+      <img
+        className="bubble-avatar profile-bubble-avatar"
+        src={avatar || asset("chat-avatar-heart-terminal.svg")}
+        alt=""
+        onError={(event) => {
+          event.currentTarget.src = asset("chat-avatar-heart-terminal.svg");
+        }}
+      />
+    </span>
   );
   return (
     <div
@@ -98,10 +101,9 @@ export function MessageBubble({
           <span className="message-sender-name">{senderName}</span>
         )}
         <div className={chatRoom ? "chat-bubble-content" : undefined}>
-          <div className={`message-bubble ${isImage ? "is-image" : ""}`}>
-            {!grouped && (
-              <span className="message-bubble-tail" aria-hidden="true" />
-            )}
+          <div
+            className={`message-bubble ${isImage ? "is-image" : ""} ${grouped ? "" : "has-tail"}`}
+          >
             {isImage ? (
               <ChatImage
                 message={message}
@@ -115,9 +117,9 @@ export function MessageBubble({
               </span>
             )}
           </div>
-          {(showTime || pending || failed) && (
+          {(showTime || showStatus || unread) && (
             <small className="message-meta">
-              {chatRoom && message.mine && (
+              {showStatus && (
                 <span
                   className={
                     failed ? "message-status failed" : "message-status"
@@ -126,7 +128,16 @@ export function MessageBubble({
                   {status}
                 </span>
               )}
-              {message.time && <span>{message.time}</span>}
+              {unread && (
+                <span
+                  className="message-unread"
+                  role="img"
+                  aria-label={`아직 읽지 않은 상대 ${message.unreadCount}명`}
+                >
+                  {message.unreadCount}
+                </span>
+              )}
+              {showTime && message.time && <span>{message.time}</span>}
             </small>
           )}
         </div>
