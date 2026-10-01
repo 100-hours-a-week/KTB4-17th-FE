@@ -1106,12 +1106,17 @@ export function Onboarding({ navigate, toast }) {
             </Field>
             <Field label="키">
               <input
-                type="number"
+                type="text"
                 inputMode="numeric"
-                min="130"
-                max="220"
+                pattern="[0-9]*"
+                maxLength={3}
                 value={profile.height}
-                onChange={(e) => updateProfile("height", e.target.value)}
+                onChange={(e) =>
+                  updateProfile(
+                    "height",
+                    e.target.value.replace(/\D/g, "").slice(0, 3),
+                  )
+                }
                 placeholder="키를 입력해주세요 (cm)"
               />
             </Field>
