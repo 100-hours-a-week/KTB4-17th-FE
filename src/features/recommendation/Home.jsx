@@ -339,7 +339,7 @@ export function Home({
   }
   return (
     <>
-      <BrandHeader className="home-header">
+      <BrandHeader navigate={navigate} className="home-header">
         <span className="home-header-spacer" />
         <button
           className="home-menu-button"

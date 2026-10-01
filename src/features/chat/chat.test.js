@@ -4,6 +4,7 @@ import {
   mapChatMessage,
   mergeChatMessages,
   messagesAreGrouped,
+  messageTimesAreGrouped,
 } from "./model.js";
 
 const storage = new Map();
@@ -190,6 +191,34 @@ test("message grouping stops at sender, date, time, or pending boundaries", () =
     false,
   );
   assert.equal(messagesAreGrouped(first, undefined), false);
+});
+
+test("consecutive messages in the same minute share avatars and timestamps", () => {
+  const first = message(1, { createdAt: "2026-10-01T06:20:05Z" });
+  const last = message(2, { createdAt: "2026-10-01T06:20:59Z" });
+  assert.equal(messagesAreGrouped(first, last), true);
+  assert.equal(messageTimesAreGrouped(first, last), true);
+  assert.equal(messageTimesAreGrouped(last, undefined), false);
+});
+
+test("a minute boundary separates both avatars and timestamps", () => {
+  const first = message(1, { createdAt: "2026-10-01T06:20:59Z" });
+  const next = message(2, { createdAt: "2026-10-01T06:21:00Z" });
+  assert.equal(messagesAreGrouped(first, next), false);
+  assert.equal(messageTimesAreGrouped(first, next), false);
+});
+
+test("timestamps stop grouping at sender, date, or transmission boundaries", () => {
+  const first = message(1);
+  for (const next of [
+    message(2, { mine: true }),
+    message(2, { createdAt: "2026-10-02T06:00:00Z" }),
+    message(2, { status: "SENDING" }),
+    message(2, { status: "FAILED" }),
+    message(2, { createdAt: null }),
+  ]) {
+    assert.equal(messageTimesAreGrouped(first, next), false);
+  }
 });
 
 test("next draft survives a delayed send response", async () => {

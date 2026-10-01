@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { asset } from "../../shared/assets.js";
 import {
   BrandHeader,
   EmptyState,
@@ -13,8 +14,13 @@ import {
 } from "../../shared/ui/components.jsx";
 import * as chatApi from "./api.js";
 import { ChatImage } from "./ChatImage.jsx";
+import { ChatModeMenu } from "./ChatModeMenu.jsx";
 import { MessageBubble } from "./MessageBubble.jsx";
-import { formatFileSize, messagesAreGrouped } from "./model.js";
+import {
+  formatFileSize,
+  messagesAreGrouped,
+  messageTimesAreGrouped,
+} from "./model.js";
 import { enqueueMessages, retryMessage } from "./outbox.js";
 import { releasePreview, updateRoomSession } from "./session.js";
 import { useChatRoom } from "./useChatRoom.js";
@@ -136,7 +142,6 @@ function ChatRoomContent({
   const rootRef = useRef(null);
   const inputRef = useRef(null);
   const imageInputRef = useRef(null);
-  const toolsRef = useRef(null);
   const viewerOpenerRef = useRef(null);
   const scroll = useChatScroll({ ...room, viewingImage });
   const canSend = state.loaded && state.room?.status === "ACTIVE";
@@ -224,41 +229,52 @@ function ChatRoomContent({
   return (
     <section ref={rootRef} className="chat-room-view" aria-label="채팅방">
       <div className="chat-room-content" inert={Boolean(viewingImage)}>
-        <BrandHeader className="chat-brand-header" />
+        <BrandHeader navigate={navigate} />
         <ScreenHeader
-          className="chat-room-header"
-          title={state.room?.name || "채팅"}
+          className="chat-room-header conversation-header chat-room-partner-header"
+          title={
+            <span className="chat-room-partner">
+              <button
+                type="button"
+                className="chat-room-partner-profile"
+                aria-label={`${state.room?.name || "상대 회원"} 프로필 보기`}
+                disabled={!targetMemberId}
+                onClick={navigateToProfile}
+              >
+                <img
+                  className="chat-room-avatar chat-room-partner-photo"
+                  src={
+                    state.room?.image || asset("chat-avatar-heart-terminal.svg")
+                  }
+                  alt=""
+                  onError={(event) => {
+                    const fallback = asset("chat-avatar-heart-terminal.svg");
+                    if (event.currentTarget.getAttribute("src") !== fallback)
+                      event.currentTarget.src = fallback;
+                  }}
+                />
+              </button>
+              <span className="chat-room-partner-name">
+                {state.room?.name || "채팅"}
+              </span>
+            </span>
+          }
           onBack={() => navigate("/chats")}
           right={
             <div className="chat-header-actions">
-              <details ref={toolsRef} className="chat-assistance">
-                <summary aria-label="AI 대화 도우미">AI</summary>
-                <div className="chat-assistance-menu">
-                  <button
-                    type="button"
-                    disabled={!targetMemberId || simulationStartingFor != null}
-                    onClick={() => {
-                      toolsRef.current.open = false;
-                      void onStartSimulation?.(targetMemberId, roomId);
-                    }}
-                  >
-                    {simulationStartingFor === targetMemberId
-                      ? "생성 중…"
-                      : "시뮬레이션"}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!targetMemberId}
-                    onClick={() =>
-                      navigate(
-                        `/ai/practice/${targetMemberId}?chatRoomId=${roomId}`,
-                      )
-                    }
-                  >
-                    연습 대화
-                  </button>
-                </div>
-              </details>
+              <ChatModeMenu
+                targetMemberId={targetMemberId}
+                simulationStartingFor={simulationStartingFor}
+                onSimulation={() => onStartSimulation?.(targetMemberId, roomId)}
+                onPractice={
+                  targetMemberId
+                    ? () =>
+                        navigate(
+                          `/ai/practice/${targetMemberId}?chatRoomId=${roomId}`,
+                        )
+                    : undefined
+                }
+              />
               <button
                 type="button"
                 className="more-button"
@@ -348,7 +364,7 @@ function ChatRoomContent({
                     state.messages.map((message, index) => {
                       const previous = state.messages[index - 1];
                       const grouped = messagesAreGrouped(previous, message);
-                      const showTime = !messagesAreGrouped(
+                      const showTime = !messageTimesAreGrouped(
                         message,
                         state.messages[index + 1],
                       );
@@ -453,10 +469,10 @@ function ChatRoomContent({
               onClick={() => imageInputRef.current?.click()}
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M4 5h16v14H4z" />
-                <circle cx="9" cy="10" r="1.5" />
-                <path d="m5 17 5-5 3 3 2-2 4 4" />
-                <path d="M18 3v5M15.5 5.5h5" />
+                <path d="M3 8h13v12H3z" />
+                <circle cx="7" cy="12" r="1.25" />
+                <path d="m4.5 18 3.5-4 2.5 2.5 2-2 2.5 3.5" />
+                <path d="M20 1.5v5M17.5 4h5" />
               </svg>
             </button>
             <input
@@ -495,7 +511,9 @@ function ChatRoomContent({
                   : "메시지를 입력하세요"
               }
               aria-label="메시지"
-              aria-describedby="chat-input-help"
+              aria-describedby={
+                state.draft.length >= 900 ? "chat-input-count" : undefined
+              }
               enterKeyHint={
                 window.matchMedia("(hover: hover) and (pointer: fine)").matches
                   ? "send"
@@ -516,17 +534,11 @@ function ChatRoomContent({
               ➤
             </button>
           </div>
-          <small id="chat-input-help" className="chat-input-help">
-            <span className="chat-desktop-help">
-              Enter 전송 · Shift+Enter 줄바꿈
-            </span>
-            <span className="chat-mobile-help">
-              줄바꿈은 Enter, 전송은 보내기 버튼
-            </span>
-            {state.draft.length >= 900 && (
-              <span>{state.draft.length}/1000</span>
-            )}
-          </small>
+          {state.draft.length >= 900 && (
+            <small id="chat-input-count" className="chat-input-count">
+              {state.draft.length}/1000
+            </small>
+          )}
         </form>
       </div>
       {viewingImage && (
