@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAppState } from "../../shared/appState.jsx";
 import { asset } from "../../shared/assets.js";
-import { readPhoto } from "../../shared/fileUtils.js";
 import {
   BrandHeader,
   ChoiceGroup,
@@ -12,7 +11,12 @@ import {
   ScreenHeader,
 } from "../../shared/ui/components.jsx";
 import { dateAge } from "../../shared/utils.js";
-import { getMyProfile, profile as saveProfile } from "./api.js";
+import {
+  getMyProfile,
+  profile as saveProfile,
+  profileImages as saveProfileImages,
+  uploadProfileImage,
+} from "./api.js";
 import {
   bodyTypes,
   drinkings,
@@ -21,6 +25,34 @@ import {
   smokings,
 } from "./data.js";
 import { profilePayload } from "./serialize.js";
+
+const PROFILE_IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+
+function profilePhotoItems(serverProfile) {
+  return (Array.isArray(serverProfile?.images) ? serverProfile.images : [])
+    .slice()
+    .sort(
+      (first, second) =>
+        Number(first?.displayOrder || 0) - Number(second?.displayOrder || 0),
+    )
+    .filter(
+      (image) =>
+        image?.fileId != null &&
+        typeof image?.imageUrl === "string" &&
+        image.imageUrl,
+    )
+    .map((image) => ({
+      localId: `saved-${image.fileId}`,
+      previewUrl: image.imageUrl,
+      fileId: image.fileId,
+      isFrontal: image.isFrontal === true,
+      uploading: false,
+    }));
+}
 
 export function MyPage({ navigate, toast }) {
   const { data } = useAppState();
@@ -245,6 +277,19 @@ export function MyProfile({ navigate, toast }) {
   const profile = data.profile;
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [profileLoadFailed, setProfileLoadFailed] = useState(false);
+  const [photoItems, setPhotoItems] = useState([]);
+  const [photoError, setPhotoError] = useState("");
+  const [photoSaving, setPhotoSaving] = useState(false);
+  const draggedPhotoId = useRef(null);
+  const localPhotoUrls = useRef(new Set());
+
+  useEffect(
+    () => () => {
+      for (const url of localPhotoUrls.current) URL.revokeObjectURL(url);
+      localPhotoUrls.current.clear();
+    },
+    [],
+  );
 
   useEffect(() => {
     let active = true;
@@ -254,6 +299,7 @@ export function MyProfile({ navigate, toast }) {
     getMyProfile()
       .then((serverProfile) => {
         if (!active) return;
+        setPhotoItems(profilePhotoItems(serverProfile));
         setData((old) => ({
           ...old,
           profile: {
@@ -289,19 +335,128 @@ export function MyProfile({ navigate, toast }) {
 
   const set = (key, value) =>
     setData((old) => ({ ...old, profile: { ...old.profile, [key]: value } }));
+
+  function addPhotoItem(file, isFrontal) {
+    if (!file) return;
+    if (!PROFILE_IMAGE_MIME_TYPES.has(file.type)) {
+      setPhotoError("JPG, PNG, WEBP 형식의 사진만 등록할 수 있어요.");
+      return;
+    }
+    if (photoItems.length >= 6) {
+      setPhotoError("사진은 최대 6장까지 등록할 수 있어요.");
+      return;
+    }
+
+    const localId = crypto.randomUUID();
+    const previewUrl = URL.createObjectURL(file);
+    localPhotoUrls.current.add(previewUrl);
+    setPhotoItems((current) => [
+      ...current,
+      { localId, previewUrl, fileId: null, isFrontal, uploading: true },
+    ]);
+    setPhotoError("");
+
+    const upload = async () => {
+      try {
+        const metadata = await uploadProfileImage(file);
+        setPhotoItems((current) =>
+          current.map((item) =>
+            item.localId === localId
+              ? { ...item, fileId: metadata.fileId, uploading: false }
+              : item,
+          ),
+        );
+      } catch {
+        URL.revokeObjectURL(previewUrl);
+        localPhotoUrls.current.delete(previewUrl);
+        setPhotoItems((current) =>
+          current.filter((item) => item.localId !== localId),
+        );
+        setPhotoError("사진을 업로드하지 못했어요. 잠시 후 다시 시도해주세요.");
+      }
+    };
+    void upload();
+  }
+
+  function reorderPhotos(sourceId, targetId) {
+    if (!sourceId || sourceId === targetId) return;
+    setPhotoItems((current) => {
+      const sourceIndex = current.findIndex(
+        (item) => item.localId === sourceId,
+      );
+      const targetIndex = current.findIndex(
+        (item) => item.localId === targetId,
+      );
+      if (sourceIndex < 0 || targetIndex < 0) return current;
+
+      const next = [...current];
+      const [moved] = next.splice(sourceIndex, 1);
+      const targetIndexAfterRemoval = next.findIndex(
+        (item) => item.localId === targetId,
+      );
+      const insertIndex =
+        targetIndexAfterRemoval + (sourceIndex < targetIndex ? 1 : 0);
+      next.splice(insertIndex, 0, moved);
+      return next;
+    });
+  }
+
+  function removePhoto(localId) {
+    setPhotoItems((current) => {
+      const item = current.find((photo) => photo.localId === localId);
+      if (item?.previewUrl && localPhotoUrls.current.has(item.previewUrl)) {
+        URL.revokeObjectURL(item.previewUrl);
+        localPhotoUrls.current.delete(item.previewUrl);
+      }
+      return current.filter((photo) => photo.localId !== localId);
+    });
+    setPhotoError("");
+  }
+
   async function save() {
+    if (!photoItems.length) {
+      setPhotoError("프로필 사진을 한 장 이상 등록해주세요.");
+      return;
+    }
+    if (!photoItems.some((item) => item.isFrontal && item.fileId)) {
+      setPhotoError("정면 사진을 등록해주세요.");
+      return;
+    }
+    if (photoItems.some((item) => item.uploading || !item.fileId)) {
+      setPhotoError("사진 업로드가 끝난 뒤 저장해주세요.");
+      return;
+    }
+    if (photoSaving) return;
+
+    setPhotoSaving(true);
+    setPhotoError("");
     try {
       await saveProfile(profilePayload(profile));
+      await saveProfileImages(
+        photoItems.map((item) => ({
+          fileId: item.fileId,
+          isFrontal: item.isFrontal,
+        })),
+      );
     } catch (e) {
-      return toast(e.code || "프로필을 저장하지 못했어요.");
+      toast(e.code || "프로필을 저장하지 못했어요.");
+      setPhotoSaving(false);
+      return;
     }
+    setData((old) => ({
+      ...old,
+      profile: { ...old.profile, photo: photoItems[0]?.previewUrl || "" },
+    }));
     toast("프로필을 저장했어요.");
     navigate("/settings");
   }
   return (
     <>
       <ScreenHeader title="프로필 수정" onBack={() => navigate("/settings")} />
-      <main className="main-scroll edit-main" aria-busy={isLoadingProfile}>
+      <main
+        className="main-scroll edit-main"
+        aria-busy={isLoadingProfile || photoSaving}
+      >
         {isLoadingProfile ? (
           <p className="profile-load-state" role="status">
             저장된 프로필을 불러오는 중이에요.
@@ -315,24 +470,133 @@ export function MyProfile({ navigate, toast }) {
           </div>
         ) : (
           <>
-            <label className="edit-avatar">
-              <PersonAvatar
-                person={{ photo: profile.photo || asset("user-avatar.png") }}
-                size="large"
-              />
-              <span>사진 변경</span>
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                onChange={(e) =>
-                  readPhoto(
-                    e.target.files?.[0],
-                    (url) => set("photo", url),
-                    toast,
-                  )
-                }
-              />
-            </label>
+            <section
+              className="edit-photo-section"
+              aria-labelledby="edit-photo-title"
+            >
+              <div className="edit-photo-heading">
+                <strong className="edit-photo-title" id="edit-photo-title">
+                  프로필 사진
+                </strong>
+                <span>{photoItems.length}/6</span>
+              </div>
+              <p>첫 번째 사진이 대표 사진으로 표시돼요.</p>
+              {!photoItems.some((item) => item.isFrontal) && (
+                <label className="photo-front-upload edit-photo-front-upload">
+                  <strong>정면 사진 등록</strong>
+                  <span>얼굴이 잘 보이는 정면 사진을 선택해주세요.</span>
+                  <small>JPG · PNG · WEBP</small>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(event) => {
+                      addPhotoItem(event.target.files?.[0], true);
+                      event.target.value = "";
+                    }}
+                  />
+                </label>
+              )}
+              <section
+                className="onboarding-photo-grid edit-photo-grid"
+                aria-label="등록한 사진"
+              >
+                {photoItems.map((item, index) => (
+                  <article
+                    className="onboarding-photo-tile"
+                    data-photo-id={item.localId}
+                    draggable={!item.uploading}
+                    key={item.localId}
+                    onDragStart={(event) => {
+                      draggedPhotoId.current = item.localId;
+                      event.dataTransfer.effectAllowed = "move";
+                      event.dataTransfer.setData("text/plain", item.localId);
+                    }}
+                    onDragEnd={() => {
+                      draggedPhotoId.current = null;
+                    }}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      const sourceId =
+                        draggedPhotoId.current ||
+                        event.dataTransfer.getData("text/plain");
+                      reorderPhotos(sourceId, item.localId);
+                      draggedPhotoId.current = null;
+                    }}
+                    onPointerDown={(event) => {
+                      if (
+                        event.pointerType === "mouse" ||
+                        item.uploading ||
+                        event.target.closest("button")
+                      )
+                        return;
+                      draggedPhotoId.current = item.localId;
+                      event.currentTarget.setPointerCapture(event.pointerId);
+                    }}
+                    onPointerUp={(event) => {
+                      if (event.pointerType === "mouse") return;
+                      const target = document
+                        .elementFromPoint(event.clientX, event.clientY)
+                        ?.closest("[data-photo-id]");
+                      reorderPhotos(
+                        draggedPhotoId.current,
+                        target?.dataset.photoId,
+                      );
+                      draggedPhotoId.current = null;
+                      if (
+                        event.currentTarget.hasPointerCapture(event.pointerId)
+                      )
+                        event.currentTarget.releasePointerCapture(
+                          event.pointerId,
+                        );
+                    }}
+                    onPointerCancel={() => {
+                      draggedPhotoId.current = null;
+                    }}
+                  >
+                    <img src={item.previewUrl} alt="등록한 프로필 사진" />
+                    <div className="profile-photo-labels">
+                      {index === 0 && <b>대표 사진</b>}
+                      {item.isFrontal && <b>정면 사진</b>}
+                    </div>
+                    {item.uploading && (
+                      <span className="photo-uploading">업로드 중</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(item.localId)}
+                      aria-label="사진 삭제"
+                    >
+                      ×
+                    </button>
+                  </article>
+                ))}
+                {photoItems.length < 6 &&
+                  photoItems.some((item) => item.isFrontal) && (
+                    <label className="onboarding-photo-add">
+                      <span>＋</span>
+                      <small>추가 사진</small>
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        onChange={(event) => {
+                          addPhotoItem(event.target.files?.[0], false);
+                          event.target.value = "";
+                        }}
+                      />
+                    </label>
+                  )}
+              </section>
+              <div className="info-panel edit-photo-help">
+                사진을 드래그하면 순서를 바꿀 수 있어요. 정면 사진 라벨은 순서를
+                바꿔도 해당 사진에 유지돼요.
+              </div>
+              {photoError && (
+                <p className="field-error edit-photo-error" role="alert">
+                  {photoError}
+                </p>
+              )}
+            </section>
             <Field label="닉네임">
               <input
                 value={profile.nickname}
@@ -398,7 +662,9 @@ export function MyProfile({ navigate, toast }) {
               />
             </Field>
             <div className="edit-actions">
-              <PixelButton onClick={save}>저장하기</PixelButton>
+              <PixelButton onClick={save} disabled={photoSaving}>
+                {photoSaving ? "저장 중…" : "저장하기"}
+              </PixelButton>
             </div>
           </>
         )}
