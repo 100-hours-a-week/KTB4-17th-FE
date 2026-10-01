@@ -151,12 +151,26 @@ function AppRouter() {
           notifyAuthExpired: false,
         });
         if (!isCurrentCheck()) return;
+        const registeredIdentity =
+          status?.userStatus === "ACTIVE"
+            ? null
+            : await userApi.onboardingProfile();
+        if (!isCurrentCheck()) return;
         hasAuthenticatedSession = true;
         setData((old) => ({
           ...old,
           session: true,
           onboarded: status?.userStatus === "ACTIVE",
           registrationInfoConfirmed: true,
+          ...(registeredIdentity
+            ? {
+                profile: {
+                  ...old.profile,
+                  birthDate: registeredIdentity.birthDate || "",
+                  gender: registeredIdentity.gender || "",
+                },
+              }
+            : {}),
           onboardingStep:
             status?.userStatus === "ACTIVE"
               ? "complete"

@@ -1,6 +1,9 @@
+import { normalizeBirthDate } from "../features/user/birthDate.js";
+
 export function dateAge(value) {
-  if (!value) return 0;
-  const birth = new Date(`${value}T00:00:00`);
+  const normalized = normalizeBirthDate(value);
+  if (!normalized) return 0;
+  const birth = new Date(`${normalized}T00:00:00`);
   if (Number.isNaN(birth.getTime())) return 0;
   const today = new Date();
   let years = today.getFullYear() - birth.getFullYear();
