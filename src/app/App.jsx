@@ -30,7 +30,9 @@ import * as userApi from "../features/user/api.js";
 import {
   AUTH_EXPIRED_EVENT,
   clearAccessToken,
+  getAccessToken,
 } from "../shared/api/authToken.js";
+import { refreshAuthSession } from "../shared/api/client.js";
 import {
   AppStateProvider,
   makeInitialState,
@@ -121,60 +123,129 @@ function AppRouter() {
 
   useEffect(() => {
     let active = true;
-    const registrationPath =
-      window.location.pathname.startsWith("/registration");
+    let sessionCheckId = 0;
+    let hasAuthenticatedSession = false;
 
-    async function bootstrapSession() {
+    async function bootstrapSession({ resuming = false } = {}) {
+      const checkId = ++sessionCheckId;
+      const isCurrentCheck = () => active && checkId === sessionCheckId;
+      const registrationPath =
+        window.location.pathname.startsWith("/registration");
+      const hadAccessToken =
+        hasAuthenticatedSession || (resuming && Boolean(getAccessToken()));
+      if (resuming && hadAccessToken) hasAuthenticatedSession = true;
+      setLoading(true);
+      setSessionCheckError(false);
       try {
         if (registrationPath) {
-          clearAccessToken();
-          if (window.location.pathname === "/registration") {
-            setData((old) => ({
-              ...old,
-              session: false,
-              onboarded: false,
-              onboardingStep: "identity",
-              registrationInfoConfirmed: false,
-            }));
-          }
-          return;
+          // The OAuth registration callback clears the refresh cookie for a new
+          // account. Check that cookie before trusting a previous access token.
+          await refreshAuthSession();
+        } else {
+          await completeOAuthCallback();
         }
+        if (!isCurrentCheck()) return;
 
-        await completeOAuthCallback();
-        if (!active) return;
-
-        const status = await userApi.onboarding();
-        if (!active) return;
+        const status = await userApi.onboarding({
+          cache: "no-store",
+          notifyAuthExpired: false,
+        });
+        if (!isCurrentCheck()) return;
+        hasAuthenticatedSession = true;
         setData((old) => ({
           ...old,
           session: true,
           onboarded: status?.userStatus === "ACTIVE",
+          registrationInfoConfirmed: true,
           onboardingStep:
             status?.userStatus === "ACTIVE"
               ? "complete"
               : onboardingStepFromStatus(status),
         }));
+        if (
+          registrationPath &&
+          window.location.pathname.startsWith("/registration")
+        ) {
+          navigate(status?.userStatus === "ACTIVE" ? "/home" : "/onboarding", {
+            replace: true,
+          });
+        }
       } catch (error) {
-        if (!active) return;
+        if (!isCurrentCheck()) return;
         if (
           error?.code === "AUTH_REQUIRED" ||
+          error?.status === 401 ||
           error?.code === "USER_NOT_FOUND"
         ) {
+          hasAuthenticatedSession = false;
           clearAccessToken();
-          setData((old) => ({ ...old, session: false, onboarded: false }));
+          setData((old) => ({
+            ...old,
+            session: false,
+            onboarded: false,
+            registrationInfoConfirmed: false,
+            ...(registrationPath ? { onboardingStep: "identity" } : {}),
+          }));
+          if (
+            resuming &&
+            hadAccessToken &&
+            window.location.pathname.startsWith("/registration")
+          ) {
+            navigate("/login", { replace: true });
+          }
           return;
         }
         setSessionCheckError(true);
       } finally {
-        if (active) setLoading(false);
+        if (isCurrentCheck()) setLoading(false);
       }
     }
 
+    function recheckRegistration() {
+      if (!window.location.pathname.startsWith("/registration")) return;
+      setPath(window.location.pathname);
+      setSearch(window.location.search);
+      void bootstrapSession({ resuming: true });
+    }
+
+    function handlePageShow(event) {
+      if (event.persisted) recheckRegistration();
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") recheckRegistration();
+    }
+
+    window.addEventListener("popstate", recheckRegistration);
+    window.addEventListener("pageshow", handlePageShow);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     void bootstrapSession();
     return () => {
       active = false;
+      window.removeEventListener("popstate", recheckRegistration);
+      window.removeEventListener("pageshow", handlePageShow);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [setData]);
+  }, [setData, navigate]);
+
+  useEffect(() => {
+    if (
+      loading ||
+      !path.startsWith("/registration") ||
+      !data.session ||
+      !data.registrationInfoConfirmed
+    )
+      return;
+
+    navigate(data.onboarded ? "/home" : "/onboarding", { replace: true });
+  }, [
+    loading,
+    path,
+    data.session,
+    data.registrationInfoConfirmed,
+    data.onboarded,
+    navigate,
+  ]);
 
   useEffect(() => {
     function handleAuthExpired() {
