@@ -476,16 +476,76 @@
   padding: 20px;
 }
 
-.edit-avatar {
+.edit-photo-section {
+  margin-bottom: 28px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  background: #fffdfd;
+}
+
+.edit-photo-heading {
   display: flex;
   align-items: center;
-  flex-direction: column;
-  gap: 8px;
-  cursor: pointer;
-  position: relative;
-  margin-bottom: 24px;
-  font-size: 12px;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.edit-photo-title {
+  font-size: 15px;
+}
+
+.edit-photo-heading span {
   color: var(--purple);
+  font-size: 12px;
+}
+
+.edit-photo-section > p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.edit-photo-front-upload {
+  min-height: 150px;
+  margin-top: 16px;
+}
+
+.edit-photo-grid {
+  margin-top: 16px;
+}
+
+.profile-photo-labels {
+  position: absolute;
+  bottom: 5px;
+  left: 5px;
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.edit-photo-grid .profile-photo-labels b {
+  position: static;
+  padding: 3px 5px;
+  background: #2e1949d9;
+  color: #fff;
+  font-size: 10px;
+}
+
+.edit-photo-grid .photo-uploading {
+  top: 5px;
+  right: 32px;
+  bottom: auto;
+}
+
+.edit-photo-help {
+  margin-top: 14px;
+}
+
+.edit-photo-error {
+  margin: 10px 0 0;
+  color: #ba386d;
 }
 
 .edit-actions {
