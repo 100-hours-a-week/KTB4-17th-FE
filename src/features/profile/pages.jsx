@@ -608,11 +608,7 @@ export function MyProfile({ navigate, toast }) {
               )}
             </section>
             <Field label="닉네임">
-              <input
-                value={profile.nickname}
-                onChange={(e) => set("nickname", e.target.value)}
-                maxLength={10}
-              />
+              <input value={profile.nickname} disabled />
             </Field>
             <Field label="활동 지역">
               <input
