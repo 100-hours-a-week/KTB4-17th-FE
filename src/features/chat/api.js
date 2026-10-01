@@ -7,8 +7,13 @@ export const rooms = ({ cursor, size = 20 } = {}) => {
   return apiRequest(`/api/v1/chat-rooms?${params.toString()}`);
 };
 
-export const messages = (roomId) =>
-  apiRequest(`/api/v1/chat-rooms/${roomId}/messages?size=20`);
+export const messages = (roomId, { cursor, size = 20, signal } = {}) => {
+  const params = new URLSearchParams({ size: String(size) });
+  if (cursor) params.set("cursor", String(cursor));
+  return apiRequest(`/api/v1/chat-rooms/${roomId}/messages?${params}`, {
+    signal,
+  });
+};
 
 export const markAsRead = (roomId, lastReadMessageId) =>
   apiRequest(`/api/v1/chat-rooms/${roomId}/read`, {
@@ -16,21 +21,29 @@ export const markAsRead = (roomId, lastReadMessageId) =>
     body: { lastReadMessageId },
   });
 
-export const sendMessage = (roomId, text) =>
+export const sendMessage = (
+  roomId,
+  text,
+  clientMessageId = crypto.randomUUID(),
+) =>
   apiRequest(`/api/v1/chat-rooms/${roomId}/messages`, {
     method: "POST",
     body: {
-      clientMessageId: crypto.randomUUID(),
+      clientMessageId,
       messageType: "TEXT",
       textContent: text,
     },
   });
 
-export const sendImageMessage = (roomId, imageFileId) =>
+export const sendImageMessage = (
+  roomId,
+  imageFileId,
+  clientMessageId = crypto.randomUUID(),
+) =>
   apiRequest(`/api/v1/chat-rooms/${roomId}/messages`, {
     method: "POST",
     body: {
-      clientMessageId: crypto.randomUUID(),
+      clientMessageId,
       messageType: "IMAGE",
       imageFileId,
     },
