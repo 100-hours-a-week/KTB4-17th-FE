@@ -70,7 +70,7 @@ function unwrapData(result) {
 export async function refreshAuthSession() {
   if (!refreshInFlight) {
     refreshInFlight = (async () => {
-      clearAccessToken();
+      clearAccessToken({ preserveSession: true });
       const response = await sendRequest(
         AUTH_REFRESH_PATH,
         { method: "POST", cache: "no-store" },

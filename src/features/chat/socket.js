@@ -12,6 +12,11 @@ const SUBSCRIPTIONS = [
     destination: "/user/queue/chat-messages",
     onMessage: "message",
   },
+  {
+    id: "chat-read-receipts",
+    destination: "/user/queue/chat-read-receipts",
+    onMessage: "readReceipt",
+  },
 ];
 
 function unescapeHeader(value) {
@@ -42,6 +47,7 @@ function parseFrame(rawFrame) {
 
 export function connectChatSocket({
   onMessage,
+  onReadReceipt = () => {},
   onStatus = () => {},
   onConnected = () => {},
 }) {
@@ -114,7 +120,9 @@ export function connectChatSocket({
                 candidate.destination === frame.headers.destination,
             ) || (SUBSCRIPTIONS.length === 1 ? SUBSCRIPTIONS[0] : null);
           if (subscription?.onMessage === "message")
-            onMessage(JSON.parse(frame.body));
+            onMessage?.(JSON.parse(frame.body));
+          else if (subscription?.onMessage === "readReceipt")
+            onReadReceipt(JSON.parse(frame.body));
         } catch {
           onStatus("error");
         }
