@@ -432,8 +432,20 @@ function AppRouter() {
         isLoggingOut={logoutPending}
       />
     );
+  else if (path === "/my/profile/view")
+    page = <OtherProfile isOwn returnTo="/my" navigate={navigate} />;
   else if (path === "/my/profile")
-    page = <MyProfile navigate={navigate} toast={toast} />;
+    page = (
+      <MyProfile
+        navigate={navigate}
+        toast={toast}
+        returnTo={
+          new URLSearchParams(search).get("returnTo") === "/my/profile/view"
+            ? "/my/profile/view"
+            : "/settings"
+        }
+      />
+    );
   else if (path === "/my/persona") page = <Persona navigate={navigate} />;
   else if (path === "/preferences")
     page = <Preferences navigate={navigate} toast={toast} />;

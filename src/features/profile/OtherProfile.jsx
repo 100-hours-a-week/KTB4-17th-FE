@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PhotoSegments, ProfilePhoto } from "../../shared/ui/components.jsx";
-import { getMemberProfile } from "./api.js";
+import { dateAge } from "../../shared/utils.js";
+import { getMemberProfile, getMyProfile } from "./api.js";
 import {
   bodyTypes,
   drinkings,
@@ -15,14 +16,13 @@ function profileChoiceLabel(options, value) {
   return options.find(([option]) => option === value)?.[1] || value;
 }
 
-export function OtherProfile({ memberId, returnTo, navigate }) {
+export function OtherProfile({ memberId, returnTo, navigate, isOwn = false }) {
   const [profile, setProfile] = useState(null);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const profileRequestVersion = useRef(0);
   const pointerStart = useRef(null);
-  const suppressSideClick = useRef(false);
   const photos = profile?.photos || [];
 
   const loadProfile = useCallback(async () => {
@@ -31,7 +31,9 @@ export function OtherProfile({ memberId, returnTo, navigate }) {
     setError("");
 
     try {
-      const result = await getMemberProfile(memberId);
+      const result = await (isOwn
+        ? getMyProfile()
+        : getMemberProfile(memberId));
       if (requestVersion !== profileRequestVersion.current) return;
 
       const images = Array.isArray(result?.images) ? result.images : [];
@@ -46,8 +48,12 @@ export function OtherProfile({ memberId, returnTo, navigate }) {
         .filter((url) => typeof url === "string" && url);
       setProfile({
         ...result,
-        id: Number(result?.memberId || memberId),
-        photos: orderedPhotos,
+        id: isOwn ? "me" : Number(result?.memberId || memberId),
+        age: isOwn ? dateAge(result?.birthDate) : result?.age,
+        region: isOwn ? result?.activityRegionName : result?.region,
+        photos: orderedPhotos.length
+          ? orderedPhotos
+          : [result?.profileImageUrl].filter(Boolean),
       });
       setPhotoIndex(0);
     } catch (requestError) {
@@ -63,7 +69,7 @@ export function OtherProfile({ memberId, returnTo, navigate }) {
         setLoading(false);
       }
     }
-  }, [memberId]);
+  }, [memberId, isOwn]);
 
   useEffect(() => {
     void loadProfile();
@@ -80,39 +86,42 @@ export function OtherProfile({ memberId, returnTo, navigate }) {
   }
 
   function handlePointerDown(event) {
-    if (event.pointerType === "mouse" && event.button !== 0) return;
-    if (event.target.closest?.(".other-profile-back, .other-profile-segments"))
+    if (
+      event.isPrimary === false ||
+      (event.pointerType === "mouse" && event.button !== 0)
+    )
       return;
-    pointerStart.current = { x: event.clientX, y: event.clientY };
+    if (event.target.closest?.("button")) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    pointerStart.current = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+    };
   }
 
   function handlePointerUp(event) {
     const start = pointerStart.current;
     pointerStart.current = null;
-    if (!start || photos.length < 2) return;
+    if (!start || start.pointerId !== event.pointerId) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId))
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    if (photos.length < 2) return;
 
     const x = event.clientX - start.x;
     const y = event.clientY - start.y;
-    if (Math.abs(x) < 42 || Math.abs(x) <= Math.abs(y)) return;
-
-    cyclePhoto(x < 0 ? 1 : -1);
-    if (event.target.closest?.(".other-profile-photo-side")) {
-      suppressSideClick.current = true;
-      window.setTimeout(() => {
-        suppressSideClick.current = false;
-      }, 0);
+    if (Math.abs(x) <= 8 && Math.abs(y) <= 8) {
+      const bounds = event.currentTarget.getBoundingClientRect();
+      const direction = event.clientX < bounds.left + bounds.width / 2 ? -1 : 1;
+      setPhotoIndex((current) =>
+        Math.max(0, Math.min(current + direction, photos.length - 1)),
+      );
+    } else if (Math.abs(x) >= 48 && Math.abs(x) > Math.abs(y)) {
+      cyclePhoto(x < 0 ? 1 : -1);
     }
   }
 
-  function handleSideClick(direction) {
-    if (suppressSideClick.current) {
-      suppressSideClick.current = false;
-      return;
-    }
-    cyclePhoto(direction);
-  }
-
-  const profileName = profile?.nickname || "상대 회원";
+  const profileName = profile?.nickname || (isOwn ? "내 프로필" : "상대 회원");
   const profileDetails = profile
     ? [
         {
@@ -156,8 +165,20 @@ export function OtherProfile({ memberId, returnTo, navigate }) {
         className="other-profile-hero"
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
-        onPointerCancel={() => {
+        onPointerCancel={(event) => {
           pointerStart.current = null;
+          if (event.currentTarget.hasPointerCapture(event.pointerId))
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }}
+        onDragStart={(event) => event.preventDefault()}
+        tabIndex={photos.length > 1 ? 0 : undefined}
+        aria-label="프로필 사진. 양쪽을 터치하거나 좌우로 스와이프해 사진을 볼 수 있어요."
+        onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) return;
+          if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+            event.preventDefault();
+            cyclePhoto(event.key === "ArrowLeft" ? -1 : 1);
+          }
         }}
       >
         {profile ? (
@@ -177,6 +198,17 @@ export function OtherProfile({ memberId, returnTo, navigate }) {
         >
           ‹
         </button>
+        {isOwn && (
+          <button
+            type="button"
+            className="other-profile-settings"
+            aria-label="프로필 설정"
+            title="프로필 설정"
+            onClick={() => navigate("/my/profile?returnTo=/my/profile/view")}
+          >
+            <span aria-hidden="true">⚙︎</span>
+          </button>
+        )}
         {profile && (
           <PhotoSegments
             person={profile}
@@ -184,22 +216,6 @@ export function OtherProfile({ memberId, returnTo, navigate }) {
             onSelect={setPhotoIndex}
             className="other-profile-segments"
           />
-        )}
-        {photos.length > 1 && (
-          <>
-            <button
-              type="button"
-              className="other-profile-photo-side other-profile-photo-side-left"
-              aria-label="이전 사진"
-              onClick={() => handleSideClick(-1)}
-            />
-            <button
-              type="button"
-              className="other-profile-photo-side other-profile-photo-side-right"
-              aria-label="다음 사진"
-              onClick={() => handleSideClick(1)}
-            />
-          </>
         )}
         {loading && (
           <p className="other-profile-loading" role="status">
