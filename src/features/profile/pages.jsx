@@ -159,7 +159,12 @@ export function Settings({ navigate, onLogout, isLoggingOut = false }) {
 
   return (
     <>
-      <ScreenHeader title="설정" onBack={() => navigate("/my")} />
+      <BrandHeader />
+      <ScreenHeader
+        className="chat-room-header"
+        title="설정"
+        onBack={() => navigate("/my")}
+      />
       <main className="main-scroll settings-main">
         <div className="settings-intro">
           <span className="settings-kicker">내 설정 노트</span>
@@ -300,7 +305,12 @@ export function MyProfile({ navigate, toast }) {
   }
   return (
     <>
-      <ScreenHeader title="프로필 수정" onBack={() => navigate("/settings")} />
+      <BrandHeader />
+      <ScreenHeader
+        className="chat-room-header"
+        title="프로필 수정"
+        onBack={() => navigate("/settings")}
+      />
       <main className="main-scroll edit-main" aria-busy={isLoadingProfile}>
         {isLoadingProfile ? (
           <p className="profile-load-state" role="status">
