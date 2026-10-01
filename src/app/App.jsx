@@ -14,6 +14,7 @@ import { Likes } from "../features/matching/Likes.jsx";
 import { Notifications } from "../features/notifications/Notifications.jsx";
 import { Onboarding } from "../features/onboarding/Onboarding.jsx";
 import { Preferences } from "../features/preferences/Preferences.jsx";
+import { OtherProfile } from "../features/profile/OtherProfile.jsx";
 import {
   MyPage,
   MyProfile,
@@ -43,6 +44,27 @@ import {
 } from "../shared/ui/components.jsx";
 import { onboardingStepFromStatus } from "../shared/utils.js";
 
+function profileReturnPath(search) {
+  const requested = new URLSearchParams(search).get("returnTo");
+  if (!requested) return "/home";
+
+  try {
+    const destination = new URL(requested, window.location.origin);
+    if (destination.origin !== window.location.origin) return "/home";
+    if (destination.pathname === "/likes") {
+      const tab = destination.searchParams.get("tab");
+      return tab === "sent" || tab === "received"
+        ? `/likes?tab=${tab}`
+        : "/likes";
+    }
+    return /^\/chats\/\d+$/.test(destination.pathname)
+      ? destination.pathname
+      : "/home";
+  } catch {
+    return "/home";
+  }
+}
+
 function AppRouter() {
   const { data, setData } = useAppState();
   const [path, setPath] = useState(window.location.pathname);
@@ -51,12 +73,14 @@ function AppRouter() {
   const [loading, setLoading] = useState(true);
   const [sessionCheckError, setSessionCheckError] = useState(false);
   const [logoutPending, setLogoutPending] = useState(false);
-  const navigate = useCallback((to) => {
+  const navigate = useCallback((to, options = {}) => {
     const destination = new URL(to, window.location.origin);
     const destinationUrl = `${destination.pathname}${destination.search}${destination.hash}`;
     const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-    if (currentUrl !== destinationUrl)
-      window.history.pushState({}, "", destinationUrl);
+    if (currentUrl !== destinationUrl) {
+      if (options.replace) window.history.replaceState({}, "", destinationUrl);
+      else window.history.pushState({}, "", destinationUrl);
+    }
     setPath(destination.pathname);
     setSearch(destination.search);
     window.scrollTo(0, 0);
@@ -256,12 +280,22 @@ function AppRouter() {
         onStartSimulation={startSimulation}
       />
     );
+  else if (/^\/profiles\/\d+$/.test(path))
+    page = (
+      <OtherProfile
+        memberId={Number(path.split("/").pop())}
+        returnTo={profileReturnPath(search)}
+        navigate={navigate}
+      />
+    );
   else if (path.startsWith("/profiles/"))
     page = <LegacyProfileRedirect navigate={navigate} />;
   else if (path === "/likes")
     page = (
       <Likes
         toast={toast}
+        navigate={navigate}
+        initialTab={new URLSearchParams(search).get("tab")}
         onFindMatch={() => {
           navigate("/home");
           void loadRecommendations();
@@ -304,7 +338,7 @@ function AppRouter() {
         navigate={navigate}
       />
     );
-  else if (path === "/my") page = <MyPage navigate={navigate} />;
+  else if (path === "/my") page = <MyPage navigate={navigate} toast={toast} />;
   else if (path === "/settings")
     page = (
       <Settings

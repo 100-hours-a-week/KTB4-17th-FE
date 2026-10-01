@@ -1,3 +1,11 @@
+.ai-screen-state-main {
+  top: 96px;
+  bottom: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
 .simulation-body {
   position: absolute;
   inset: 192px 0 122px;
@@ -143,15 +151,18 @@
 
 .report-metric {
   margin-bottom: 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   border: 1px solid var(--line);
   padding: 13px;
   background: var(--paper);
 }
 
-.report-metric span {
+.report-metric-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.report-metric-heading span {
   font-size: 13px;
 }
 
@@ -163,8 +174,9 @@
 }
 
 .report-metric b {
-  font-size: 24px;
+  font-size: 15px;
   color: var(--purple);
+  white-space: nowrap;
 }
 
 .report-disclaimer {

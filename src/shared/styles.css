@@ -40,7 +40,7 @@
 
 :root {
   font-family:
-    KakaoSmallSans, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR",
+    "Galmuri11", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR",
     sans-serif;
   color: #352a48;
   background: #eee7f4;
@@ -57,6 +57,7 @@
   --lavender: #dcc7fa;
   --pink: #f6bde2;
   --soft-lavender: #f5ebff;
+  --motion-press-ease: cubic-bezier(0.23, 1, 0.32, 1);
   --pixel-step-shape: polygon(
     6px 0,
     calc(100% - 6px) 0,
@@ -92,6 +93,12 @@ body,
   min-height: 100%;
 }
 
+/* Let the screen's own scroller handle overscroll instead of browser refresh. */
+html,
+body {
+  overscroll-behavior-y: none;
+}
+
 body {
   min-width: 320px;
 }
@@ -103,9 +110,14 @@ select {
   font: inherit;
 }
 
+/* Keep touch taps immediate and make enabled buttons respond on press. */
 button {
   cursor: pointer;
   color: inherit;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  transition: transform 140ms var(--motion-press-ease);
 }
 
 button:disabled {
@@ -151,7 +163,7 @@ button:focus-visible {
   align-items: center;
   gap: 12px;
   background: var(--paper);
-  border-bottom: 2px solid var(--line);
+  border-bottom: 1px solid var(--line);
 }
 
 .brand-header-logo {
@@ -352,6 +364,17 @@ small {
   font-weight: 500;
 }
 
+.screen-header-branded {
+  grid-template-columns: 36px 66px minmax(0, 1fr) 56px;
+}
+
+.screen-header-logo {
+  display: block;
+  width: 66px;
+  height: 30px;
+  object-fit: contain;
+}
+
 .header-back,
 .plain-back {
   appearance: none;
@@ -398,7 +421,7 @@ small {
   padding-bottom: env(safe-area-inset-bottom, 0);
   display: flex;
   background: var(--paper);
-  border: 2px solid #38205f;
+  border-top: 1px solid var(--line);
   z-index: 5;
 }
 
@@ -416,9 +439,14 @@ small {
   font-size: 14px;
 }
 
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
 .bottom-nav button.active {
-  color: var(--ink);
-  background: transparent;
+  color: var(--purple);
+  background: var(--soft-lavender);
+  box-shadow: inset 0 2px 0 var(--purple);
 }
 
 .bottom-nav .icon {

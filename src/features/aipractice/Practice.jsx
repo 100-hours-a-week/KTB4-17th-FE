@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ScreenHeader } from "../../shared/ui/components.jsx";
+import { BrandHeader, ScreenHeader } from "../../shared/ui/components.jsx";
 import { MessageBubble } from "../chat/Chat.jsx";
 import * as aiPracticeApi from "./api.js";
 import { connectAiPracticeSocket } from "./socket.js";
@@ -77,6 +77,8 @@ export function Practice({
   const refreshRef = useRef(() => Promise.resolve());
   const requestRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const composerInputRef = useRef(null);
+  const focusAfterSendRef = useRef(false);
   chatsRef.current = chats;
 
   useEffect(() => {
@@ -87,6 +89,7 @@ export function Practice({
     setLoadError("");
     setInput("");
     setSendError("");
+    focusAfterSendRef.current = false;
     requestRef.current = null;
     setSession(null);
     setChats([]);
@@ -214,6 +217,7 @@ export function Practice({
     setSendError("");
     try {
       const accepted = await aiPracticeApi.aiPracticeSend(session.id, request);
+      focusAfterSendRef.current = true;
       requestRef.current = null;
       setChats((current) =>
         mergePracticeChats(current, [
@@ -299,7 +303,13 @@ export function Practice({
     sending ||
     hasGenerating ||
     count >= dailyLimit;
+  useEffect(() => {
+    if (!focusAfterSendRef.current || inputDisabled) return;
+    focusAfterSendRef.current = false;
+    composerInputRef.current?.focus({ preventScroll: true });
+  }, [inputDisabled]);
   const partnerTitle = "AI 연습 대화";
+  const backPath = chatRoomId ? `/chats/${chatRoomId}` : "/home";
   const inputPlaceholder =
     count >= dailyLimit
       ? "오늘의 연습을 마쳤어요"
@@ -312,9 +322,11 @@ export function Practice({
             : "메시지를 입력하세요";
   return (
     <>
+      <BrandHeader />
       <ScreenHeader
+        className="chat-room-header"
         title={partnerTitle}
-        onBack={() => navigate("/chats")}
+        onBack={() => navigate(backPath)}
         right={
           session?.status === "ACTIVE" ? (
             <button
@@ -445,8 +457,10 @@ export function Practice({
             종료된 대화의 기록을 보고 있어요.
           </p>
         )}
-        <div className="practice-compose-row">
+        <div className="message-composer-controls">
           <input
+            ref={composerInputRef}
+            className="message-text-input"
             value={input}
             onChange={(event) => setInput(event.target.value)}
             placeholder={inputPlaceholder}
@@ -456,7 +470,6 @@ export function Practice({
           />
           <button
             type="submit"
-            className="practice-send-button"
             disabled={!input.trim() || inputDisabled}
             aria-label="보내기"
           >

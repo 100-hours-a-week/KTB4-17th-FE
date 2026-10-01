@@ -3,14 +3,6 @@
   padding: 0 20px;
 }
 
-.home-mode-label {
-  color: var(--muted);
-  font-family: "Galmuri11", "Apple SD Gothic Neo", sans-serif;
-  font-size: 18px;
-  line-height: 26px;
-  white-space: nowrap;
-}
-
 .home-header-spacer {
   flex: 1;
 }
@@ -54,6 +46,18 @@
 .home-main {
   top: 56px;
   padding: 16px 16px 8px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.home-main::-webkit-scrollbar {
+  display: none;
+}
+
+.recommendation-empty-refresh {
+  min-height: 100%;
+  touch-action: none;
+  user-select: none;
 }
 
 .recommendation-card {
@@ -71,10 +75,9 @@
 
 .recommendation-stack {
   position: relative;
-}
-
-.recommendation-stack.has-next {
-  padding-bottom: 20px;
+  min-height: 100%;
+  display: grid;
+  place-items: center;
 }
 
 .recommendation-card-current {
@@ -89,14 +92,11 @@
 .recommendation-card-preview {
   position: absolute;
   z-index: 1;
-  top: 0;
+  top: 50%;
   left: 0;
   right: 0;
+  transform: translateY(-50%);
   pointer-events: none;
-}
-
-.recommendation-card-preview.is-next {
-  top: 20px;
 }
 
 .recommendation-photo {
@@ -132,7 +132,7 @@
 .photo-steps button {
   flex: 1;
   min-width: 0;
-  height: 3px;
+  height: 5px;
   margin: 0;
   padding: 0;
   border: 0;

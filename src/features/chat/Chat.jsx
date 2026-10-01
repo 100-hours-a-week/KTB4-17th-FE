@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { asset } from "../../shared/assets.js";
 import {
   BrandHeader,
@@ -27,6 +34,13 @@ const CHAT_DATE_FORMATTER = new Intl.DateTimeFormat("ko-KR", {
   year: "numeric",
   month: "numeric",
   day: "numeric",
+});
+const CHAT_DATE_DIVIDER_FORMATTER = new Intl.DateTimeFormat("ko-KR", {
+  timeZone: CHAT_TIME_ZONE,
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+  weekday: "long",
 });
 const CHAT_ACTIVITY_DATE_FORMATTER = new Intl.DateTimeFormat("ko-KR", {
   timeZone: CHAT_TIME_ZONE,
@@ -62,6 +76,26 @@ export function formatChatMessageTime(value) {
   return date ? CHAT_CLOCK_FORMATTER.format(date) : "";
 }
 
+function formatChatDateDivider(date) {
+  if (!date) return "";
+
+  const parts = Object.fromEntries(
+    CHAT_DATE_DIVIDER_FORMATTER.formatToParts(date).map(({ type, value }) => [
+      type,
+      value,
+    ]),
+  );
+  return (
+    String(parts.year) +
+    "년 " +
+    Number(parts.month) +
+    "월 " +
+    Number(parts.day) +
+    "일 " +
+    parts.weekday
+  );
+}
+
 export function parseChatDate(value) {
   if (!value) return null;
 
@@ -82,12 +116,13 @@ export function parseChatDate(value) {
       fraction = "",
     ] = localDateTime;
     const milliseconds = Number(`${fraction}000`.slice(0, 3));
+    // The API sends these offset-free chat timestamps as UTC.
     date = new Date(
       Date.UTC(
         Number(year),
         Number(month) - 1,
         Number(day),
-        Number(hour) - 9,
+        Number(hour),
         Number(minute),
         Number(second),
         milliseconds,
@@ -219,6 +254,7 @@ function sortChatRooms(rooms) {
 
 export function mapChatMessage(item) {
   const image = item.messageType === "IMAGE" || item.type === "IMAGE";
+  const date = parseChatDate(item.createdAt);
   return {
     id: item.messageId ?? item.id,
     mine: Boolean(item.mine),
@@ -226,6 +262,8 @@ export function mapChatMessage(item) {
     imageFileId: item.imageFileId ?? null,
     imageUrl: item.imageUrl || "",
     text: image ? "" : item.textContent || item.text || "",
+    dateKey: date ? chatDateKey(date) : "",
+    dateLabel: formatChatDateDivider(date),
     time: formatChatMessageTime(item.createdAt) || "방금",
   };
 }
@@ -525,6 +563,7 @@ export function MessageBubble({
   chatRoom = false,
   onViewImage,
   onImageLoaded,
+  onViewProfile,
 }) {
   const isImage = message.type === "IMAGE";
   return (
@@ -534,16 +573,36 @@ export function MessageBubble({
       {ai && !message.mine && (
         <Icon name="ai-avatar.svg" className="bubble-avatar" />
       )}
-      {!ai && !message.mine && (
-        <img
-          className="bubble-avatar profile-bubble-avatar"
-          src={avatar || asset("chat-avatar-heart-terminal.svg")}
-          alt=""
-          onError={(event) => {
-            event.currentTarget.src = asset("chat-avatar-heart-terminal.svg");
-          }}
-        />
-      )}
+      {!ai &&
+        !message.mine &&
+        (onViewProfile ? (
+          <button
+            type="button"
+            className="profile-bubble-avatar-button"
+            aria-label={`${senderName || "상대 회원"} 프로필 보기`}
+            onClick={onViewProfile}
+          >
+            <img
+              className="bubble-avatar profile-bubble-avatar"
+              src={avatar || asset("chat-avatar-heart-terminal.svg")}
+              alt=""
+              onError={(event) => {
+                event.currentTarget.src = asset(
+                  "chat-avatar-heart-terminal.svg",
+                );
+              }}
+            />
+          </button>
+        ) : (
+          <img
+            className="bubble-avatar profile-bubble-avatar"
+            src={avatar || asset("chat-avatar-heart-terminal.svg")}
+            alt=""
+            onError={(event) => {
+              event.currentTarget.src = asset("chat-avatar-heart-terminal.svg");
+            }}
+          />
+        ))}
       <div className={`bubble-group ${chatRoom ? "chat-bubble-group" : ""}`}>
         {chatRoom && !message.mine && !ai && senderName && (
           <span className="message-sender-name">{senderName}</span>
@@ -598,6 +657,8 @@ export function ChatRoom({
   const [roomLoading, setRoomLoading] = useState(true);
   const [roomError, setRoomError] = useState("");
   const imageInputRef = useRef(null);
+  const messageInputRef = useRef(null);
+  const composerRef = useRef(null);
   const messagesScrollRef = useRef(null);
   const lastScrolledMessageIdRef = useRef(null);
   const imageUrlCacheRef = useRef(new Map());
@@ -695,9 +756,10 @@ export function ChatRoom({
       document.removeEventListener("visibilitychange", syncReadCursor);
   }, [latestMessageKey, messagesLoadedRoomId, requestReadThrough, roomId]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (
       !latestMessageKey ||
+      messagesLoadedRoomId !== roomId ||
       latestMessageKey === lastScrolledMessageIdRef.current
     )
       return;
@@ -709,7 +771,39 @@ export function ChatRoom({
       behavior: lastScrolledMessageIdRef.current ? "smooth" : "auto",
     });
     lastScrolledMessageIdRef.current = latestMessageKey;
-  }, [latestMessageKey]);
+  }, [latestMessageKey, messagesLoadedRoomId, roomId]);
+
+  useEffect(() => {
+    const composer = composerRef.current;
+    const container = messagesScrollRef.current;
+    if (!composer || !container) return undefined;
+
+    const syncComposerHeight = () => {
+      const wasNearBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight <
+        80;
+      container.style.bottom = `${composer.offsetHeight}px`;
+      if (wasNearBottom) {
+        window.requestAnimationFrame(() => {
+          const currentContainer = messagesScrollRef.current;
+          currentContainer?.scrollTo({
+            top: currentContainer.scrollHeight,
+            behavior: "auto",
+          });
+        });
+      }
+    };
+
+    syncComposerHeight();
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", syncComposerHeight);
+      return () => window.removeEventListener("resize", syncComposerHeight);
+    }
+
+    const observer = new ResizeObserver(syncComposerHeight);
+    observer.observe(composer);
+    return () => observer.disconnect();
+  }, []);
 
   function scrollToLatestMessage() {
     const container = messagesScrollRef.current;
@@ -774,6 +868,7 @@ export function ChatRoom({
     let hasLoaded = false;
     messagesRoomReadyRef.current = false;
     setMessagesLoadedRoomId(null);
+    lastScrolledMessageIdRef.current = null;
     setServerMessages([]);
     readCursorRef.current = 0;
     readTargetRef.current = 0;
@@ -873,6 +968,16 @@ export function ChatRoom({
     [],
   );
 
+  function handleMessageInputChange(event) {
+    const inputElement = event.currentTarget;
+    inputElement.style.height = "auto";
+    const contentHeight = inputElement.scrollHeight;
+    const nextHeight = Math.min(Math.max(contentHeight, 42), 120);
+    inputElement.style.height = `${nextHeight}px`;
+    inputElement.style.overflowY = contentHeight > 120 ? "auto" : "hidden";
+    setInput(inputElement.value);
+  }
+
   function selectImage(event) {
     const file = event.currentTarget.files?.[0];
     event.currentTarget.value = "";
@@ -942,10 +1047,16 @@ export function ChatRoom({
         );
       }
       setInput("");
+      if (messageInputRef.current) {
+        messageInputRef.current.style.height = "42px";
+        messageInputRef.current.style.overflowY = "hidden";
+        messageInputRef.current.scrollTop = 0;
+      }
     } catch (e) {
       toast(chatSendErrorMessage(e));
     } finally {
       setSending(false);
+      window.requestAnimationFrame(() => messageInputRef.current?.focus());
     }
   }
   return (
@@ -1002,24 +1113,44 @@ export function ChatRoom({
             description="채팅 목록에서 다시 확인해주세요."
           />
         ) : (
-          messages.map((message) => (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              avatar={activeRoom?.image || ""}
-              senderName={activeRoom?.name || ""}
-              chatRoom
-              onViewImage={setViewingImage}
-              onImageLoaded={
-                String(message.id) === latestMessageKey
-                  ? scrollToLatestMessage
-                  : undefined
-              }
-            />
-          ))
+          messages.map((message, index) => {
+            const previousMessage = messages[index - 1];
+            const showDateDivider =
+              message.dateKey && message.dateKey !== previousMessage?.dateKey;
+            return (
+              <Fragment key={message.id}>
+                {showDateDivider && (
+                  <div className="chat-date-divider">
+                    <span>{message.dateLabel}</span>
+                  </div>
+                )}
+                <MessageBubble
+                  message={message}
+                  avatar={activeRoom?.image || ""}
+                  senderName={activeRoom?.name || ""}
+                  chatRoom
+                  onViewImage={setViewingImage}
+                  onViewProfile={
+                    targetMemberId
+                      ? () =>
+                          navigate(
+                            `/profiles/${targetMemberId}?returnTo=${encodeURIComponent(`/chats/${roomId}`)}`,
+                          )
+                      : undefined
+                  }
+                  onImageLoaded={
+                    String(message.id) === latestMessageKey
+                      ? scrollToLatestMessage
+                      : undefined
+                  }
+                />
+              </Fragment>
+            );
+          })
         )}
       </div>
       <form
+        ref={composerRef}
         className={`message-composer ${selectedImage ? "has-image" : ""} ${sending && selectedImage ? "is-uploading" : ""}`}
         onSubmit={(e) => {
           e.preventDefault();
@@ -1067,12 +1198,24 @@ export function ChatRoom({
             aria-label="첨부할 사진 선택"
             onChange={selectImage}
           />
-          <input
+          <textarea
+            ref={messageInputRef}
             className="message-text-input"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={handleMessageInputChange}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter" || event.shiftKey) return;
+              if (
+                event.nativeEvent.isComposing ||
+                event.nativeEvent.keyCode === 229
+              )
+                return;
+              event.preventDefault();
+              void send();
+            }}
             placeholder="메시지를 입력하세요"
             aria-label="메시지"
+            rows={1}
             maxLength={1000}
             disabled={sending}
           />

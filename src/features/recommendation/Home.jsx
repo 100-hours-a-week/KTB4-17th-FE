@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { asset } from "../../shared/assets.js";
 import {
   BrandHeader,
@@ -44,7 +44,12 @@ export function Home({
   const [isCardSettling, setIsCardSettling] = useState(false);
   const [previewDirection, setPreviewDirection] = useState("next");
   const gestureStart = useRef(null);
+  const cardRef = useRef(null);
   const cardTransitionTimer = useRef(null);
+  const wheelHandlerRef = useRef(null);
+  const nativeWheelListener = useRef((event) =>
+    wheelHandlerRef.current?.(event),
+  );
   const wheelGesture = useRef({
     delta: 0,
     direction: 0,
@@ -96,6 +101,7 @@ export function Home({
   }
   async function refreshRecommendations() {
     if (recommendationRefreshing) return;
+    toast("새로운 인연을 찾고 있어요.");
     try {
       const count = await onRefreshRecommendations();
       toast(
@@ -150,6 +156,13 @@ export function Home({
     const count = Math.max(profilePhotoUrls(person).length, 1);
     setPhotoIndex((current) => (current + direction + count) % count);
   }
+  function selectAdjacentPhoto(direction) {
+    const count = profilePhotoUrls(person).length;
+    if (count <= 1) return;
+    setPhotoIndex((current) =>
+      Math.max(0, Math.min(current + direction, count - 1)),
+    );
+  }
   function handlePointerDown(event) {
     if (
       isCardSettling ||
@@ -174,11 +187,21 @@ export function Home({
 
     if (event.currentTarget.hasPointerCapture(event.pointerId))
       event.currentTarget.releasePointerCapture(event.pointerId);
-    if (!person || actionBusy) return;
+    if (actionBusy) return;
 
     const x = event.clientX - start.x;
     const y = event.clientY - start.y;
-    if (Math.abs(x) >= 48 && Math.abs(x) > Math.abs(y)) {
+    if (!person) {
+      if (Math.abs(y) > Math.abs(x) && y >= REFRESH_DISTANCE)
+        void refreshRecommendations();
+      return;
+    }
+    if (Math.abs(x) <= 8 && Math.abs(y) <= 8) {
+      const bounds = event.currentTarget.getBoundingClientRect();
+      const direction = event.clientX < bounds.left + bounds.width / 2 ? -1 : 1;
+      resetCardPosition();
+      selectAdjacentPhoto(direction);
+    } else if (Math.abs(x) >= 48 && Math.abs(x) > Math.abs(y)) {
       resetCardPosition();
       cyclePhoto(x < 0 ? 1 : -1);
     } else if (Math.abs(y) > Math.abs(x)) handleVerticalGesture(y);
@@ -192,9 +215,11 @@ export function Home({
     const y = event.clientY - start.y;
     if (Math.abs(y) > Math.abs(x)) {
       event.preventDefault();
-      setDragOffset(Math.max(-240, Math.min(y, 240)));
-      if (y > 0) setPreviewDirection(previousPerson ? "previous" : "none");
-      else if (y < 0) setPreviewDirection("next");
+      if (person) {
+        setDragOffset(Math.max(-240, Math.min(y, 240)));
+        if (y > 0) setPreviewDirection(previousPerson ? "previous" : "none");
+        else if (y < 0) setPreviewDirection("next");
+      }
     }
   }
   function handlePointerCancel(event) {
@@ -202,11 +227,10 @@ export function Home({
     gestureStart.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId))
       event.currentTarget.releasePointerCapture(event.pointerId);
-    resetCardPosition();
+    if (person) resetCardPosition();
   }
   function handleWheel(event) {
     if (
-      !person ||
       actionBusy ||
       recommendationRefreshing ||
       Math.abs(event.deltaY) <= Math.abs(event.deltaX)
@@ -238,7 +262,7 @@ export function Home({
     gesture.direction = direction;
     gesture.delta += Math.abs(event.deltaY);
     if (gesture.resetTimer) window.clearTimeout(gesture.resetTimer);
-    if (direction < 0 && gesture.delta >= WHEEL_NEXT_DISTANCE) {
+    if (person && direction < 0 && gesture.delta >= WHEEL_NEXT_DISTANCE) {
       gesture.locked = true;
       gesture.delta = 0;
       if (nextPerson || hasNext) transitionCard("next", () => void advance());
@@ -247,6 +271,7 @@ export function Home({
     }
 
     if (
+      person &&
       direction > 0 &&
       currentIndex > 0 &&
       gesture.delta >= WHEEL_PREVIOUS_DISTANCE
@@ -258,7 +283,7 @@ export function Home({
       return;
     }
 
-    if (direction > 0 && currentIndex === 0) {
+    if (direction > 0 && (!person || currentIndex === 0)) {
       gesture.resetTimer = window.setTimeout(() => {
         const distance = gesture.delta;
         gesture.delta = 0;
@@ -276,6 +301,16 @@ export function Home({
       finishWheelGestureAfterIdle();
     }
   }
+  wheelHandlerRef.current = handleWheel;
+  const setCardElement = useCallback((card) => {
+    if (cardRef.current === card) return;
+    cardRef.current?.removeEventListener("wheel", nativeWheelListener.current);
+    cardRef.current = card;
+    card?.addEventListener("wheel", nativeWheelListener.current, {
+      passive: false,
+    });
+  }, []);
+
   async function like() {
     if (!person || actionBusy) return;
     setActionBusy("like");
@@ -305,7 +340,6 @@ export function Home({
   return (
     <>
       <BrandHeader className="home-header">
-        <span className="home-mode-label">AI 분석모드</span>
         <span className="home-header-spacer" />
         <button
           className="home-menu-button"
@@ -318,10 +352,24 @@ export function Home({
         </button>
         {menuOpen && (
           <nav className="home-menu" aria-label="홈 메뉴">
-            <button type="button" onClick={() => navigate("/preferences")}>
+            <button
+              type="button"
+              aria-disabled="true"
+              onClick={() => {
+                setMenuOpen(false);
+                toast("선호 설정은 준비 중이에요.");
+              }}
+            >
               선호 설정
             </button>
-            <button type="button" onClick={() => navigate("/notifications")}>
+            <button
+              type="button"
+              aria-disabled="true"
+              onClick={() => {
+                setMenuOpen(false);
+                toast("알림 기능은 준비 중이에요.");
+              }}
+            >
               알림
             </button>
           </nav>
@@ -346,19 +394,26 @@ export function Home({
             }
           />
         ) : !person ? (
-          <EmptyState
-            icon="✦"
-            title={
-              recommendations.length > 0
-                ? "추천을 모두 봤어요"
-                : "새로운 추천을 준비하고 있어요"
-            }
-            description={"새로운 인연이 준비되면 이곳에서 만날 수 있어요."}
-          />
-        ) : (
           <div
-            className={`recommendation-stack${nextPerson ? " has-next" : ""}`}
+            ref={setCardElement}
+            className="recommendation-empty-refresh"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
           >
+            <EmptyState
+              icon="✦"
+              title={
+                recommendations.length > 0
+                  ? "추천을 모두 봤어요"
+                  : "새로운 추천을 준비하고 있어요"
+              }
+              description={"새로운 인연이 준비되면 이곳에서 만날 수 있어요."}
+            />
+          </div>
+        ) : (
+          <div className="recommendation-stack">
             {previewPerson && (
               <article
                 className={`recommendation-card recommendation-card-preview is-${previewDirection}`}
@@ -371,13 +426,13 @@ export function Home({
               </article>
             )}
             <article
+              ref={setCardElement}
               className={`recommendation-card recommendation-card-current${isCardSettling ? " is-settling" : ""}`}
               style={{ transform: `translate3d(0, ${dragOffset}px, 0)` }}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerCancel}
-              onWheel={handleWheel}
               onDragStart={(event) => event.preventDefault()}
             >
               <ProfilePhoto

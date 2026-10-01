@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  BrandHeader,
   EmptyState,
   Icon,
   PixelButton,
@@ -33,26 +34,36 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
     };
   }, [simulationId]);
 
-  if (error)
+  if (error || !simulation)
     return (
-      <EmptyState
-        icon="!"
-        title="시뮬레이션을 불러오지 못했어요"
-        description="잠시 후 다시 시도해주세요."
-        action={
-          <PixelButton onClick={() => navigate("/home")}>
-            홈으로 가기
-          </PixelButton>
-        }
-      />
-    );
-  if (!simulation)
-    return (
-      <EmptyState
-        icon="✦"
-        title="시뮬레이션 결과를 불러오고 있어요"
-        description="잠시만 기다려주세요."
-      />
+      <>
+        <BrandHeader />
+        <ScreenHeader
+          className="chat-room-header"
+          title="시뮬레이션"
+          onBack={() => navigate("/home")}
+        />
+        <main className="main-scroll ai-screen-state-main">
+          {error ? (
+            <EmptyState
+              icon="!"
+              title="시뮬레이션을 불러오지 못했어요"
+              description="잠시 후 다시 시도해주세요."
+              action={
+                <PixelButton onClick={() => navigate("/home")}>
+                  홈으로 가기
+                </PixelButton>
+              }
+            />
+          ) : (
+            <EmptyState
+              icon="✦"
+              title="시뮬레이션 결과를 불러오고 있어요"
+              description="잠시만 기다려주세요."
+            />
+          )}
+        </main>
+      </>
     );
 
   const partner = simulation.partner || {};
@@ -62,9 +73,16 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
     Number.isSafeInteger(roomId) && roomId > 0 ? `/chats/${roomId}` : "/chats";
   const chatRoomQuery =
     Number.isSafeInteger(roomId) && roomId > 0 ? `?chatRoomId=${roomId}` : "";
+  const partnerMemberId = Number(partner.userId);
+  const practicePath =
+    Number.isSafeInteger(partnerMemberId) && partnerMemberId > 0
+      ? `/ai/practice/${partnerMemberId}${chatRoomQuery}`
+      : null;
   return (
     <>
+      <BrandHeader />
       <ScreenHeader
+        className="chat-room-header"
         title={partner.nickname || "시뮬레이션"}
         onBack={() => navigate("/home")}
         right={<Icon name="ai-avatar.svg" />}
@@ -73,7 +91,11 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
         <button type="button" className="active">
           시뮬레이션
         </button>
-        <button type="button" onClick={() => navigate("/home")}>
+        <button
+          type="button"
+          disabled={!practicePath}
+          onClick={() => practicePath && navigate(practicePath)}
+        >
           연습 대화
         </button>
         <button type="button" onClick={() => navigate(chatPath)}>
@@ -159,30 +181,42 @@ export function Report({ simulationId, chatRoomId, navigate }) {
     Number.isSafeInteger(roomId) && roomId > 0
       ? `/ai/simulations/${simulationId}?chatRoomId=${roomId}`
       : `/ai/simulations/${simulationId}`;
-  if (error)
+  if (error || !report)
     return (
-      <EmptyState
-        icon="!"
-        title="리포트를 불러오지 못했어요"
-        description="잠시 후 다시 시도해주세요."
-        action={
-          <PixelButton onClick={() => navigate(simulationPath)}>
-            시뮬레이션으로 돌아가기
-          </PixelButton>
-        }
-      />
-    );
-  if (!report)
-    return (
-      <EmptyState
-        icon="✦"
-        title="리포트를 불러오고 있어요"
-        description="잠시만 기다려주세요."
-      />
+      <>
+        <BrandHeader />
+        <ScreenHeader
+          className="chat-room-header"
+          title="궁합 리포트"
+          onBack={() => navigate(simulationPath)}
+        />
+        <main className="main-scroll ai-screen-state-main">
+          {error ? (
+            <EmptyState
+              icon="!"
+              title="리포트를 불러오지 못했어요"
+              description="잠시 후 다시 시도해주세요."
+              action={
+                <PixelButton onClick={() => navigate(simulationPath)}>
+                  시뮬레이션으로 돌아가기
+                </PixelButton>
+              }
+            />
+          ) : (
+            <EmptyState
+              icon="✦"
+              title="리포트를 불러오고 있어요"
+              description="잠시만 기다려주세요."
+            />
+          )}
+        </main>
+      </>
     );
   return (
     <>
+      <BrandHeader />
       <ScreenHeader
+        className="chat-room-header"
         title="궁합 리포트"
         onBack={() => navigate(simulationPath)}
       />
@@ -206,11 +240,11 @@ export function Report({ simulationId, chatRoomId, navigate }) {
         </div>
         {(report.areas || []).map((area) => (
           <div className="report-metric" key={area.area || area.label}>
-            <span>
-              {area.label || area.area}
-              <small>{area.comment || "분석 결과를 확인해주세요."}</small>
-            </span>
-            <b>{area.gradeLabel || area.grade || "-"}</b>
+            <div className="report-metric-heading">
+              <span>{area.label || area.area}</span>
+              <b>{area.gradeLabel || area.grade || "-"}</b>
+            </div>
+            <small>{area.comment || "분석 결과를 확인해주세요."}</small>
           </div>
         ))}
         <p className="report-disclaimer">
