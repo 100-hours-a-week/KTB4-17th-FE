@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BrandHeader, ScreenHeader } from "../../shared/ui/components.jsx";
 import { MessageBubble } from "../chat/Chat.jsx";
+import { ChatModeMenu } from "../chat/ChatModeMenu.jsx";
 import * as aiPracticeApi from "./api.js";
 import { connectAiPracticeSocket } from "./socket.js";
 
@@ -321,51 +322,36 @@ export function Practice({
             ? "대화를 불러오는 중이에요"
             : "메시지를 입력하세요";
   return (
-    <>
-      <BrandHeader />
+    <section className="ai-conversation-view" aria-label="AI 연습 대화">
+      <BrandHeader navigate={navigate} />
       <ScreenHeader
-        className="chat-room-header"
+        className="chat-room-header conversation-header"
         title={partnerTitle}
         onBack={() => navigate(backPath)}
         right={
-          session?.status === "ACTIVE" ? (
-            <button
-              type="button"
-              className="more-button"
-              aria-label="연습 대화 메뉴"
-              onClick={() => setShowEndDialog(true)}
-            >
-              •••
-            </button>
-          ) : null
+          <div className="chat-header-actions">
+            <ChatModeMenu
+              currentMode="practice"
+              targetMemberId={Number.isSafeInteger(id) && id > 0 ? id : null}
+              simulationStartingFor={simulationStartingFor}
+              onSimulation={() => onStartSimulation(id, chatRoomId)}
+              onChat={() =>
+                navigate(chatRoomId ? `/chats/${chatRoomId}` : "/chats")
+              }
+            />
+            {session?.status === "ACTIVE" && (
+              <button
+                type="button"
+                className="more-button"
+                aria-label="연습 대화 메뉴"
+                onClick={() => setShowEndDialog(true)}
+              >
+                •••
+              </button>
+            )}
+          </div>
         }
       />
-      <div className="mode-tabs">
-        <button
-          type="button"
-          onClick={() => void onStartSimulation(id, chatRoomId)}
-          disabled={
-            !Number.isSafeInteger(id) ||
-            id <= 0 ||
-            simulationStartingFor != null
-          }
-        >
-          {simulationStartingFor === id
-            ? "시뮬레이션 생성 중..."
-            : "시뮬레이션"}
-        </button>
-        <button type="button" className="active">
-          연습 대화
-        </button>
-        <button
-          type="button"
-          onClick={() =>
-            navigate(chatRoomId ? `/chats/${chatRoomId}` : "/chats")
-          }
-        >
-          채팅
-        </button>
-      </div>
       <div className="ai-notice">
         ⓘ　실제 상대가 아닌 AI예요. 대화 내용은 상대에게 전달되지 않아요.
         <span>
@@ -508,6 +494,6 @@ export function Practice({
           </section>
         </div>
       )}
-    </>
+    </section>
   );
 }

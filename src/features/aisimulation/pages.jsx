@@ -7,9 +7,14 @@ import {
   ScreenHeader,
 } from "../../shared/ui/components.jsx";
 import { MessageBubble } from "../chat/Chat.jsx";
+import { ChatModeMenu } from "../chat/ChatModeMenu.jsx";
 import * as aiSimulationApi from "./api.js";
 
 export function Simulation({ simulationId, chatRoomId, navigate }) {
+  const roomId = Number(chatRoomId);
+  const chatPath =
+    Number.isSafeInteger(roomId) && roomId > 0 ? `/chats/${roomId}` : "/chats";
+  const backPath = chatPath === "/chats" ? "/home" : chatPath;
   const [simulation, setSimulation] = useState(null);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -36,14 +41,14 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
 
   if (error || !simulation)
     return (
-      <>
-        <BrandHeader />
+      <section className="ai-conversation-view" aria-label="AI 시뮬레이션">
+        <BrandHeader navigate={navigate} />
         <ScreenHeader
-          className="chat-room-header"
-          title="시뮬레이션"
-          onBack={() => navigate("/home")}
+          className="chat-room-header conversation-header"
+          title="AI 시뮬레이션"
+          onBack={() => navigate(backPath)}
         />
-        <main className="main-scroll ai-screen-state-main">
+        <main className="ai-conversation-state">
           {error ? (
             <EmptyState
               icon="!"
@@ -63,14 +68,11 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
             />
           )}
         </main>
-      </>
+      </section>
     );
 
   const partner = simulation.partner || {};
   const me = simulation.me || {};
-  const roomId = Number(chatRoomId);
-  const chatPath =
-    Number.isSafeInteger(roomId) && roomId > 0 ? `/chats/${roomId}` : "/chats";
   const chatRoomQuery =
     Number.isSafeInteger(roomId) && roomId > 0 ? `?chatRoomId=${roomId}` : "";
   const partnerMemberId = Number(partner.userId);
@@ -79,29 +81,21 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
       ? `/ai/practice/${partnerMemberId}${chatRoomQuery}`
       : null;
   return (
-    <>
-      <BrandHeader />
+    <section className="ai-conversation-view" aria-label="AI 시뮬레이션">
+      <BrandHeader navigate={navigate} />
       <ScreenHeader
-        className="chat-room-header"
-        title={partner.nickname || "시뮬레이션"}
-        onBack={() => navigate("/home")}
-        right={<Icon name="ai-avatar.svg" />}
+        className="chat-room-header conversation-header"
+        title="AI 시뮬레이션"
+        onBack={() => navigate(backPath)}
+        right={
+          <ChatModeMenu
+            currentMode="simulation"
+            targetMemberId={partnerMemberId}
+            onPractice={practicePath ? () => navigate(practicePath) : undefined}
+            onChat={() => navigate(chatPath)}
+          />
+        }
       />
-      <div className="mode-tabs">
-        <button type="button" className="active">
-          시뮬레이션
-        </button>
-        <button
-          type="button"
-          disabled={!practicePath}
-          onClick={() => practicePath && navigate(practicePath)}
-        >
-          연습 대화
-        </button>
-        <button type="button" onClick={() => navigate(chatPath)}>
-          채팅
-        </button>
-      </div>
       <div className="ai-notice">
         ⓘ　실제 상대가 아닌 AI예요. 대화 내용은 상대에게 전달되지 않아요.
       </div>
@@ -155,7 +149,7 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
           리포트 확인하기 ↗
         </PixelButton>
       </div>
-    </>
+    </section>
   );
 }
 
@@ -184,7 +178,7 @@ export function Report({ simulationId, chatRoomId, navigate }) {
   if (error || !report)
     return (
       <>
-        <BrandHeader />
+        <BrandHeader navigate={navigate} />
         <ScreenHeader
           className="chat-room-header"
           title="궁합 리포트"
@@ -214,7 +208,7 @@ export function Report({ simulationId, chatRoomId, navigate }) {
     );
   return (
     <>
-      <BrandHeader />
+      <BrandHeader navigate={navigate} />
       <ScreenHeader
         className="chat-room-header"
         title="궁합 리포트"
