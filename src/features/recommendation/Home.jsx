@@ -339,7 +339,7 @@ export function Home({
   }
   return (
     <>
-      <BrandHeader className="home-header">
+      <BrandHeader navigate={navigate} className="home-header">
         <span className="home-header-spacer" />
         <button
           className="home-menu-button"
@@ -470,7 +470,7 @@ export function Home({
                       "simulation",
                     ],
                     [
-                      "연습 대화",
+                      "AI 연습대화",
                       "action-practice.svg",
                       startPractice,
                       "practice",

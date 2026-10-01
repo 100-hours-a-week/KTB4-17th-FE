@@ -7,6 +7,7 @@ import {
   Icon,
   PixelButton,
 } from "../../shared/ui/components.jsx";
+import { onboardingStepFromStatus } from "../../shared/utils.js";
 import { regions as searchActivityRegions } from "../activity-region/api.js";
 import { beginKakaoLogin } from "../auth/api.js";
 import * as personaApi from "../persona/api.js";
@@ -19,8 +20,14 @@ import {
   religions,
   smokings,
 } from "../profile/data.js";
+import {
+  createPhotoId,
+  prepareProfilePhoto,
+  profilePhotoErrorMessage,
+} from "../profile/photoUpload.js";
 import { profilePayload } from "../profile/serialize.js";
 import * as userApi from "../user/api.js";
+import { isValidBirthDate, normalizeBirthDate } from "../user/birthDate.js";
 import { getRegistrationAgeRestriction } from "../user/registrationAge.js";
 
 const ONBOARDING_STEPS = [
@@ -39,11 +46,6 @@ const PERSONA_FLOW_STEPS = new Set([
   "photo-intro",
   "photo",
 ]);
-const CHAT_IMAGE_MIME_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-]);
 
 export function isHangulSyllable(character) {
   const codePoint = character.codePointAt(0);
@@ -59,16 +61,7 @@ export function isValidKoreanName(value) {
   );
 }
 
-export function isValidBirthDate(value) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const [year, month, day] = value.split("-").map(Number);
-  const date = new Date(year, month - 1, day);
-  return (
-    date.getFullYear() === year &&
-    date.getMonth() === month - 1 &&
-    date.getDate() === day
-  );
-}
+export { isValidBirthDate } from "../user/birthDate.js";
 
 export function splitBirthDate(value) {
   const [year = "", month = "", day = ""] = (value || "").split("-");
@@ -169,7 +162,7 @@ export function BirthDateInput({ value, onChange }) {
       };
     }),
   ];
-  const selectedDate = isValidBirthDate(value) ? value : "";
+  const selectedDate = normalizeBirthDate(value);
   const currentYear = new Date().getFullYear();
   const calendarYears = Array.from(
     { length: currentYear - 1899 },
@@ -214,7 +207,7 @@ export function BirthDateInput({ value, onChange }) {
             type="text"
             inputMode="numeric"
             autoComplete="bday-month"
-            aria-label="월 두 자리"
+            aria-label="월 한 자리 또는 두 자리"
             placeholder="03"
             maxLength={2}
             value={parts.month}
@@ -228,7 +221,7 @@ export function BirthDateInput({ value, onChange }) {
             type="text"
             inputMode="numeric"
             autoComplete="bday-day"
-            aria-label="일 두 자리"
+            aria-label="일 한 자리 또는 두 자리"
             placeholder="21"
             maxLength={2}
             value={parts.day}
@@ -426,13 +419,17 @@ export function Onboarding({ navigate, toast }) {
   const [photoItems, setPhotoItems] = useState([]);
   const [photoSaving, setPhotoSaving] = useState(false);
   const draggedPhotoId = useRef(null);
+  const localPhotoUrls = useRef(new Set());
+  const removedPhotoIds = useRef(new Set());
+  const mounted = useRef(false);
   const identitySubmitInFlight = useRef(false);
   const profileSaveInFlight = useRef(false);
   const personaStartInFlight = useRef(false);
   const profile = data.profile;
   const hasRegisteredIdentity = data.session && data.registrationInfoConfirmed;
-  const step =
-    hasRegisteredIdentity && data.onboardingStep === "identity"
+  const step = !hasRegisteredIdentity
+    ? "identity"
+    : data.onboardingStep === "identity"
       ? "region"
       : data.onboardingStep;
   const stepIndex = ONBOARDING_STEPS.indexOf(step);
@@ -440,6 +437,14 @@ export function Onboarding({ navigate, toast }) {
   const canGoBack = stepIndex > (hasRegisteredIdentity ? 1 : 0);
   const updateProfile = (key, value) =>
     setData((old) => ({ ...old, profile: { ...old.profile, [key]: value } }));
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      for (const url of localPhotoUrls.current) URL.revokeObjectURL(url);
+      localPhotoUrls.current.clear();
+    };
+  }, []);
   function handleNameChange(event) {
     const nextName = event.currentTarget.value;
     updateProfile("name", nextName);
@@ -583,15 +588,18 @@ export function Onboarding({ navigate, toast }) {
       return;
     }
     const name = profile.name;
-    if (!isValidBirthDate(profile.birthDate))
-      return setError("생년월일을 연도, 월, 일 순서로 정확히 입력해주세요.");
+    const birthDate = normalizeBirthDate(profile.birthDate);
+    if (!birthDate)
+      return setError(
+        "실제로 존재하는 생년월일을 입력해주세요. 월과 일은 한 자리로 입력해도 돼요.",
+      );
     if (!isValidKoreanName(name)) {
       setError("");
       setNameTouched(true);
       setNameHelper("이름은 한글 2~8자 이내로 입력해주세요");
       return;
     }
-    if (getRegistrationAgeRestriction(profile.birthDate)) {
+    if (getRegistrationAgeRestriction(birthDate)) {
       setError("");
       navigate("/registration/restricted");
       return;
@@ -604,7 +612,7 @@ export function Onboarding({ navigate, toast }) {
     try {
       const authResponse = await userApi.identity({
         name,
-        birthDate: profile.birthDate,
+        birthDate,
         gender: profile.gender,
       });
       storeBearerToken(authResponse);
@@ -616,7 +624,7 @@ export function Onboarding({ navigate, toast }) {
         profile: {
           ...old.profile,
           name,
-          birthDate: profile.birthDate,
+          birthDate,
           gender: profile.gender,
         },
       }));
@@ -777,18 +785,15 @@ export function Onboarding({ navigate, toast }) {
   }
 
   function addPhotoItem(file, isFrontal) {
-    if (!file) return;
-    if (!CHAT_IMAGE_MIME_TYPES.has(file.type)) {
-      setError("JPG, PNG, WEBP 형식의 사진만 등록할 수 있어요.");
-      return;
-    }
+    if (!file || photoSaving) return;
     if (photoItems.length >= 6) {
       setError("사진은 최대 6장까지 등록할 수 있어요.");
       return;
     }
 
-    const localId = crypto.randomUUID();
+    const localId = createPhotoId();
     const previewUrl = URL.createObjectURL(file);
+    localPhotoUrls.current.add(previewUrl);
     setPhotoItems((current) => [
       ...current,
       { localId, previewUrl, fileId: null, isFrontal, uploading: true },
@@ -796,8 +801,23 @@ export function Onboarding({ navigate, toast }) {
     setError("");
 
     const upload = async () => {
+      let currentPreview = previewUrl;
       try {
-        const metadata = await profileApi.uploadProfileImage(file);
+        const prepared = await prepareProfilePhoto(file);
+        if (!mounted.current || removedPhotoIds.current.has(localId)) return;
+        currentPreview = URL.createObjectURL(prepared);
+        localPhotoUrls.current.add(currentPreview);
+        URL.revokeObjectURL(previewUrl);
+        localPhotoUrls.current.delete(previewUrl);
+        setPhotoItems((current) =>
+          current.map((item) =>
+            item.localId === localId
+              ? { ...item, previewUrl: currentPreview }
+              : item,
+          ),
+        );
+        const metadata = await profileApi.uploadProfileImage(prepared);
+        if (!mounted.current || removedPhotoIds.current.has(localId)) return;
         setPhotoItems((current) =>
           current.map((item) =>
             item.localId === localId
@@ -805,19 +825,21 @@ export function Onboarding({ navigate, toast }) {
               : item,
           ),
         );
-      } catch {
-        URL.revokeObjectURL(previewUrl);
+      } catch (error) {
+        URL.revokeObjectURL(currentPreview);
+        localPhotoUrls.current.delete(currentPreview);
+        if (!mounted.current || removedPhotoIds.current.has(localId)) return;
         setPhotoItems((current) =>
           current.filter((item) => item.localId !== localId),
         );
-        setError("사진을 업로드하지 못했어요. 잠시 후 다시 시도해주세요.");
+        setError(profilePhotoErrorMessage(error));
       }
     };
     void upload();
   }
 
   function reorderPhotos(sourceId, targetId) {
-    if (!sourceId || sourceId === targetId) return;
+    if (photoSaving || !sourceId || sourceId === targetId) return;
     setPhotoItems((current) => {
       const sourceIndex = current.findIndex(
         (item) => item.localId === sourceId,
@@ -839,9 +861,14 @@ export function Onboarding({ navigate, toast }) {
   }
 
   function removePhoto(localId) {
+    if (photoSaving) return;
+    removedPhotoIds.current.add(localId);
     setPhotoItems((current) => {
       const item = current.find((photo) => photo.localId === localId);
-      if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl);
+      if (item?.previewUrl) {
+        URL.revokeObjectURL(item.previewUrl);
+        localPhotoUrls.current.delete(item.previewUrl);
+      }
       return current.filter((photo) => photo.localId !== localId);
     });
   }
@@ -1065,12 +1092,14 @@ export function Onboarding({ navigate, toast }) {
         {step === "region" && (
           <>
             <h1>활동 지역을 알려주세요</h1>
-            <p className="subcopy">가까운 사람들을 추천해드려요.</p>
+            <p className="subcopy">
+              가까운 사람들을 추천해드려요. 시·군·구 이름으로 검색할 수 있어요.
+            </p>
             <Field label="지역 검색">
               <input
                 value={regionQuery}
                 onChange={(e) => setRegionQuery(e.target.value)}
-                placeholder="시/군/구를 입력하세요"
+                placeholder="시·군·구 검색 (예: 수원시, 강남구)"
               />
             </Field>
             {regionSearchStatus === "loading" && (
@@ -1356,10 +1385,11 @@ export function Onboarding({ navigate, toast }) {
               <label className="photo-front-upload">
                 <strong>정면 사진 등록</strong>
                 <span>얼굴이 잘 보이는 정면 사진을 선택해주세요.</span>
-                <small>JPG · PNG · WEBP</small>
+                <small>JPG · PNG · WEBP · HEIC</small>
                 <input
                   type="file"
-                  accept="image/png,image/jpeg,image/webp"
+                  accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif"
+                  disabled={photoSaving}
                   onChange={(event) => {
                     addPhotoItem(event.target.files?.[0], true);
                     event.target.value = "";
@@ -1372,7 +1402,7 @@ export function Onboarding({ navigate, toast }) {
                 <article
                   className="onboarding-photo-tile"
                   data-photo-id={item.localId}
-                  draggable={!item.uploading}
+                  draggable={!item.uploading && !photoSaving}
                   key={item.localId}
                   onDragStart={(event) => {
                     draggedPhotoId.current = item.localId;
@@ -1394,6 +1424,7 @@ export function Onboarding({ navigate, toast }) {
                   onPointerDown={(event) => {
                     if (
                       event.pointerType === "mouse" ||
+                      photoSaving ||
                       item.uploading ||
                       event.target.closest("button")
                     )
@@ -1429,6 +1460,7 @@ export function Onboarding({ navigate, toast }) {
                     type="button"
                     onClick={() => removePhoto(item.localId)}
                     aria-label="사진 삭제"
+                    disabled={photoSaving}
                   >
                     ×
                   </button>
@@ -1441,7 +1473,8 @@ export function Onboarding({ navigate, toast }) {
                     <small>추가 사진</small>
                     <input
                       type="file"
-                      accept="image/png,image/jpeg,image/webp"
+                      accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif"
+                      disabled={photoSaving}
                       onChange={(event) => {
                         addPhotoItem(event.target.files?.[0], false);
                         event.target.value = "";

@@ -34,14 +34,21 @@ export function PixelButton({
   );
 }
 
-export function BrandHeader({ children, className = "" }) {
+export function BrandHeader({ children, className = "", navigate }) {
   return (
     <header className={`brand-header ${className}`}>
-      <img
-        className="brand-header-logo"
-        src={asset("logo-login.png")}
-        alt="*23#"
-      />
+      <button
+        type="button"
+        className="brand-header-home"
+        onClick={() => navigate("/home")}
+        aria-label="홈으로 이동"
+      >
+        <img
+          className="brand-header-logo"
+          src={asset("logo-login.png")}
+          alt="*23#"
+        />
+      </button>
       {children}
     </header>
   );

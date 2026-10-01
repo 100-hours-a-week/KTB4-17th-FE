@@ -140,7 +140,7 @@ export function Likes({
   }
   return (
     <>
-      <BrandHeader />
+      <BrandHeader navigate={navigate} />
       <div className="segmented-tabs">
         <button
           type="button"

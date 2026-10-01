@@ -1,6 +1,5 @@
 .my-topbar {
   justify-content: space-between;
-  padding: 0 18px;
 }
 
 .my-header-actions {
@@ -10,24 +9,15 @@
   margin-left: auto;
 }
 
-.my-topbar button {
+.my-header-actions button {
   position: relative;
   display: grid;
   place-items: center;
   width: 38px;
   height: 38px;
   padding: 0;
-  border: 2px solid #38205f;
-  background: var(--soft-lavender);
-  box-shadow: 2px 2px 0 #352a4840;
-}
-
-/* Only devices with a real hover pointer should receive hover movement. */
-@media (hover: hover) and (pointer: fine) {
-  .my-topbar button:where(:hover) {
-    transform: translate(-1px, -1px);
-    box-shadow: 3px 3px 0 #352a4840;
-  }
+  border: 0;
+  background: transparent;
 }
 
 .my-topbar button:where(:focus-visible) {
@@ -119,6 +109,20 @@
 
 .my-identity-loading {
   min-height: 128px;
+}
+
+.my-profile-avatar-button {
+  display: block;
+  flex: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.my-profile-avatar-button .person-avatar {
+  display: block;
 }
 
 .my-identity-loading-content {
@@ -513,6 +517,22 @@
 
 .edit-photo-grid {
   margin-top: 16px;
+}
+
+.edit-photo-current {
+  cursor: default;
+  touch-action: auto;
+}
+
+.edit-photo-replace-button {
+  min-height: 40px;
+  margin-top: 14px;
+  padding: 8px 12px;
+  border: 1px solid var(--purple);
+  background: #fff7fc;
+  color: var(--purple);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .profile-photo-labels {

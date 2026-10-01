@@ -302,10 +302,15 @@ export function messagesAreGrouped(previous, message) {
       previous.dateKey === message.dateKey &&
       previous.timestamp &&
       message.timestamp &&
-      Math.abs(message.timestamp - previous.timestamp) < 5 * 60_000 &&
+      Math.floor(previous.timestamp / 60_000) ===
+        Math.floor(message.timestamp / 60_000) &&
       previous.status === "SENT" &&
       message.status === "SENT",
   );
+}
+
+export function messageTimesAreGrouped(previous, message) {
+  return messagesAreGrouped(previous, message);
 }
 
 export function chatRoomErrorMessage(error) {
