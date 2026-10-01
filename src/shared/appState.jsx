@@ -25,16 +25,6 @@ const LEGACY_STORAGE_KEYS = [
   "pocket-signal-v2-api:notifications",
   "pocket-signal-v2-api:preferences",
 ];
-const ONBOARDING_STEPS = [
-  "identity",
-  "region",
-  "profile",
-  "lifestyle",
-  "questions",
-  "persona-summary",
-  "photo-intro",
-  "photo",
-];
 
 const AppStateContext = createContext(null);
 
@@ -72,11 +62,9 @@ export function loadInitialState() {
         initial.notifications = stored.notifications;
       if (stored.preferences && typeof stored.preferences === "object")
         initial.preferences = { ...initial.preferences, ...stored.preferences };
-      if (ONBOARDING_STEPS.includes(stored.onboardingStep))
-        initial.onboardingStep = stored.onboardingStep;
-      initial.registrationInfoConfirmed = Boolean(
-        stored.registrationInfoConfirmed,
-      );
+      // Only a successful server session check can confirm registration.
+      initial.registrationInfoConfirmed = false;
+      initial.onboardingStep = "identity";
       initial.agreed = Boolean(stored.agreed);
       if (Array.isArray(stored.terms) && stored.terms.length === 4)
         initial.terms = stored.terms.map(Boolean);

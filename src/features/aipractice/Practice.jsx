@@ -34,8 +34,8 @@ export function practiceErrorMessage(error) {
   const messages = {
     AUTH_REQUIRED: "로그인이 만료됐어요. 다시 로그인한 뒤 이용해주세요.",
     TARGET_MEMBER_NOT_FOUND: "상대 회원 정보를 찾을 수 없어요.",
-    SESSION_NOT_FOUND: "연습 대화 정보를 찾을 수 없어요.",
-    SESSION_ENDED: "종료된 연습 대화에는 새 메시지를 보낼 수 없어요.",
+    SESSION_NOT_FOUND: "AI 연습대화 정보를 찾을 수 없어요.",
+    SESSION_ENDED: "종료된 AI 연습대화에는 새 메시지를 보낼 수 없어요.",
     GENERATION_IN_PROGRESS: "AI가 이전 메시지에 답변하고 있어요.",
     DAILY_LIMIT_EXCEEDED: "오늘의 연습 횟수를 모두 사용했어요.",
     CHAT_NOT_RETRYABLE: "이 답변은 다시 시도할 수 없어요.",
@@ -43,7 +43,7 @@ export function practiceErrorMessage(error) {
   };
   return (
     messages[error?.code] ||
-    "연습 대화를 처리하지 못했어요. 잠시 후 다시 시도해주세요."
+    "AI 연습대화를 처리하지 못했어요. 잠시 후 다시 시도해주세요."
   );
 }
 
@@ -96,7 +96,7 @@ export function Practice({
     setChats([]);
     setUsage(null);
     if (!Number.isSafeInteger(memberId) || memberId <= 0) {
-      setLoadError("상대 회원 ID가 없어 연습 대화를 시작할 수 없어요.");
+      setLoadError("상대 회원 ID가 없어 AI 연습대화를 시작할 수 없어요.");
       setLoading(false);
       return () => {
         active = false;
@@ -309,7 +309,7 @@ export function Practice({
     focusAfterSendRef.current = false;
     composerInputRef.current?.focus({ preventScroll: true });
   }, [inputDisabled]);
-  const partnerTitle = "AI 연습 대화";
+  const partnerTitle = "AI 연습대화";
   const backPath = chatRoomId ? `/chats/${chatRoomId}` : "/home";
   const inputPlaceholder =
     count >= dailyLimit
@@ -322,28 +322,29 @@ export function Practice({
             ? "대화를 불러오는 중이에요"
             : "메시지를 입력하세요";
   return (
-    <section className="ai-conversation-view" aria-label="AI 연습 대화">
-      <BrandHeader navigate={navigate} />
+    <section className="ai-conversation-view" aria-label="AI 연습대화">
+      <BrandHeader navigate={navigate}>
+        <ChatModeMenu
+          currentMode="practice"
+          targetMemberId={Number.isSafeInteger(id) && id > 0 ? id : null}
+          simulationStartingFor={simulationStartingFor}
+          onSimulation={() => onStartSimulation(id, chatRoomId)}
+          onChat={() =>
+            navigate(chatRoomId ? `/chats/${chatRoomId}` : "/chats")
+          }
+        />
+      </BrandHeader>
       <ScreenHeader
         className="chat-room-header conversation-header"
         title={partnerTitle}
         onBack={() => navigate(backPath)}
         right={
           <div className="chat-header-actions">
-            <ChatModeMenu
-              currentMode="practice"
-              targetMemberId={Number.isSafeInteger(id) && id > 0 ? id : null}
-              simulationStartingFor={simulationStartingFor}
-              onSimulation={() => onStartSimulation(id, chatRoomId)}
-              onChat={() =>
-                navigate(chatRoomId ? `/chats/${chatRoomId}` : "/chats")
-              }
-            />
             {session?.status === "ACTIVE" && (
               <button
                 type="button"
                 className="more-button"
-                aria-label="연습 대화 메뉴"
+                aria-label="AI 연습대화 메뉴"
                 onClick={() => setShowEndDialog(true)}
               >
                 •••
@@ -361,7 +362,7 @@ export function Practice({
       <div className="chat-messages practice-messages">
         {loading ? (
           <div className="practice-state" role="status">
-            연습 대화를 불러오고 있어요…
+            AI 연습대화를 불러오고 있어요…
           </div>
         ) : loadError ? (
           <div className="practice-state" role="alert">
@@ -471,7 +472,7 @@ export function Practice({
             aria-modal="true"
             aria-labelledby="practice-end-title"
           >
-            <h2 id="practice-end-title">연습 대화를 종료할까요?</h2>
+            <h2 id="practice-end-title">AI 연습대화를 종료할까요?</h2>
             <p>종료한 뒤에도 대화 기록은 다시 확인할 수 있어요.</p>
             <div>
               <button

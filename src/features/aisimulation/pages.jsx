@@ -82,19 +82,18 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
       : null;
   return (
     <section className="ai-conversation-view" aria-label="AI 시뮬레이션">
-      <BrandHeader navigate={navigate} />
+      <BrandHeader navigate={navigate}>
+        <ChatModeMenu
+          currentMode="simulation"
+          targetMemberId={partnerMemberId}
+          onPractice={practicePath ? () => navigate(practicePath) : undefined}
+          onChat={() => navigate(chatPath)}
+        />
+      </BrandHeader>
       <ScreenHeader
         className="chat-room-header conversation-header"
         title="AI 시뮬레이션"
         onBack={() => navigate(backPath)}
-        right={
-          <ChatModeMenu
-            currentMode="simulation"
-            targetMemberId={partnerMemberId}
-            onPractice={practicePath ? () => navigate(practicePath) : undefined}
-            onChat={() => navigate(chatPath)}
-          />
-        }
       />
       <div className="ai-notice">
         ⓘ　실제 상대가 아닌 AI예요. 대화 내용은 상대에게 전달되지 않아요.

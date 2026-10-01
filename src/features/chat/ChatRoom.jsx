@@ -229,7 +229,21 @@ function ChatRoomContent({
   return (
     <section ref={rootRef} className="chat-room-view" aria-label="채팅방">
       <div className="chat-room-content" inert={Boolean(viewingImage)}>
-        <BrandHeader navigate={navigate} />
+        <BrandHeader navigate={navigate}>
+          <ChatModeMenu
+            targetMemberId={targetMemberId}
+            simulationStartingFor={simulationStartingFor}
+            onSimulation={() => onStartSimulation?.(targetMemberId, roomId)}
+            onPractice={
+              targetMemberId
+                ? () =>
+                    navigate(
+                      `/ai/practice/${targetMemberId}?chatRoomId=${roomId}`,
+                    )
+                : undefined
+            }
+          />
+        </BrandHeader>
         <ScreenHeader
           className="chat-room-header conversation-header chat-room-partner-header"
           title={
@@ -262,19 +276,6 @@ function ChatRoomContent({
           onBack={() => navigate("/chats")}
           right={
             <div className="chat-header-actions">
-              <ChatModeMenu
-                targetMemberId={targetMemberId}
-                simulationStartingFor={simulationStartingFor}
-                onSimulation={() => onStartSimulation?.(targetMemberId, roomId)}
-                onPractice={
-                  targetMemberId
-                    ? () =>
-                        navigate(
-                          `/ai/practice/${targetMemberId}?chatRoomId=${roomId}`,
-                        )
-                    : undefined
-                }
-              />
               <button
                 type="button"
                 className="more-button"

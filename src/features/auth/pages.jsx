@@ -75,7 +75,7 @@ export function Login({ onLogin, onLocalTestLogin }) {
           aria-labelledby="local-test-login-title"
         >
           <h2 id="local-test-login-title">개발용 테스트 계정</h2>
-          <p>카카오 로그인과 온보딩 없이 AI 연습 대화를 바로 확인해요.</p>
+          <p>카카오 로그인과 온보딩 없이 AI 연습대화를 바로 확인해요.</p>
           {testAccountsLoading ? (
             <div className="local-test-login-status" role="status">
               테스트 계정을 확인하고 있어요…

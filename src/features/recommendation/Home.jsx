@@ -470,7 +470,7 @@ export function Home({
                       "simulation",
                     ],
                     [
-                      "연습 대화",
+                      "AI 연습대화",
                       "action-practice.svg",
                       startPractice,
                       "practice",
