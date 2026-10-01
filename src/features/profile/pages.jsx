@@ -92,7 +92,7 @@ export function MyPage({ navigate, toast }) {
   const age = dateAge(profile.birthDate);
   return (
     <>
-      <BrandHeader className="my-topbar">
+      <BrandHeader navigate={navigate} className="my-topbar">
         <div className="my-header-actions">
           <button
             type="button"
@@ -191,7 +191,7 @@ export function Settings({ navigate, onLogout, isLoggingOut = false }) {
 
   return (
     <>
-      <BrandHeader />
+      <BrandHeader navigate={navigate} />
       <ScreenHeader
         className="chat-room-header"
         title="설정"
@@ -457,7 +457,7 @@ export function MyProfile({ navigate, toast }) {
   }
   return (
     <>
-      <BrandHeader />
+      <BrandHeader navigate={navigate} />
       <ScreenHeader
         className="chat-room-header"
         title="프로필 수정"
