@@ -102,7 +102,11 @@ function dispatchAuthExpired() {
 }
 
 export async function apiRequest(path, options = {}) {
-  const { skipAuth = false, ...requestOptions } = options;
+  const {
+    skipAuth = false,
+    notifyAuthExpired = true,
+    ...requestOptions
+  } = options;
   let response = await sendRequest(path, requestOptions, { skipAuth });
 
   if (
@@ -128,7 +132,8 @@ export async function apiRequest(path, options = {}) {
   const result = await readJson(response);
   if (!response.ok) {
     const error = requestError(response, result);
-    if (response.status === 401 && !skipAuth) dispatchAuthExpired();
+    if (response.status === 401 && !skipAuth && notifyAuthExpired)
+      dispatchAuthExpired();
     throw error;
   }
 

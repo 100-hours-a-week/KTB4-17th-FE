@@ -8,6 +8,7 @@ import {
   PixelButton,
 } from "../../shared/ui/components.jsx";
 import { regions as searchActivityRegions } from "../activity-region/api.js";
+import { beginKakaoLogin } from "../auth/api.js";
 import * as personaApi from "../persona/api.js";
 import * as profileApi from "../profile/api.js";
 import {
@@ -410,6 +411,8 @@ export function profileValidation(profile, includeLifestyle = false) {
 export function Onboarding({ navigate, toast }) {
   const { data, setData } = useAppState();
   const [error, setError] = useState("");
+  const [identitySaving, setIdentitySaving] = useState(false);
+  const [identityAuthExpired, setIdentityAuthExpired] = useState(false);
   const [nameTouched, setNameTouched] = useState(false);
   const [nameHelper, setNameHelper] = useState("");
   const [regionQuery, setRegionQuery] = useState("");
@@ -423,12 +426,18 @@ export function Onboarding({ navigate, toast }) {
   const [photoItems, setPhotoItems] = useState([]);
   const [photoSaving, setPhotoSaving] = useState(false);
   const draggedPhotoId = useRef(null);
+  const identitySubmitInFlight = useRef(false);
   const profileSaveInFlight = useRef(false);
   const personaStartInFlight = useRef(false);
   const profile = data.profile;
-  const step = data.onboardingStep;
+  const hasRegisteredIdentity = data.session && data.registrationInfoConfirmed;
+  const step =
+    hasRegisteredIdentity && data.onboardingStep === "identity"
+      ? "region"
+      : data.onboardingStep;
   const stepIndex = ONBOARDING_STEPS.indexOf(step);
   const isPersonaFlowStep = PERSONA_FLOW_STEPS.has(step);
+  const canGoBack = stepIndex > (hasRegisteredIdentity ? 1 : 0);
   const updateProfile = (key, value) =>
     setData((old) => ({ ...old, profile: { ...old.profile, [key]: value } }));
   function handleNameChange(event) {
@@ -457,6 +466,7 @@ export function Onboarding({ navigate, toast }) {
     [setData],
   );
   const back = () => {
+    if (hasRegisteredIdentity && stepIndex <= 1) return;
     if (stepIndex <= 0) {
       navigate("/login");
       return;
@@ -566,6 +576,12 @@ export function Onboarding({ navigate, toast }) {
   }, [step, personaConversation, startPersona]);
 
   async function submitIdentity() {
+    if (identitySubmitInFlight.current || identityAuthExpired) return;
+    if (hasRegisteredIdentity) {
+      advance("region");
+      navigate("/onboarding", { replace: true });
+      return;
+    }
     const name = profile.name;
     if (!isValidBirthDate(profile.birthDate))
       return setError("생년월일을 연도, 월, 일 순서로 정확히 입력해주세요.");
@@ -582,6 +598,8 @@ export function Onboarding({ navigate, toast }) {
     }
     if (!profile.gender) return setError("성별을 선택해주세요.");
 
+    identitySubmitInFlight.current = true;
+    setIdentitySaving(true);
     setError("");
     try {
       const authResponse = await userApi.identity({
@@ -590,21 +608,37 @@ export function Onboarding({ navigate, toast }) {
         gender: profile.gender,
       });
       storeBearerToken(authResponse);
+      setData((old) => ({
+        ...old,
+        session: true,
+        onboardingStep: "region",
+        registrationInfoConfirmed: true,
+        profile: {
+          ...old.profile,
+          name,
+          birthDate: profile.birthDate,
+          gender: profile.gender,
+        },
+      }));
+      navigate("/onboarding", { replace: true });
     } catch (e) {
       if (e.code === "USER_AGE_REQUIREMENT_NOT_MET") {
         setError("");
         navigate("/registration/restricted");
         return;
       }
-      return setError(e.code || "기본 정보를 저장하지 못했어요.");
+      if (e.code === "AUTH_REQUIRED" || e.status === 401) {
+        setIdentityAuthExpired(true);
+        setError(
+          "가입 상태를 확인할 수 없어요. 카카오 인증을 다시 진행해주세요.",
+        );
+        return;
+      }
+      setError("기본 정보를 저장하지 못했어요. 잠시 후 다시 시도해주세요.");
+    } finally {
+      identitySubmitInFlight.current = false;
+      setIdentitySaving(false);
     }
-    setData((old) => ({
-      ...old,
-      session: true,
-      onboardingStep: "region",
-      registrationInfoConfirmed: true,
-    }));
-    navigate("/onboarding");
   }
 
   async function nextProfile() {
@@ -891,7 +925,7 @@ export function Onboarding({ navigate, toast }) {
       {!isRegistrationInfoStep && (
         <>
           <header className="onboarding-top">
-            {isPersonaFlowStep ? (
+            {isPersonaFlowStep || !canGoBack ? (
               <span
                 className="onboarding-back-placeholder"
                 aria-hidden="true"
@@ -1432,7 +1466,16 @@ export function Onboarding({ navigate, toast }) {
         className={`onboarding-action${isRegistrationInfoStep ? " registration-info-action" : ""}`}
       >
         {step === "identity" && (
-          <PixelButton onClick={submitIdentity}>확인</PixelButton>
+          <PixelButton
+            onClick={identityAuthExpired ? beginKakaoLogin : submitIdentity}
+            disabled={identitySaving}
+          >
+            {identitySaving
+              ? "저장 중..."
+              : identityAuthExpired
+                ? "카카오 인증 다시 하기"
+                : "확인"}
+          </PixelButton>
         )}
         {step === "terms" && (
           <PixelButton

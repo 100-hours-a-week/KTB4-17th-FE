@@ -1,6 +1,7 @@
 import { apiRequest } from "../../shared/api/client.js";
 
-export const onboarding = () => apiRequest("/api/v1/users/me/onboarding");
+export const onboarding = (options = {}) =>
+  apiRequest("/api/v1/users/me/onboarding", options);
 
 export const onboardingProfile = () =>
   apiRequest("/api/v1/users/me/onboarding/profile");
