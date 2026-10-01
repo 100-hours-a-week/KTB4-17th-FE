@@ -1,6 +1,6 @@
+import * as Sentry from "@sentry/react";
 import React from "react";
 import { createRoot } from "react-dom/client";
-import * as Sentry from "@sentry/react";
 import App from "./app/App.jsx";
 import "./styles.css";
 
