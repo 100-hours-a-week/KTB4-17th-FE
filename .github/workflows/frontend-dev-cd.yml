@@ -95,6 +95,8 @@ jobs:
             -p "${EC2_PORT:-22}" \
             "$EC2_USER@$EC2_HOST" \
             "cd /home/ubuntu/app && \
+             aws ecr get-login-password --region '$AWS_REGION' | \
+             docker login --username AWS --password-stdin '$ECR_REGISTRY' && \
              sed -i 's|^FRONTEND_IMAGE=.*|FRONTEND_IMAGE=$IMAGE_URL|' .env && \
              docker compose pull nginx && \
              docker compose up -d --no-deps nginx"
