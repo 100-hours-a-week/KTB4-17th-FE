@@ -1,3 +1,4 @@
+import { createMessageId } from "../../shared/messageId.js";
 import {
   chatSendErrorMessage,
   mapChatMessage,
@@ -26,7 +27,7 @@ export function enqueueMessages(entry, text, attachment, api) {
   for (const type of [attachment ? "IMAGE" : null, text ? "TEXT" : null].filter(
     Boolean,
   )) {
-    const clientMessageId = crypto.randomUUID();
+    const clientMessageId = createMessageId();
     const task = {
       clientMessageId,
       type,

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
+import { createMessageId } from "../../shared/messageId.js";
 import {
   mapChatMessage,
   mergeChatMessages,
@@ -100,6 +101,54 @@ async function settled(entry) {
     await new Promise((resolve) => setImmediate(resolve));
   }
 }
+
+test("mobile HTTP origins can generate unique UUID v4 message identifiers", () => {
+  const cryptoApi = {
+    getRandomValues: globalThis.crypto.getRandomValues.bind(globalThis.crypto),
+  };
+  const ids = Array.from({ length: 100 }, () => createMessageId(cryptoApi));
+  assert.equal(new Set(ids).size, 100);
+  for (const id of ids)
+    assert.match(
+      id,
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+});
+
+test("image messages upload and send without crypto.randomUUID", async () => {
+  const original = Object.getOwnPropertyDescriptor(globalThis, "crypto");
+  const cryptoApi = {
+    getRandomValues: globalThis.crypto.getRandomValues.bind(globalThis.crypto),
+  };
+  Object.defineProperty(globalThis, "crypto", {
+    configurable: true,
+    value: cryptoApi,
+  });
+  try {
+    const entry = activeEntry();
+    const { api, calls } = apiFixture();
+    enqueueMessages(
+      entry,
+      "사진이에요",
+      {
+        file: new File(["photo"], "phone.jpg"),
+        previewUrl: "blob:phone-photo",
+      },
+      api,
+    );
+    await settled(entry);
+    assert.deepEqual(
+      calls.map((call) => call.kind),
+      ["upload", "image", "text"],
+    );
+    assert.equal(entry.snapshot.messages.length, 2);
+    assert.ok(
+      entry.snapshot.messages.every((message) => message.status === "SENT"),
+    );
+  } finally {
+    Object.defineProperty(globalThis, "crypto", original);
+  }
+});
 
 test("message mapping retains reconciliation and read fields", () => {
   const mapped = message(9, {

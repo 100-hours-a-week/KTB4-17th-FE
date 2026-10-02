@@ -12,6 +12,10 @@ import {
   EmptyState,
   ScreenHeader,
 } from "../../shared/ui/components.jsx";
+import {
+  prepareProfilePhoto,
+  profilePhotoErrorMessage,
+} from "../profile/photoUpload.js";
 import * as chatApi from "./api.js";
 import { ChatImage } from "./ChatImage.jsx";
 import { ChatModeMenu } from "./ChatModeMenu.jsx";
@@ -22,11 +26,13 @@ import {
   messageTimesAreGrouped,
 } from "./model.js";
 import { enqueueMessages, retryMessage } from "./outbox.js";
-import { releasePreview, updateRoomSession } from "./session.js";
+import {
+  isSessionActive,
+  releasePreview,
+  updateRoomSession,
+} from "./session.js";
 import { useChatRoom } from "./useChatRoom.js";
 import { useChatScroll } from "./useChatScroll.js";
-
-const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function ImageViewer({ message, entry, onClose }) {
   const dialogRef = useRef(null);
@@ -83,35 +89,63 @@ function ImageViewer({ message, entry, onClose }) {
   );
 }
 
-function useKeyboardViewport(rootRef) {
-  useEffect(() => {
+function useKeyboardViewport(rootRef, preservePosition) {
+  useLayoutEffect(() => {
     const screen = rootRef.current?.closest(".app-screen");
     const viewport = window.visualViewport;
-    if (!screen || !viewport) return undefined;
-    const originalHeight = screen.style.height;
-    const originalMinHeight = screen.style.minHeight;
+    if (!screen) return undefined;
+    const properties = [
+      "height",
+      "minHeight",
+      "position",
+      "top",
+      "left",
+      "transform",
+    ];
+    const originalStyles = Object.fromEntries(
+      properties.map((name) => [name, screen.style[name]]),
+    );
+    screen.classList.add("app-screen-chat");
+    let frame = null;
+    const restoreStyles = () => {
+      for (const name of properties) screen.style[name] = originalStyles[name];
+    };
     const resize = () => {
       if (
         window.matchMedia("(width < 600px)").matches &&
-        viewport.scale === 1
+        (!viewport || viewport.scale === 1)
       ) {
-        screen.style.height = `${viewport.height}px`;
+        screen.style.height = `${viewport?.height || window.innerHeight}px`;
         screen.style.minHeight = "0";
+        screen.style.position = "fixed";
+        screen.style.top = `${viewport?.offsetTop || 0}px`;
+        screen.style.left = "50%";
+        screen.style.transform = "translateX(-50%)";
       } else {
-        screen.style.height = originalHeight;
-        screen.style.minHeight = originalMinHeight;
+        restoreStyles();
       }
+      preservePosition();
+    };
+    const scheduleResize = () => {
+      if (frame != null) window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        frame = null;
+        resize();
+      });
     };
     resize();
-    viewport.addEventListener("resize", resize);
-    window.addEventListener("resize", resize);
+    viewport?.addEventListener("resize", scheduleResize);
+    viewport?.addEventListener("scroll", scheduleResize);
+    window.addEventListener("resize", scheduleResize);
     return () => {
-      viewport.removeEventListener("resize", resize);
-      window.removeEventListener("resize", resize);
-      screen.style.height = originalHeight;
-      screen.style.minHeight = originalMinHeight;
+      if (frame != null) window.cancelAnimationFrame(frame);
+      viewport?.removeEventListener("resize", scheduleResize);
+      viewport?.removeEventListener("scroll", scheduleResize);
+      window.removeEventListener("resize", scheduleResize);
+      screen.classList.remove("app-screen-chat");
+      restoreStyles();
     };
-  }, [rootRef]);
+  }, [rootRef, preservePosition]);
 }
 
 export function ChatRoom(props) {
@@ -139,6 +173,9 @@ function ChatRoomContent({
     sync,
   } = room;
   const [viewingImage, setViewingImage] = useState(null);
+  const [preparingImage, setPreparingImage] = useState(false);
+  const imageSelectionVersion = useRef(0);
+  const imagePreparationPending = useRef(false);
   const rootRef = useRef(null);
   const inputRef = useRef(null);
   const imageInputRef = useRef(null);
@@ -151,7 +188,14 @@ function ChatRoomContent({
     viewerOpenerRef.current = opener;
     setViewingImage({ message, opener });
   }, []);
-  useKeyboardViewport(rootRef);
+  useKeyboardViewport(rootRef, scroll.preservePosition);
+
+  useEffect(
+    () => () => {
+      imageSelectionVersion.current += 1;
+    },
+    [],
+  );
 
   useLayoutEffect(() => {
     if (viewingImage || !viewerOpenerRef.current) return;
@@ -171,32 +215,44 @@ function ChatRoomContent({
   }, [state.draft]);
 
   function clearAttachment() {
+    imageSelectionVersion.current += 1;
+    imagePreparationPending.current = false;
+    setPreparingImage(false);
     releasePreview(entry, state.attachment?.previewUrl);
     updateRoomSession(entry, { attachment: null });
   }
 
-  function selectImage(event) {
+  async function selectImage(event) {
     const file = event.currentTarget.files?.[0];
     event.currentTarget.value = "";
-    if (!file) return;
-    if (!IMAGE_TYPES.has(file.type)) {
-      toast("JPG, PNG, WebP 이미지만 첨부할 수 있어요.");
-      return;
+    if (!file || !canSend) return;
+    const version = ++imageSelectionVersion.current;
+    imagePreparationPending.current = true;
+    setPreparingImage(true);
+    try {
+      const prepared = await prepareProfilePhoto(file);
+      if (version !== imageSelectionVersion.current || !isSessionActive(entry))
+        return;
+      releasePreview(entry, entry.snapshot.attachment?.previewUrl);
+      const previewUrl = URL.createObjectURL(prepared);
+      entry.urls.add(previewUrl);
+      updateRoomSession(entry, { attachment: { file: prepared, previewUrl } });
+    } catch (error) {
+      if (version === imageSelectionVersion.current && isSessionActive(entry))
+        toast(profilePhotoErrorMessage(error));
+    } finally {
+      if (version === imageSelectionVersion.current) {
+        imagePreparationPending.current = false;
+        setPreparingImage(false);
+      }
     }
-    if (file.size > 10 * 1024 * 1024) {
-      toast("사진은 10MB 이하로 첨부할 수 있어요.");
-      return;
-    }
-    releasePreview(entry, entry.snapshot.attachment?.previewUrl);
-    const previewUrl = URL.createObjectURL(file);
-    entry.urls.add(previewUrl);
-    updateRoomSession(entry, { attachment: { file, previewUrl } });
   }
 
   function send() {
     const text = entry.snapshot.draft.trim();
     const attachment = entry.snapshot.attachment;
-    if ((!text && !attachment) || !canSend) return;
+    if ((!text && !attachment) || !canSend || imagePreparationPending.current)
+      return;
     scroll.scrollToLatest();
     enqueueMessages(entry, text, attachment, chatApi);
     // Keep the active composer available; do not wait for a network response or
@@ -441,6 +497,11 @@ function ChatRoomContent({
               대화가 종료되어 메시지를 보낼 수 없어요.
             </p>
           )}
+          {preparingImage && (
+            <p className="image-upload-status" role="status">
+              사진을 준비하고 있어요…
+            </p>
+          )}
           {state.attachment && (
             <div className="image-attachment-preview">
               <img
@@ -480,7 +541,7 @@ function ChatRoomContent({
               ref={imageInputRef}
               className="image-file-input"
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif"
               aria-label="첨부할 사진 선택"
               onChange={selectImage}
             />
@@ -526,7 +587,11 @@ function ChatRoomContent({
             />
             <button
               type="submit"
-              disabled={(!state.draft.trim() && !state.attachment) || !canSend}
+              disabled={
+                preparingImage ||
+                (!state.draft.trim() && !state.attachment) ||
+                !canSend
+              }
               aria-label="보내기"
               onPointerDown={(event) => {
                 if (event.pointerType === "mouse") event.preventDefault();
