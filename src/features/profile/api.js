@@ -1,10 +1,13 @@
 import { apiRequest } from "../../shared/api/client.js";
 import { uploadFile } from "../../shared/api/files.js";
 
-export const getMyProfile = () => apiRequest("/api/v1/users/me/profile");
+export const getMyProfile = () =>
+  apiRequest("/api/v1/users/me/profile", { cache: "no-store" });
 
 export const getMemberProfile = (memberId) =>
-  apiRequest(`/api/v1/users/${encodeURIComponent(memberId)}/profile`);
+  apiRequest(`/api/v1/users/${encodeURIComponent(memberId)}/profile`, {
+    cache: "no-store",
+  });
 
 export const profile = (body) =>
   apiRequest("/api/v1/users/me/profile", { method: "PUT", body });

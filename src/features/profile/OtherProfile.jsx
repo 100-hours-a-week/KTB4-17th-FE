@@ -10,6 +10,7 @@ import {
   smokings,
 } from "./data.js";
 import "./other-profile.css";
+import { profileImageUrls } from "./imageUrls.js";
 
 function profileChoiceLabel(options, value) {
   if (!value) return "정보 없음";
@@ -36,24 +37,12 @@ export function OtherProfile({ memberId, returnTo, navigate, isOwn = false }) {
         : getMemberProfile(memberId));
       if (requestVersion !== profileRequestVersion.current) return;
 
-      const images = Array.isArray(result?.images) ? result.images : [];
-      const orderedPhotos = images
-        .slice()
-        .sort(
-          (first, second) =>
-            Number(first?.displayOrder || 0) -
-            Number(second?.displayOrder || 0),
-        )
-        .map((image) => image?.imageUrl)
-        .filter((url) => typeof url === "string" && url);
       setProfile({
         ...result,
         id: isOwn ? "me" : Number(result?.memberId || memberId),
         age: isOwn ? dateAge(result?.birthDate) : result?.age,
         region: isOwn ? result?.activityRegionName : result?.region,
-        photos: orderedPhotos.length
-          ? orderedPhotos
-          : [result?.profileImageUrl].filter(Boolean),
+        photos: profileImageUrls(result),
       });
       setPhotoIndex(0);
     } catch (requestError) {

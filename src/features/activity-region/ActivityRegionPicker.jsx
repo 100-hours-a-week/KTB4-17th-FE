@@ -41,7 +41,7 @@ export function ActivityRegionPicker({
   return (
     <Field
       label="활동 지역"
-      hint="시·군·구 이름으로 검색한 뒤 결과를 선택해주세요."
+      hint="활동 지역은 시·군·구 단위까지 검색할 수 있어요. 검색 결과에서 지역을 선택해주세요."
     >
       <input
         value={query}

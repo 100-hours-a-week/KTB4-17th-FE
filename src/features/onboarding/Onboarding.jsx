@@ -1093,7 +1093,8 @@ export function Onboarding({ navigate, toast }) {
           <>
             <h1>활동 지역을 알려주세요</h1>
             <p className="subcopy">
-              가까운 사람들을 추천해드려요. 시·군·구 이름으로 검색할 수 있어요.
+              가까운 사람들을 추천해드려요. 활동 지역은 시·군·구 단위까지 검색할
+              수 있어요.
             </p>
             <Field label="지역 검색">
               <input
