@@ -40,6 +40,7 @@ export function Home({
   const [photoIndex, setPhotoIndex] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [actionBusy, setActionBusy] = useState("");
+  const actionInFlight = useRef(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [isCardSettling, setIsCardSettling] = useState(false);
   const [previewDirection, setPreviewDirection] = useState("next");
@@ -312,7 +313,8 @@ export function Home({
   }, []);
 
   async function like() {
-    if (!person || actionBusy) return;
+    if (!person || actionInFlight.current) return;
+    actionInFlight.current = true;
     setActionBusy("like");
     try {
       await matchingApi.sendLike(person.id);
@@ -321,6 +323,7 @@ export function Home({
     } catch (error) {
       toast(error?.code || "좋아요를 보내지 못했어요.");
     } finally {
+      actionInFlight.current = false;
       setActionBusy("");
     }
   }
@@ -329,11 +332,13 @@ export function Home({
     navigate(`/ai/practice/${person.id}`);
   }
   async function startSimulation() {
-    if (!person || actionBusy) return;
+    if (!person || actionInFlight.current) return;
+    actionInFlight.current = true;
     setActionBusy("simulation");
     try {
       await onStartSimulation(person.id);
     } finally {
+      actionInFlight.current = false;
       setActionBusy("");
     }
   }

@@ -30,6 +30,7 @@ export function Likes({
   const [tab, setTab] = useState(initialTab === "sent" ? "sent" : "received");
   const [rejectTarget, setRejectTarget] = useState(null);
   const [actionLikeId, setActionLikeId] = useState(null);
+  const actionInFlight = useRef(false);
   const requestInFlight = useRef({ received: false, sent: false });
   const [pages, setPages] = useState({
     received: {
@@ -104,7 +105,13 @@ export function Likes({
     }));
   }, []);
   async function acceptLike(person) {
-    if (!person.memberId || actionLikeId != null) return;
+    if (
+      !person.memberId ||
+      person.status === "MATCHED" ||
+      actionInFlight.current
+    )
+      return;
+    actionInFlight.current = true;
     setActionLikeId(person.id);
     try {
       await matchingApi.sendLike(person.memberId);
@@ -113,6 +120,7 @@ export function Likes({
     } catch (error) {
       toast(error?.code || "좋아요를 처리하지 못했어요.");
     } finally {
+      actionInFlight.current = false;
       setActionLikeId(null);
     }
   }
@@ -125,7 +133,8 @@ export function Likes({
   }
 
   async function rejectLike() {
-    if (!rejectTarget || actionLikeId != null) return;
+    if (!rejectTarget || actionInFlight.current) return;
+    actionInFlight.current = true;
     setActionLikeId(rejectTarget.id);
     try {
       await matchingApi.rejectLike(rejectTarget.id);
@@ -135,6 +144,7 @@ export function Likes({
     } catch (error) {
       toast(error?.code || "좋아요를 거절하지 못했어요.");
     } finally {
+      actionInFlight.current = false;
       setActionLikeId(null);
     }
   }
@@ -215,14 +225,10 @@ export function Likes({
                     </small>
                   </span>
                 </div>
-                {tab === "received" && (
-                  <p className="like-status">
-                    {person.status === "MATCHED"
-                      ? "서로 좋아요"
-                      : "나에게 좋아요를 보냈어요"}
-                  </p>
+                {tab === "received" && person.status === "MATCHED" && (
+                  <p className="like-status">서로 좋아요</p>
                 )}
-                {tab === "received" && (
+                {tab === "received" && person.status !== "MATCHED" && (
                   <div className="like-actions">
                     <PixelButton
                       secondary
