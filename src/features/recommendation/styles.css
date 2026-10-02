@@ -205,6 +205,25 @@
   margin-top: 18px;
 }
 
+.recommendation-profile-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--paper);
+  font-size: 13px;
+  text-shadow: 0 1px 4px #21172f99;
+}
+
+.recommendation-profile-link:focus-visible {
+  outline: 2px solid var(--paper);
+  outline-offset: 4px;
+}
+
 .card-action {
   border: 0;
   background: none;

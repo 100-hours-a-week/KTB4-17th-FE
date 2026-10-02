@@ -461,6 +461,17 @@ export function Home({
                     {[person.region, person.mbti].filter(Boolean).join(" / ")}
                   </p>
                 )}
+                <button
+                  type="button"
+                  className="recommendation-profile-link"
+                  aria-label={`${person.nickname} 프로필 상세 보기`}
+                  disabled={Boolean(actionBusy) || isCardSettling}
+                  onClick={() =>
+                    navigate(`/profiles/${person.id}?returnTo=/home`)
+                  }
+                >
+                  프로필 상세 보기 <span aria-hidden="true">›</span>
+                </button>
                 <div className="recommendation-actions">
                   {[
                     [
