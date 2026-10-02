@@ -141,7 +141,10 @@ export function MyPage({ navigate, toast }) {
                 onClick={() => navigate("/my/profile/view")}
               >
                 <PersonAvatar
-                  person={{ photo: profile.photo || asset("user-avatar.png") }}
+                  person={{
+                    id: "me",
+                    photo: profile.photo || asset("user-avatar.png"),
+                  }}
                   size="large"
                 />
               </button>

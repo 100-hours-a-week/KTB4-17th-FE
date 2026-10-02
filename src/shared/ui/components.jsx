@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useProfileImage } from "../../features/profile/useProfileImage.js";
 import { asset } from "../assets.js";
 import { profilePhotoUrls } from "../utils.js";
 
@@ -162,11 +162,16 @@ export function EmptyState({ icon = "♡", title, description, action }) {
 }
 
 export function PersonAvatar({ person, size = "medium" }) {
-  return person?.photo || person?.image ? (
+  const { source, onError } = useProfileImage(
+    person,
+    person?.photo || person?.image || "",
+  );
+  return source ? (
     <img
       className={`person-avatar ${size}`}
-      src={person.photo || person.image}
+      src={source}
       alt=""
+      onError={onError}
     />
   ) : (
     <span className={`person-avatar generated ${size}`} aria-hidden="true">
@@ -176,10 +181,13 @@ export function PersonAvatar({ person, size = "medium" }) {
 }
 
 export function ProfilePhoto({ person, index = 0, className = "" }) {
-  const source = profilePhotoUrls(person)[index] || "";
-  const [failedSources, setFailedSources] = useState(() => new Set());
+  const { source, onError } = useProfileImage(
+    person,
+    profilePhotoUrls(person)[index] || "",
+    index,
+  );
 
-  if (!source || failedSources.has(source)) {
+  if (!source) {
     return (
       <div
         className={`${className} recommendation-placeholder`}
@@ -196,9 +204,7 @@ export function ProfilePhoto({ person, index = 0, className = "" }) {
       className={className}
       src={source}
       alt={`${person?.nickname || "프로필"}님의 프로필 사진`}
-      onError={() =>
-        setFailedSources((previous) => new Set(previous).add(source))
-      }
+      onError={onError}
     />
   );
 }
