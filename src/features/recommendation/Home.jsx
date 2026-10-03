@@ -25,6 +25,7 @@ export function Home({
   toast,
   recommendations,
   currentIndex,
+  recommendationExhausted,
   hasNext,
   recommendationStatus,
   recommendationError,
@@ -410,7 +411,7 @@ export function Home({
             <EmptyState
               icon="✦"
               title={
-                recommendations.length > 0
+                recommendationExhausted || recommendations.length > 0
                   ? "추천을 모두 봤어요"
                   : "새로운 추천을 준비하고 있어요"
               }
