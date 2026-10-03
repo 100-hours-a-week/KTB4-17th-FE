@@ -4,8 +4,15 @@ import {
   initialRecommendationFeedState,
   recommendationFeedReducer,
 } from "./recommendationFeedState.js";
+import { wheelNavigationIntent } from "./wheelNavigation.js";
 
 const recommendation = (id) => ({ id });
+
+test("wheel down advances and wheel up returns to the previous card", () => {
+  assert.equal(wheelNavigationIntent(120), "next");
+  assert.equal(wheelNavigationIntent(-120), "previous");
+  assert.equal(wheelNavigationIntent(0), null);
+});
 
 test("dismissing the last recommendation shows the previous card", () => {
   const state = {
