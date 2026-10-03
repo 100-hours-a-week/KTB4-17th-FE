@@ -59,7 +59,9 @@ jobs:
         run: npm run typecheck
 
       - name: Dependency Vulnerability Check
-        run: npm audit --audit-level=high
+        # 기존: run: npm audit --audit-level=high
+        # GHSA-vfj7-8cjw-p6xm: braces 패치 버전 없음, stylelint(devDependencies) 경유로만 사용. 패치 나오면 allowlist에서 제거
+        run: npx -y audit-ci@7 --high --allowlist GHSA-vfj7-8cjw-p6xm
 
 
       - name: Build
