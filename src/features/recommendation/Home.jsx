@@ -10,6 +10,7 @@ import {
 } from "../../shared/ui/components.jsx";
 import { profilePhotoUrls } from "../../shared/utils.js";
 import * as matchingApi from "../matching/api.js";
+import { wheelNavigationIntent } from "./wheelNavigation.js";
 
 const NEXT_CARD_DISTANCE = 64;
 const PREVIOUS_CARD_DISTANCE = 64;
@@ -54,7 +55,7 @@ export function Home({
   );
   const wheelGesture = useRef({
     delta: 0,
-    direction: 0,
+    direction: null,
     locked: false,
     resetTimer: null,
   });
@@ -240,12 +241,12 @@ export function Home({
       return;
 
     event.preventDefault();
-    const direction = Math.sign(event.deltaY);
+    const direction = wheelNavigationIntent(event.deltaY);
     const gesture = wheelGesture.current;
     const resetWheelGesture = () => {
       gesture.locked = false;
       gesture.delta = 0;
-      gesture.direction = 0;
+      gesture.direction = null;
       gesture.resetTimer = null;
     };
     const finishWheelGestureAfterIdle = () => {
@@ -264,7 +265,11 @@ export function Home({
     gesture.direction = direction;
     gesture.delta += Math.abs(event.deltaY);
     if (gesture.resetTimer) window.clearTimeout(gesture.resetTimer);
-    if (person && direction < 0 && gesture.delta >= WHEEL_NEXT_DISTANCE) {
+    if (
+      person &&
+      direction === "next" &&
+      gesture.delta >= WHEEL_NEXT_DISTANCE
+    ) {
       gesture.locked = true;
       gesture.delta = 0;
       if (nextPerson || hasNext) transitionCard("next", () => void advance());
@@ -274,7 +279,7 @@ export function Home({
 
     if (
       person &&
-      direction > 0 &&
+      direction === "previous" &&
       currentIndex > 0 &&
       gesture.delta >= WHEEL_PREVIOUS_DISTANCE
     ) {
@@ -285,11 +290,11 @@ export function Home({
       return;
     }
 
-    if (direction > 0 && (!person || currentIndex === 0)) {
+    if (direction === "previous" && (!person || currentIndex === 0)) {
       gesture.resetTimer = window.setTimeout(() => {
         const distance = gesture.delta;
         gesture.delta = 0;
-        gesture.direction = 0;
+        gesture.direction = null;
         if (gesture.locked) return;
         if (distance >= WHEEL_REFRESH_DISTANCE) {
           gesture.locked = true;
