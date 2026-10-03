@@ -10,6 +10,7 @@ import {
 } from "../../shared/ui/components.jsx";
 import { profilePhotoUrls } from "../../shared/utils.js";
 import * as matchingApi from "../matching/api.js";
+import { wheelNavigationIntent } from "./wheelNavigation.js";
 
 const NEXT_CARD_DISTANCE = 64;
 const PREVIOUS_CARD_DISTANCE = 64;
@@ -25,6 +26,7 @@ export function Home({
   toast,
   recommendations,
   currentIndex,
+  recommendationExhausted,
   hasNext,
   recommendationStatus,
   recommendationError,
@@ -40,6 +42,7 @@ export function Home({
   const [photoIndex, setPhotoIndex] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [actionBusy, setActionBusy] = useState("");
+  const actionInFlight = useRef(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [isCardSettling, setIsCardSettling] = useState(false);
   const [previewDirection, setPreviewDirection] = useState("next");
@@ -52,7 +55,7 @@ export function Home({
   );
   const wheelGesture = useRef({
     delta: 0,
-    direction: 0,
+    direction: null,
     locked: false,
     resetTimer: null,
   });
@@ -238,12 +241,12 @@ export function Home({
       return;
 
     event.preventDefault();
-    const direction = Math.sign(event.deltaY);
+    const direction = wheelNavigationIntent(event.deltaY);
     const gesture = wheelGesture.current;
     const resetWheelGesture = () => {
       gesture.locked = false;
       gesture.delta = 0;
-      gesture.direction = 0;
+      gesture.direction = null;
       gesture.resetTimer = null;
     };
     const finishWheelGestureAfterIdle = () => {
@@ -262,7 +265,11 @@ export function Home({
     gesture.direction = direction;
     gesture.delta += Math.abs(event.deltaY);
     if (gesture.resetTimer) window.clearTimeout(gesture.resetTimer);
-    if (person && direction < 0 && gesture.delta >= WHEEL_NEXT_DISTANCE) {
+    if (
+      person &&
+      direction === "next" &&
+      gesture.delta >= WHEEL_NEXT_DISTANCE
+    ) {
       gesture.locked = true;
       gesture.delta = 0;
       if (nextPerson || hasNext) transitionCard("next", () => void advance());
@@ -272,7 +279,7 @@ export function Home({
 
     if (
       person &&
-      direction > 0 &&
+      direction === "previous" &&
       currentIndex > 0 &&
       gesture.delta >= WHEEL_PREVIOUS_DISTANCE
     ) {
@@ -283,11 +290,11 @@ export function Home({
       return;
     }
 
-    if (direction > 0 && (!person || currentIndex === 0)) {
+    if (direction === "previous" && (!person || currentIndex === 0)) {
       gesture.resetTimer = window.setTimeout(() => {
         const distance = gesture.delta;
         gesture.delta = 0;
-        gesture.direction = 0;
+        gesture.direction = null;
         if (gesture.locked) return;
         if (distance >= WHEEL_REFRESH_DISTANCE) {
           gesture.locked = true;
@@ -312,7 +319,8 @@ export function Home({
   }, []);
 
   async function like() {
-    if (!person || actionBusy) return;
+    if (!person || actionInFlight.current) return;
+    actionInFlight.current = true;
     setActionBusy("like");
     try {
       await matchingApi.sendLike(person.id);
@@ -321,6 +329,7 @@ export function Home({
     } catch (error) {
       toast(error?.code || "좋아요를 보내지 못했어요.");
     } finally {
+      actionInFlight.current = false;
       setActionBusy("");
     }
   }
@@ -329,11 +338,13 @@ export function Home({
     navigate(`/ai/practice/${person.id}`);
   }
   async function startSimulation() {
-    if (!person || actionBusy) return;
+    if (!person || actionInFlight.current) return;
+    actionInFlight.current = true;
     setActionBusy("simulation");
     try {
       await onStartSimulation(person.id);
     } finally {
+      actionInFlight.current = false;
       setActionBusy("");
     }
   }
@@ -405,7 +416,7 @@ export function Home({
             <EmptyState
               icon="✦"
               title={
-                recommendations.length > 0
+                recommendationExhausted || recommendations.length > 0
                   ? "추천을 모두 봤어요"
                   : "새로운 추천을 준비하고 있어요"
               }
@@ -461,6 +472,17 @@ export function Home({
                     {[person.region, person.mbti].filter(Boolean).join(" / ")}
                   </p>
                 )}
+                <button
+                  type="button"
+                  className="recommendation-profile-link"
+                  aria-label={`${person.nickname} 프로필 상세 보기`}
+                  disabled={Boolean(actionBusy) || isCardSettling}
+                  onClick={() =>
+                    navigate(`/profiles/${person.id}?returnTo=/home`)
+                  }
+                >
+                  프로필 상세 보기 <span aria-hidden="true">›</span>
+                </button>
                 <div className="recommendation-actions">
                   {[
                     [

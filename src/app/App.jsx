@@ -100,6 +100,7 @@ function AppRouter() {
   const {
     recommendations,
     currentIndex: recommendationIndex,
+    exhausted: recommendationExhausted,
     hasNext,
     status: recommendationStatus,
     error: recommendationError,
@@ -352,6 +353,7 @@ function AppRouter() {
         toast={toast}
         recommendations={recommendations}
         currentIndex={recommendationIndex}
+        recommendationExhausted={recommendationExhausted}
         hasNext={hasNext}
         recommendationStatus={recommendationStatus}
         recommendationError={recommendationError}

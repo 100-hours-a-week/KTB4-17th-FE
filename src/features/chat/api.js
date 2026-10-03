@@ -1,5 +1,6 @@
 import { apiRequest } from "../../shared/api/client.js";
 import { uploadFile } from "../../shared/api/files.js";
+import { createMessageId } from "../../shared/messageId.js";
 
 export const rooms = ({ cursor, size = 20 } = {}) => {
   const params = new URLSearchParams({ size: String(size) });
@@ -24,7 +25,7 @@ export const markAsRead = (roomId, lastReadMessageId) =>
 export const sendMessage = (
   roomId,
   text,
-  clientMessageId = crypto.randomUUID(),
+  clientMessageId = createMessageId(),
 ) =>
   apiRequest(`/api/v1/chat-rooms/${roomId}/messages`, {
     method: "POST",
@@ -38,7 +39,7 @@ export const sendMessage = (
 export const sendImageMessage = (
   roomId,
   imageFileId,
-  clientMessageId = crypto.randomUUID(),
+  clientMessageId = createMessageId(),
 ) =>
   apiRequest(`/api/v1/chat-rooms/${roomId}/messages`, {
     method: "POST",
