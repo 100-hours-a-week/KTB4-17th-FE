@@ -24,7 +24,7 @@ jobs:
 
     env:
       DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-      DISCORD_USER_MAP: ${{ vars.DISCORD_USER_MAP }}
+      DISCORD_USER_MAP: ${{ secrets.DISCORD_USER_MAP }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
       PR_TITLE: ${{ github.event.pull_request.title }}
@@ -44,7 +44,7 @@ jobs:
           fi
 
           if [[ -z "$DISCORD_USER_MAP" ]]; then
-            echo "Repository variable DISCORD_USER_MAP is not configured."
+            echo "Repository secret DISCORD_USER_MAP is not configured."
             exit 1
           fi
 
