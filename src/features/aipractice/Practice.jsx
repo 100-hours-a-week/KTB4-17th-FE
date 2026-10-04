@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { BrandHeader, ScreenHeader } from "../../shared/ui/components.jsx";
 import { MessageBubble } from "../chat/Chat.jsx";
 import { ChatModeMenu } from "../chat/ChatModeMenu.jsx";
@@ -42,8 +43,11 @@ export function practiceErrorMessage(error) {
     AI_SERVER_NOT_CONFIGURED: "AI 응답 서버가 아직 연결되지 않았어요.",
   };
   return (
-    messages[error?.code] ||
-    "AI 연습대화를 처리하지 못했어요. 잠시 후 다시 시도해주세요."
+    (Object.hasOwn(messages, error?.code) && messages[error.code]) ||
+    apiErrorMessage(
+      error,
+      "AI 연습대화를 처리하지 못했어요. 잠시 후 다시 시도해주세요.",
+    )
   );
 }
 
@@ -329,9 +333,6 @@ export function Practice({
           targetMemberId={Number.isSafeInteger(id) && id > 0 ? id : null}
           simulationStartingFor={simulationStartingFor}
           onSimulation={() => onStartSimulation(id, chatRoomId)}
-          onChat={() =>
-            navigate(chatRoomId ? `/chats/${chatRoomId}` : "/chats")
-          }
         />
       </BrandHeader>
       <ScreenHeader
