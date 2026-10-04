@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import * as recommendationApi from "./api.js";
 import { mapRecommendationItem } from "./mapRecommendationItem.js";
 
@@ -55,7 +56,12 @@ export function useRecommendationFeed({ enabled }) {
       }
     } catch (requestError) {
       if (requestId === requestRef.current)
-        setError(requestError?.code || "RECOMMENDATIONS_UNAVAILABLE");
+        setError(
+          apiErrorMessage(
+            requestError,
+            "추천 목록을 불러오지 못했어요. 연결을 확인한 뒤 다시 시도해주세요.",
+          ),
+        );
     } finally {
       if (requestId === requestRef.current) setStatus("ready");
     }
@@ -90,7 +96,12 @@ export function useRecommendationFeed({ enabled }) {
       return items.length > 0;
     } catch (requestError) {
       if (requestId === requestRef.current)
-        setError(requestError?.code || "RECOMMENDATIONS_UNAVAILABLE");
+        setError(
+          apiErrorMessage(
+            requestError,
+            "추천 목록을 불러오지 못했어요. 연결을 확인한 뒤 다시 시도해주세요.",
+          ),
+        );
       return false;
     } finally {
       moreRequestRef.current = false;

@@ -1,3 +1,5 @@
+import { apiErrorMessage } from "../../shared/api/errorMessages.js";
+
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const MAX_SOURCE_BYTES = 30 * 1024 * 1024;
 let photoSequence = 0;
@@ -114,7 +116,10 @@ export function profilePhotoErrorMessage(error) {
       "사진 업로드 시간이 만료됐어요. 사진을 다시 선택해주세요.",
   };
   return (
-    messages[error?.code] ||
-    "사진을 업로드하지 못했어요. 연결을 확인한 뒤 다시 선택해주세요."
+    (Object.hasOwn(messages, error?.code) && messages[error.code]) ||
+    apiErrorMessage(
+      error,
+      "사진을 업로드하지 못했어요. 연결을 확인한 뒤 다시 선택해주세요.",
+    )
   );
 }

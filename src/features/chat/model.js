@@ -1,3 +1,5 @@
+import { apiErrorMessage } from "../../shared/api/errorMessages.js";
+
 const CHAT_TIME_ZONE = "Asia/Seoul";
 const CHAT_CLOCK_FORMATTER = new Intl.DateTimeFormat("ko-KR", {
   timeZone: CHAT_TIME_ZONE,
@@ -124,7 +126,10 @@ export function chatDateKey(date) {
 export function chatListErrorMessage(error) {
   if (error?.code === "AUTH_REQUIRED")
     return "로그인이 만료됐어요. 다시 로그인한 뒤 이용해주세요.";
-  return "채팅 목록을 불러오지 못했어요. 잠시 후 다시 시도해주세요.";
+  return apiErrorMessage(
+    error,
+    "채팅 목록을 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
+  );
 }
 
 export function chatSendErrorMessage(error) {
@@ -146,7 +151,10 @@ export function chatSendErrorMessage(error) {
     ].includes(error?.code)
   )
     return "사진 업로드에 실패했어요. 잠시 후 다시 시도해주세요.";
-  return "메시지를 보내지 못했어요. 잠시 후 다시 시도해주세요.";
+  return apiErrorMessage(
+    error,
+    "메시지를 보내지 못했어요. 잠시 후 다시 시도해주세요.",
+  );
 }
 
 export function formatFileSize(bytes) {
@@ -319,7 +327,10 @@ export function chatRoomErrorMessage(error) {
   if (error?.code === "CHAT_ACCESS_DENIED")
     return "이 채팅방에 접근할 수 없어요.";
   if (error?.code === "CHAT_ROOM_NOT_FOUND") return "채팅방을 찾을 수 없어요.";
-  return "대화를 불러오지 못했어요. 연결을 확인하고 다시 시도해주세요.";
+  return apiErrorMessage(
+    error,
+    "대화를 불러오지 못했어요. 연결을 확인하고 다시 시도해주세요.",
+  );
 }
 
 export function normalizePageInfo(pageInfo) {

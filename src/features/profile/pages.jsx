@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { useAppState } from "../../shared/appState.jsx";
 import { asset } from "../../shared/assets.js";
 import {
@@ -493,7 +494,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
         );
       }
     } catch (e) {
-      toast(e.code || "프로필을 저장하지 못했어요.");
+      toast(apiErrorMessage(e, "프로필을 저장하지 못했어요."));
       setPhotoSaving(false);
       return;
     }

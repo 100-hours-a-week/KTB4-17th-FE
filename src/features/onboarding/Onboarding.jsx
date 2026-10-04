@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { storeBearerToken } from "../../shared/api/authToken.js";
+import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { useAppState } from "../../shared/appState.jsx";
 import {
   ChoiceGroup,
@@ -511,10 +512,10 @@ export function Onboarding({ navigate, toast }) {
         setRegionResults([]);
         setRegionSearchStatus("error");
         setRegionSearchError(
-          requestError.code === "AUTH_REQUIRED" ||
-            requestError.code === "HTTP_401"
-            ? "로그인이 만료되었어요. 다시 로그인해주세요."
-            : "활동 지역을 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
+          apiErrorMessage(
+            requestError,
+            "활동 지역을 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
+          ),
         );
       }
     }, 300);
@@ -543,8 +544,13 @@ export function Onboarding({ navigate, toast }) {
             : current,
         );
         advance("persona-summary");
-      } catch {
-        setError("가치관 요약을 불러오지 못했어요. 다시 시도해주세요.");
+      } catch (requestError) {
+        setError(
+          apiErrorMessage(
+            requestError,
+            "가치관 요약을 불러오지 못했어요. 다시 시도해주세요.",
+          ),
+        );
       }
     },
     [advance],
@@ -560,10 +566,10 @@ export function Onboarding({ navigate, toast }) {
       await applyConversation(conversation);
     } catch (requestError) {
       setError(
-        requestError?.code === "AUTH_REQUIRED" ||
-          requestError?.code === "HTTP_401"
-          ? "로그인이 만료되었어요. 다시 로그인해주세요."
-          : "AI 문답을 시작하지 못했어요. 잠시 후 다시 시도해주세요.",
+        apiErrorMessage(
+          requestError,
+          "AI 문답을 시작하지 못했어요. 잠시 후 다시 시도해주세요.",
+        ),
       );
     } finally {
       personaStartInFlight.current = false;
@@ -642,7 +648,12 @@ export function Onboarding({ navigate, toast }) {
         );
         return;
       }
-      setError("기본 정보를 저장하지 못했어요. 잠시 후 다시 시도해주세요.");
+      setError(
+        apiErrorMessage(
+          e,
+          "기본 정보를 저장하지 못했어요. 잠시 후 다시 시도해주세요.",
+        ),
+      );
     } finally {
       identitySubmitInFlight.current = false;
       setIdentitySaving(false);
@@ -662,9 +673,10 @@ export function Onboarding({ navigate, toast }) {
       if (!checked?.available) return setError("이미 사용 중인 닉네임이에요.");
     } catch (e) {
       return setError(
-        e.code === "AUTH_REQUIRED" || e.code === "HTTP_401"
-          ? "로그인이 만료되었어요. 다시 로그인해주세요."
-          : "닉네임 사용 가능 여부를 확인하지 못했어요. 잠시 후 다시 시도해주세요.",
+        apiErrorMessage(
+          e,
+          "닉네임 사용 가능 여부를 확인하지 못했어요. 잠시 후 다시 시도해주세요.",
+        ),
       );
     }
     advance("lifestyle");
@@ -707,7 +719,12 @@ export function Onboarding({ navigate, toast }) {
       return;
     }
 
-    setError("프로필을 저장하지 못했어요. 잠시 후 다시 시도해주세요.");
+    setError(
+      apiErrorMessage(
+        requestError,
+        "프로필을 저장하지 못했어요. 잠시 후 다시 시도해주세요.",
+      ),
+    );
   }
 
   async function nextLifestyle() {
@@ -748,8 +765,13 @@ export function Onboarding({ navigate, toast }) {
         { answer: trimmedAnswer, turnIndex: personaConversation.turnIndex },
       );
       await applyConversation(conversation);
-    } catch {
-      setError("답변을 보내지 못했어요. 잠시 후 다시 시도해주세요.");
+    } catch (requestError) {
+      setError(
+        apiErrorMessage(
+          requestError,
+          "답변을 보내지 못했어요. 잠시 후 다시 시도해주세요.",
+        ),
+      );
     } finally {
       setPersonaBusy(false);
     }
@@ -762,8 +784,13 @@ export function Onboarding({ navigate, toast }) {
     try {
       const conversation = await action(personaConversation.sessionId);
       await applyConversation(conversation);
-    } catch {
-      setError("AI 문답을 진행하지 못했어요. 잠시 후 다시 시도해주세요.");
+    } catch (requestError) {
+      setError(
+        apiErrorMessage(
+          requestError,
+          "AI 문답을 진행하지 못했어요. 잠시 후 다시 시도해주세요.",
+        ),
+      );
     } finally {
       setPersonaBusy(false);
     }
@@ -777,8 +804,13 @@ export function Onboarding({ navigate, toast }) {
     try {
       await personaApi.personaConfirm(personaId);
       advance("photo-intro");
-    } catch {
-      setError("가치관을 확정하지 못했어요. 잠시 후 다시 시도해주세요.");
+    } catch (requestError) {
+      setError(
+        apiErrorMessage(
+          requestError,
+          "가치관을 확정하지 못했어요. 잠시 후 다시 시도해주세요.",
+        ),
+      );
     } finally {
       setPersonaBusy(false);
     }
@@ -907,8 +939,13 @@ export function Onboarding({ navigate, toast }) {
       }));
       toast("환영해요! 새로운 인연을 만나보세요.");
       navigate("/home");
-    } catch {
-      setError("프로필 사진을 저장하지 못했어요. 잠시 후 다시 시도해주세요.");
+    } catch (requestError) {
+      setError(
+        apiErrorMessage(
+          requestError,
+          "프로필 사진을 저장하지 못했어요. 잠시 후 다시 시도해주세요.",
+        ),
+      );
     } finally {
       setPhotoSaving(false);
     }
