@@ -19,6 +19,7 @@ import {
   updateRoomSession,
 } from "./session.js";
 import { connectChatSocket } from "./socket.js";
+import { loadChatVisit } from "./unread.js";
 
 export function useChatRoom(roomId) {
   const entry = useMemo(() => getRoomSession(roomId), [roomId]);
@@ -31,7 +32,9 @@ export function useChatRoom(roomId) {
   );
   const getSnapshot = useCallback(() => entry.snapshot, [entry]);
   const state = useSyncExternalStore(subscribe, getSnapshot);
-  const [syncing, setSyncing] = useState(false);
+  const [syncing, setSyncing] = useState(true);
+  const [visit, setVisit] = useState(null);
+  const visitRef = useRef(null);
   const [error, setError] = useState(null);
   const [olderError, setOlderError] = useState("");
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -57,16 +60,30 @@ export function useChatRoom(roomId) {
       do {
         syncAgainRef.current = false;
         try {
-          const pages = await fetchMessageGap(
-            roomId,
-            entry.snapshot.lastSyncedId,
-            controller.signal,
-            chatApi.messages,
-          );
+          const opening = !visitRef.current;
+          const prepared = opening
+            ? await loadChatVisit(roomId, {
+                signal: controller.signal,
+                fetchRooms: chatApi.rooms,
+                fetchMessages: chatApi.messages,
+              })
+            : null;
+          const pages =
+            prepared?.pages ||
+            (await fetchMessageGap(
+              roomId,
+              entry.snapshot.lastSyncedId,
+              controller.signal,
+              chatApi.messages,
+            ));
           if (!isCurrent() || !isSessionActive(entry)) return;
           applyMessagePage(entry, pages);
           updateRoomSession(entry, (current) => ({
             ...current,
+            room:
+              prepared && current.room
+                ? { ...current.room, unread: prepared.unreadCount }
+                : current.room,
             lastSyncedId: Math.max(
               current.lastSyncedId,
               ...(pages[0].messages || []).map(
@@ -74,6 +91,15 @@ export function useChatRoom(roomId) {
               ),
             ),
           }));
+          if (prepared) {
+            // This belongs to the mounted visit, never to the room cache.
+            const nextVisit = {
+              unreadBoundaryId: prepared.unreadBoundaryId,
+              readThroughId: prepared.readThroughId,
+            };
+            visitRef.current = nextVisit;
+            setVisit(nextVisit);
+          }
           setError(null);
         } catch (requestError) {
           if (!isCurrent() || requestError.name === "AbortError") return;
@@ -139,6 +165,8 @@ export function useChatRoom(roomId) {
 
   useEffect(() => {
     aliveRef.current = true;
+    visitRef.current = null;
+    setVisit(null);
     abortRef.current = new AbortController();
     const controller = abortRef.current;
     const isCurrent = () => aliveRef.current && abortRef.current === controller;
@@ -220,6 +248,7 @@ export function useChatRoom(roomId) {
   return {
     entry,
     state,
+    visit,
     syncing,
     error,
     connection,

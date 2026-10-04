@@ -26,21 +26,30 @@ function captureAnchor(container) {
     : null;
 }
 
-function restoreAnchor(container, anchor) {
-  if (!anchor) return;
-  const message = messageElements(container).find(
-    (element) => element.dataset.messageKey === anchor.key,
+function anchorPosition(container, anchor) {
+  const message =
+    anchor &&
+    messageElements(container).find(
+      (element) => element.dataset.messageKey === anchor.key,
+    );
+  return message
+    ? container.scrollTop +
+        message.getBoundingClientRect().top -
+        container.getBoundingClientRect().top -
+        anchor.offset
+    : container.scrollTop;
+}
+
+function nearLatest(container) {
+  return (
+    container.scrollHeight - container.scrollTop - container.clientHeight < 48
   );
-  if (message)
-    container.scrollTop +=
-      message.getBoundingClientRect().top -
-      container.getBoundingClientRect().top -
-      anchor.offset;
 }
 
 export function useChatScroll({
   entry,
   state,
+  visit,
   syncing,
   viewingImage,
   loadingOlder,
@@ -51,21 +60,32 @@ export function useChatScroll({
   const listRef = useRef(null);
   const topRef = useRef(null);
   const initialized = useRef(false);
-  const follow = useRef(entry.scroll?.followLatest ?? true);
-  const anchor = useRef(entry.scroll?.anchor || null);
-  const previousIds = useRef(
-    new Set(state.messages.map(serverMessageId).filter(Boolean)),
-  );
-  const previousMaximum = useRef(Math.max(0, ...previousIds.current));
-  const current = useRef({ state, syncing, viewingImage });
-  current.current = { state, syncing, viewingImage };
-  const [atBottom, setAtBottom] = useState(follow.current);
+  const follow = useRef(true);
+  const anchor = useRef(null);
+  const programmaticTop = useRef(null);
+  const previousIds = useRef(new Set());
+  const previousMaximum = useRef(0);
+  const current = useRef({ state, visit, syncing, viewingImage });
+  current.current = { state, visit, syncing, viewingImage };
+  const [atBottom, setAtBottom] = useState(true);
   const [newCount, setNewCount] = useState(0);
   const [announcement, setAnnouncement] = useState("");
+  const [readError, setReadError] = useState(false);
   const readTimer = useRef(null);
   const readInFlight = useRef(false);
   const readRetries = useRef(0);
   const alive = useRef(true);
+  const generation = useRef(0);
+
+  const setPosition = useCallback((container, top) => {
+    const target = Math.max(
+      0,
+      Math.min(container.scrollHeight - container.clientHeight, top),
+    );
+    if (Math.abs(container.scrollTop - target) < 1) return;
+    container.scrollTop = target;
+    programmaticTop.current = container.scrollTop;
+  }, []);
 
   const savePosition = useCallback(() => {
     const container = containerRef.current;
@@ -78,10 +98,11 @@ export function useChatScroll({
     };
   }, [entry]);
 
-  const visibleReadId = useCallback(() => {
+  const readTarget = useCallback(() => {
     const container = containerRef.current;
     const {
       state: snapshot,
+      visit: activeVisit,
       syncing: isSyncing,
       viewingImage: hasViewer,
     } = current.current;
@@ -89,17 +110,21 @@ export function useChatScroll({
       !alive.current ||
       !initialized.current ||
       !isSessionActive(entry) ||
+      !activeVisit ||
       !snapshot.loaded ||
       isSyncing ||
       hasViewer ||
       document.visibilityState === "hidden" ||
-      !container?.clientHeight ||
-      !follow.current
+      !container?.clientHeight
     )
       return 0;
-    const latest = [...snapshot.messages]
-      .reverse()
-      .find((message) => serverMessageId(message));
+
+    // Opening a room acknowledges the captured entry snapshot after positioning.
+    // Its divider stays in this visit even when everything fits a desktop screen.
+    if (activeVisit.readThroughId > entry.snapshot.readCursor)
+      return activeVisit.readThroughId;
+    if (!follow.current) return 0;
+    const latest = [...snapshot.messages].reverse().find(serverMessageId);
     if (!latest) return 0;
     const element = messageElements(container).find(
       (item) => item.dataset.messageKey === latest.renderKey,
@@ -119,73 +144,105 @@ export function useChatScroll({
 
   const attemptRead = useCallback(async () => {
     readTimer.current = null;
-    const id = visibleReadId();
+    const id = readTarget();
     if (!id || id <= entry.snapshot.readCursor || readInFlight.current) return;
+    const startedGeneration = generation.current;
+    const isCurrent = () =>
+      alive.current &&
+      startedGeneration === generation.current &&
+      isSessionActive(entry);
     readInFlight.current = true;
     try {
       const result = await chatApi.markAsRead(entry.roomId, id);
-      if (!alive.current || !isSessionActive(entry)) return;
-      updateRoomSession(entry, (snapshot) => ({
-        ...snapshot,
-        readCursor: Math.max(
+      if (!isCurrent()) return;
+      updateRoomSession(entry, (snapshot) => {
+        const cursor = Math.max(
           snapshot.readCursor,
           Number(result?.lastReadMessageId) || id,
-        ),
-      }));
+        );
+        const unread = snapshot.messages.filter(
+          (message) => !message.mine && serverMessageId(message) > cursor,
+        ).length;
+        return {
+          ...snapshot,
+          readCursor: cursor,
+          room: snapshot.room ? { ...snapshot.room, unread } : null,
+        };
+      });
       readRetries.current = 0;
+      setReadError(false);
     } catch {
-      if (alive.current && visibleReadId() && readRetries.current < 3) {
-        readRetries.current += 1;
+      if (!isCurrent()) return;
+      readRetries.current += 1;
+      if (readRetries.current < 3) {
         readTimer.current = window.setTimeout(
           () => void attemptRead(),
           readRetries.current * 1000,
         );
-      }
+      } else setReadError(true);
     } finally {
-      readInFlight.current = false;
-      if (
-        alive.current &&
-        !readTimer.current &&
-        visibleReadId() > entry.snapshot.readCursor
-      ) {
-        if (readRetries.current < 3)
+      if (isCurrent()) {
+        readInFlight.current = false;
+        if (
+          !readTimer.current &&
+          readRetries.current < 3 &&
+          readTarget() > entry.snapshot.readCursor
+        )
           readTimer.current = window.setTimeout(() => void attemptRead(), 300);
       }
     }
-  }, [entry, visibleReadId]);
+  }, [entry, readTarget]);
 
   const scheduleRead = useCallback(() => {
     if (readTimer.current) window.clearTimeout(readTimer.current);
     readTimer.current = null;
-    if (visibleReadId() > entry.snapshot.readCursor && !readInFlight.current)
+    if (
+      readRetries.current < 3 &&
+      !readInFlight.current &&
+      readTarget() > entry.snapshot.readCursor
+    )
       readTimer.current = window.setTimeout(() => void attemptRead(), 250);
-  }, [attemptRead, entry, visibleReadId]);
+  }, [attemptRead, entry, readTarget]);
+
+  const retryRead = useCallback(() => {
+    readRetries.current = 0;
+    setReadError(false);
+    scheduleRead();
+  }, [scheduleRead]);
 
   const preservePosition = useCallback(() => {
     const container = containerRef.current;
     if (!container || !initialized.current) return;
-    if (follow.current) container.scrollTop = container.scrollHeight;
-    else restoreAnchor(container, anchor.current);
+    setPosition(
+      container,
+      follow.current
+        ? container.scrollHeight
+        : anchorPosition(container, anchor.current),
+    );
     savePosition();
     scheduleRead();
-  }, [savePosition, scheduleRead]);
+  }, [savePosition, scheduleRead, setPosition]);
 
   const scrollToLatest = useCallback(() => {
     follow.current = true;
     setAtBottom(true);
     setNewCount(0);
     const container = containerRef.current;
-    if (container) container.scrollTop = container.scrollHeight;
+    if (container) setPosition(container, container.scrollHeight);
     savePosition();
     scheduleRead();
-  }, [savePosition, scheduleRead]);
+  }, [savePosition, scheduleRead, setPosition]);
 
   const onScroll = useCallback(() => {
     const container = containerRef.current;
     if (!container || !initialized.current) return;
-    const nearBottom =
-      container.scrollHeight - container.scrollTop - container.clientHeight <
-      48;
+    const expected = programmaticTop.current;
+    programmaticTop.current = null;
+    if (expected != null && Math.abs(container.scrollTop - expected) < 1) {
+      savePosition();
+      return;
+    }
+    const nearBottom = nearLatest(container);
     follow.current = nearBottom;
     setAtBottom(nearBottom);
     if (nearBottom) setNewCount(0);
@@ -202,14 +259,41 @@ export function useChatScroll({
   }, [entry, loadOlder, loadingOlder, olderError, savePosition, scheduleRead]);
 
   useLayoutEffect(() => {
-    if (!state.loaded || !containerRef.current) return;
+    if (!visit || !state.loaded || syncing || !containerRef.current) return;
     const container = containerRef.current;
     if (!initialized.current) {
+      const divider = container.querySelector("[data-unread-message-id]");
+      if (visit.unreadBoundaryId && !divider) return;
+      const dividerBounds = divider?.getBoundingClientRect();
+      const entryTop = dividerBounds
+        ? container.scrollTop +
+          dividerBounds.top -
+          container.getBoundingClientRect().top -
+          container.clientHeight / 2 +
+          dividerBounds.height / 2
+        : container.scrollHeight;
+      // Load enough read history above the boundary to show its context.
+      if (divider && entryTop < 0 && state.pageInfo.hasNext && !olderError) {
+        if (!loadingOlder) void loadOlder();
+        return;
+      }
       initialized.current = true;
-      if (follow.current) container.scrollTop = container.scrollHeight;
-      else if (entry.scroll?.anchor)
-        restoreAnchor(container, entry.scroll.anchor);
-      else container.scrollTop = entry.scroll?.top || 0;
+      if (divider) {
+        setPosition(container, entryTop);
+        follow.current = nearLatest(container);
+      } else {
+        follow.current = true;
+        setPosition(container, container.scrollHeight);
+      }
+      setAtBottom(follow.current);
+      setNewCount(
+        follow.current
+          ? 0
+          : state.messages.filter(
+              (message) =>
+                !message.mine && serverMessageId(message) > visit.readThroughId,
+            ).length,
+      );
     } else {
       const arrivals = state.messages.filter(
         (message) =>
@@ -239,12 +323,18 @@ export function useChatScroll({
     savePosition();
     scheduleRead();
   }, [
-    entry,
+    visit,
     state.loaded,
     state.messages,
+    state.pageInfo.hasNext,
+    syncing,
+    loadingOlder,
+    olderError,
+    loadOlder,
     preservePosition,
     savePosition,
     scheduleRead,
+    setPosition,
   ]);
 
   useLayoutEffect(() => {
@@ -261,37 +351,39 @@ export function useChatScroll({
 
   useEffect(() => {
     alive.current = true;
+    generation.current += 1;
     document.addEventListener("visibilitychange", scheduleRead);
     window.addEventListener("focus", scheduleRead);
     return () => {
       alive.current = false;
+      generation.current += 1;
+      readInFlight.current = false;
       savePosition();
       if (readTimer.current) window.clearTimeout(readTimer.current);
+      readTimer.current = null;
       document.removeEventListener("visibilitychange", scheduleRead);
       window.removeEventListener("focus", scheduleRead);
     };
   }, [savePosition, scheduleRead]);
 
   useEffect(() => {
-    if (!state.loaded) return undefined;
-    const list = listRef.current;
-    const container = containerRef.current;
+    if (!visit) return undefined;
     const observer =
       typeof ResizeObserver === "undefined"
         ? null
         : new ResizeObserver(preservePosition);
-    if (list) observer?.observe(list);
-    if (container) observer?.observe(container);
+    if (listRef.current) observer?.observe(listRef.current);
+    if (containerRef.current) observer?.observe(containerRef.current);
     window.addEventListener("resize", preservePosition);
     return () => {
       observer?.disconnect();
       window.removeEventListener("resize", preservePosition);
     };
-  }, [state.loaded, preservePosition]);
+  }, [visit, preservePosition]);
 
   useEffect(() => {
     if (
-      !state.loaded ||
+      !visit ||
       !state.pageInfo.hasNext ||
       !state.pageInfo.nextCursor ||
       loadingOlder ||
@@ -312,7 +404,7 @@ export function useChatScroll({
     observer.observe(top);
     return () => observer.disconnect();
   }, [
-    state.loaded,
+    visit,
     state.pageInfo.hasNext,
     state.pageInfo.nextCursor,
     loadingOlder,
@@ -330,5 +422,7 @@ export function useChatScroll({
     atBottom,
     newCount,
     announcement,
+    readError,
+    retryRead,
   };
 }

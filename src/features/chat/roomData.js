@@ -22,6 +22,7 @@ export function applyMessagePage(entry, pages) {
     const room = info
       ? {
           ...mapChatRoom(info),
+          unread: state.room?.unread ?? 0,
           status: state.room?.status === "ENDED" ? "ENDED" : info.status,
           image:
             info.otherParticipant?.profileImageUrl || state.room?.image || "",
@@ -33,12 +34,17 @@ export function applyMessagePage(entry, pages) {
         .filter((message) => message.mine && message.unreadCount === 0)
         .map(serverMessageId),
     );
+    const messages = mergeChatMessages(
+      state.messages,
+      incoming,
+      otherReadCursor,
+    );
     return {
       ...state,
       room,
       loaded: true,
       otherReadCursor,
-      messages: mergeChatMessages(state.messages, incoming, otherReadCursor),
+      messages,
       pageInfo: extendsHistory
         ? normalizePageInfo(pages[pages.length - 1]?.pageInfo)
         : state.pageInfo,

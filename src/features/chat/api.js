@@ -2,10 +2,13 @@ import { apiRequest } from "../../shared/api/client.js";
 import { uploadFile } from "../../shared/api/files.js";
 import { createMessageId } from "../../shared/messageId.js";
 
-export const rooms = ({ cursor, size = 20 } = {}) => {
+export const rooms = ({ cursor, size = 20, signal } = {}) => {
   const params = new URLSearchParams({ size: String(size) });
   if (cursor) params.set("cursor", cursor);
-  return apiRequest(`/api/v1/chat-rooms?${params.toString()}`);
+  return apiRequest(`/api/v1/chat-rooms?${params.toString()}`, {
+    signal,
+    cache: "no-store",
+  });
 };
 
 export const messages = (roomId, { cursor, size = 20, signal } = {}) => {
@@ -13,6 +16,7 @@ export const messages = (roomId, { cursor, size = 20, signal } = {}) => {
   if (cursor) params.set("cursor", String(cursor));
   return apiRequest(`/api/v1/chat-rooms/${roomId}/messages?${params}`, {
     signal,
+    cache: "no-store",
   });
 };
 
