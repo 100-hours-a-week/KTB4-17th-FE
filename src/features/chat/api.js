@@ -1,6 +1,8 @@
+import { getAuthSessionSubject } from "../../shared/api/authToken.js";
 import { apiRequest } from "../../shared/api/client.js";
 import { uploadFile } from "../../shared/api/files.js";
 import { createMessageId } from "../../shared/messageId.js";
+import { CHAT_READ_UPDATED_EVENT } from "./unreadCount.js";
 
 export const rooms = ({ cursor, size = 20, signal } = {}) => {
   const params = new URLSearchParams({ size: String(size) });
@@ -20,11 +22,16 @@ export const messages = (roomId, { cursor, size = 20, signal } = {}) => {
   });
 };
 
-export const markAsRead = (roomId, lastReadMessageId) =>
-  apiRequest(`/api/v1/chat-rooms/${roomId}/read`, {
+export const markAsRead = async (roomId, lastReadMessageId) => {
+  const subject = getAuthSessionSubject();
+  const result = await apiRequest(`/api/v1/chat-rooms/${roomId}/read`, {
     method: "POST",
     body: { lastReadMessageId },
   });
+  if (subject && subject === getAuthSessionSubject())
+    window.dispatchEvent(new Event(CHAT_READ_UPDATED_EVENT));
+  return result;
+};
 
 export const sendMessage = (
   roomId,

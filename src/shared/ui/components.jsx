@@ -1,3 +1,4 @@
+import { formatUnreadCount } from "../../features/chat/unreadCount.js";
 import { useProfileImage } from "../../features/profile/useProfileImage.js";
 import { asset } from "../assets.js";
 import { profilePhotoUrls } from "../utils.js";
@@ -93,10 +94,17 @@ const tabItems = [
   ["MY", "/my", "nav-person.svg"],
 ];
 
-export function BottomNav({ path, navigate, onRefreshHome }) {
+export function BottomNav({
+  path,
+  navigate,
+  onRefreshHome,
+  unreadMessageCount = null,
+}) {
   return (
     <nav className="bottom-nav" aria-label="주요 메뉴">
       {tabItems.map(([label, href, icon]) => {
+        const badge =
+          href === "/chats" ? formatUnreadCount(unreadMessageCount) : "";
         return (
           <button
             type="button"
@@ -111,8 +119,18 @@ export function BottomNav({ path, navigate, onRefreshHome }) {
               navigate(href);
             }}
             aria-current={path.startsWith(href) ? "page" : undefined}
+            aria-label={
+              badge ? `${label}, 안 읽은 메시지 ${unreadMessageCount}개` : label
+            }
           >
-            <Icon name={icon} />
+            <span className="bottom-nav-icon">
+              <Icon name={icon} />
+              {badge && (
+                <span className="bottom-nav-badge" aria-hidden="true">
+                  {badge}
+                </span>
+              )}
+            </span>
             <span>{label}</span>
           </button>
         );

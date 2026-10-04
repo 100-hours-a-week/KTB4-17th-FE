@@ -1,9 +1,11 @@
 import {
   AUTH_EXPIRED_EVENT,
+  AUTH_SESSION_CLEARED_EVENT,
   clearAccessToken,
   getAccessToken,
 } from "../../shared/api/authToken.js";
 import { refreshAuthSession } from "../../shared/api/client.js";
+import { createChatSocketSubscriptions } from "./socketSubscriptions.js";
 
 const FRAME_END = "\0";
 const SUBSCRIPTIONS = [
@@ -45,7 +47,7 @@ function parseFrame(rawFrame) {
   return { command, headers, body: content.slice(separator + 2) };
 }
 
-export function connectChatSocket({
+function startChatSocket({
   onMessage,
   onReadReceipt = () => {},
   onStatus = () => {},
@@ -209,3 +211,8 @@ export function connectChatSocket({
     socket?.close();
   };
 }
+
+const sharedSocket = createChatSocketSubscriptions(startChatSocket);
+window.addEventListener(AUTH_SESSION_CLEARED_EVENT, sharedSocket.clear);
+
+export const connectChatSocket = sharedSocket.subscribe;
