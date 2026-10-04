@@ -23,6 +23,7 @@ const { clearChatSessions, getRoomSession, updateRoomSession } = await import(
 );
 const { enqueueMessages, retryMessage } = await import("./outbox.js");
 const { applyMessagePage, fetchMessageGap } = await import("./roomData.js");
+const { loadChatVisit, unreadBoundary } = await import("./unread.js");
 
 function token(subject, signature = "first") {
   return `header.${Buffer.from(JSON.stringify({ sub: subject })).toString("base64url")}.${signature}`;
@@ -532,6 +533,196 @@ test("latest synchronization retains the cursor for already-loaded older history
   applyMessagePage(entry, [page(101, 120)]);
   assert.equal(entry.snapshot.pageInfo.nextCursor, 61);
   assert.equal(entry.snapshot.messages.length, 60);
+});
+
+function unreadFixture(count, first = 1, last = 4) {
+  const current = { count, first, last };
+  const calls = [];
+  return {
+    current,
+    calls,
+    fetchRooms: async () => ({
+      items: [
+        {
+          chatRoomId: 7,
+          unreadCount: current.count,
+          activityAt: String(current.last),
+        },
+      ],
+    }),
+    fetchMessages: async (_room, { cursor, size }) => {
+      calls.push(cursor || null);
+      const end = cursor
+        ? Math.min(current.last, Number(cursor) - 1)
+        : current.last;
+      const start = Math.max(current.first, end - size + 1);
+      return page(start, end, start > current.first);
+    },
+  };
+}
+
+test("entry boundary counts incoming messages only, ignoring my read badges", () => {
+  const latest = page(1, 4, false).messages;
+  latest[1].mine = true;
+  latest.forEach((item) => {
+    item.unreadCount = 0;
+  });
+  assert.equal(unreadBoundary(latest, 2), 3);
+  assert.equal(unreadBoundary(latest, 0), null);
+  assert.equal(unreadBoundary(latest, 4), null);
+});
+
+test("a cached room reopens without its old divider once the server says read", async () => {
+  const fixture = unreadFixture(1);
+  const firstVisit = await loadChatVisit(7, fixture);
+  assert.equal(firstVisit.unreadBoundaryId, 4);
+  const entry = activeEntry();
+  applyMessagePage(entry, firstVisit.pages);
+  updateRoomSession(entry, { readCursor: firstVisit.readThroughId });
+  fixture.current.count = 0;
+  const secondVisit = await loadChatVisit(7, fixture);
+  assert.equal(secondVisit.unreadBoundaryId, null);
+  assert.equal(firstVisit.unreadBoundaryId, 4);
+  assert.equal(entry.snapshot.unreadBoundaryId, undefined);
+});
+
+test("new unread messages after leaving replace the previous entry boundary", async () => {
+  const fixture = unreadFixture(2);
+  const first = await loadChatVisit(7, fixture);
+  fixture.current.count = 0;
+  assert.equal((await loadChatVisit(7, fixture)).unreadBoundaryId, null);
+  fixture.current.last = 6;
+  fixture.current.count = 2;
+  const third = await loadChatVisit(7, fixture);
+  assert.equal(first.unreadBoundaryId, 3);
+  assert.equal(third.unreadBoundaryId, 5);
+  assert.equal(third.readThroughId, 6);
+});
+
+test("socket arrivals and older cached pages cannot move the current visit divider", async () => {
+  const fixture = unreadFixture(2, 81, 100);
+  const visit = await loadChatVisit(7, fixture);
+  const entry = activeEntry();
+  applyMessagePage(entry, visit.pages);
+  updateRoomSession(entry, (state) => ({
+    ...state,
+    messages: mergeChatMessages(state.messages, [message(101)]),
+  }));
+  applyMessagePage(entry, [page(61, 80)]);
+  assert.equal(visit.unreadBoundaryId, 99);
+  assert.equal(visit.readThroughId, 100);
+  assert.equal(entry.snapshot.messages.at(-1).id, 101);
+});
+
+test("entry loads older pages until the oldest of 25 unread messages is available", async () => {
+  const fixture = unreadFixture(25, 1, 55);
+  const visit = await loadChatVisit(7, fixture);
+  assert.equal(visit.unreadBoundaryId, 31);
+  assert.deepEqual(fixture.calls, [null, 36]);
+});
+
+test("an unread page boundary includes preceding read messages for context", async () => {
+  const fixture = unreadFixture(20, 1, 55);
+  const visit = await loadChatVisit(7, fixture);
+  assert.equal(visit.unreadBoundaryId, 36);
+  assert.equal(visit.pages.length, 2);
+  assert.ok(visit.pages[1].messages.some((item) => item.messageId < 36));
+});
+
+test("read rooms load only the latest page even with extensive cached history", async () => {
+  const fixture = unreadFixture(0, 1, 100);
+  const visit = await loadChatVisit(7, fixture);
+  assert.equal(visit.unreadBoundaryId, null);
+  assert.equal(visit.readThroughId, 100);
+  assert.deepEqual(fixture.calls, [null]);
+});
+
+test("failed unread lookup rejects instead of displaying an old cached divider", async () => {
+  const fixture = unreadFixture(1);
+  const first = await loadChatVisit(7, fixture);
+  fixture.fetchRooms = async () => {
+    throw new Error("network unavailable");
+  };
+  await assert.rejects(loadChatVisit(7, fixture), /network unavailable/);
+  assert.equal(first.unreadBoundaryId, 4);
+});
+
+test("a room missing from the server list is an error rather than zero unread", async () => {
+  const fixture = unreadFixture(1);
+  fixture.fetchRooms = async () => ({
+    items: [],
+    pageInfo: { hasNext: false },
+  });
+  await assert.rejects(loadChatVisit(7, fixture), {
+    code: "CHAT_ROOM_NOT_FOUND",
+  });
+});
+
+test("unread lookup follows room pagination and rejects repeated room cursors", async () => {
+  const fixture = unreadFixture(1);
+  const original = fixture.fetchRooms;
+  fixture.fetchRooms = async ({ cursor }) =>
+    cursor
+      ? original()
+      : { items: [], pageInfo: { hasNext: true, nextCursor: "next" } };
+  assert.equal((await loadChatVisit(7, fixture)).unreadBoundaryId, 4);
+  fixture.fetchRooms = async () => ({
+    items: [],
+    pageInfo: { hasNext: true, nextCursor: "next" },
+  });
+  await assert.rejects(loadChatVisit(7, fixture), /Repeated room cursor/);
+});
+
+test("an arrival during snapshot loading retries before choosing the entry boundary", async () => {
+  const fixture = unreadFixture(1);
+  const fetchMessages = fixture.fetchMessages;
+  let arrive = true;
+  fixture.fetchMessages = async (...args) => {
+    const result = await fetchMessages(...args);
+    if (arrive) {
+      fixture.current.last = 5;
+      fixture.current.count = 2;
+      arrive = false;
+    }
+    return result;
+  };
+  const visit = await loadChatVisit(7, fixture);
+  assert.equal(visit.unreadBoundaryId, 4);
+  assert.equal(visit.readThroughId, 5);
+  assert.deepEqual(fixture.calls, [null, null]);
+});
+
+test("a cancelled entry cannot complete with a stale boundary", async () => {
+  const fixture = unreadFixture(1);
+  const controller = new AbortController();
+  const original = fixture.fetchMessages;
+  fixture.fetchMessages = async (...args) => {
+    const result = await original(...args);
+    controller.abort();
+    return result;
+  };
+  await assert.rejects(
+    loadChatVisit(7, { ...fixture, signal: controller.signal }),
+    { name: "AbortError" },
+  );
+});
+
+test("rapidly changing entry snapshots fail after bounded retries", async () => {
+  const fixture = unreadFixture(1);
+  const original = fixture.fetchMessages;
+  fixture.fetchMessages = async (...args) => {
+    const result = await original(...args);
+    fixture.current.last += 1;
+    return result;
+  };
+  await assert.rejects(loadChatVisit(7, fixture), /Unread state changed/);
+  assert.equal(fixture.calls.length, 3);
+});
+
+test("repeated unread history cursors fail instead of looping", async () => {
+  const fixture = unreadFixture(100, 1, 100);
+  fixture.fetchMessages = async () => page(81, 100, true);
+  await assert.rejects(loadChatVisit(7, fixture), /Repeated message cursor/);
 });
 
 test("message metadata permits entry without a room-list lookup", () => {

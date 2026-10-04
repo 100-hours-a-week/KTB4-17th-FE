@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { PhotoSegments, ProfilePhoto } from "../../shared/ui/components.jsx";
 import { dateAge } from "../../shared/utils.js";
 import { getMemberProfile, getMyProfile } from "./api.js";
@@ -49,9 +50,10 @@ export function OtherProfile({ memberId, returnTo, navigate, isOwn = false }) {
       if (requestVersion !== profileRequestVersion.current) return;
       setProfile(null);
       setError(
-        requestError?.status === 404
-          ? "프로필을 찾을 수 없어요."
-          : "프로필을 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
+        apiErrorMessage(
+          requestError,
+          "프로필을 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
+        ),
       );
     } finally {
       if (requestVersion === profileRequestVersion.current) {

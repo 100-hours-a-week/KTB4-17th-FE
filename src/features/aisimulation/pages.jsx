@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import {
   BrandHeader,
   EmptyState,
@@ -22,7 +23,7 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
     setSimulation(null);
     setError("");
     if (!Number.isSafeInteger(simulationId) || simulationId <= 0) {
-      setError("SIMULATION_NOT_FOUND");
+      setError(apiErrorMessage("SIMULATION_NOT_FOUND"));
       return () => {
         active = false;
       };
@@ -32,28 +33,55 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
       .then((result) => active && setSimulation(result))
       .catch(
         (requestError) =>
-          active && setError(requestError?.code || "SIMULATION_UNAVAILABLE"),
+          active &&
+          setError(
+            apiErrorMessage(
+              requestError,
+              "시뮬레이션을 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
+            ),
+          ),
       );
     return () => {
       active = false;
     };
   }, [simulationId]);
 
+  const partner = simulation?.partner || {};
+  const me = simulation?.me || {};
+  const chatRoomQuery =
+    Number.isSafeInteger(roomId) && roomId > 0 ? `?chatRoomId=${roomId}` : "";
+  const partnerMemberId = Number(partner.userId);
+  const practicePath =
+    Number.isSafeInteger(partnerMemberId) && partnerMemberId > 0
+      ? `/ai/practice/${partnerMemberId}${chatRoomQuery}`
+      : null;
+  const conversationHeader = (
+    <>
+      <BrandHeader navigate={navigate}>
+        <ChatModeMenu
+          currentMode="simulation"
+          targetMemberId={partnerMemberId}
+          onPractice={practicePath ? () => navigate(practicePath) : undefined}
+        />
+      </BrandHeader>
+      <ScreenHeader
+        className="chat-room-header conversation-header"
+        title="AI 시뮬레이션"
+        onBack={() => navigate(backPath)}
+      />
+    </>
+  );
+
   if (error || !simulation)
     return (
       <section className="ai-conversation-view" aria-label="AI 시뮬레이션">
-        <BrandHeader navigate={navigate} />
-        <ScreenHeader
-          className="chat-room-header conversation-header"
-          title="AI 시뮬레이션"
-          onBack={() => navigate(backPath)}
-        />
+        {conversationHeader}
         <main className="ai-conversation-state">
           {error ? (
             <EmptyState
               icon="!"
               title="시뮬레이션을 불러오지 못했어요"
-              description="잠시 후 다시 시도해주세요."
+              description={error}
               action={
                 <PixelButton onClick={() => navigate("/home")}>
                   홈으로 가기
@@ -71,30 +99,9 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
       </section>
     );
 
-  const partner = simulation.partner || {};
-  const me = simulation.me || {};
-  const chatRoomQuery =
-    Number.isSafeInteger(roomId) && roomId > 0 ? `?chatRoomId=${roomId}` : "";
-  const partnerMemberId = Number(partner.userId);
-  const practicePath =
-    Number.isSafeInteger(partnerMemberId) && partnerMemberId > 0
-      ? `/ai/practice/${partnerMemberId}${chatRoomQuery}`
-      : null;
   return (
     <section className="ai-conversation-view" aria-label="AI 시뮬레이션">
-      <BrandHeader navigate={navigate}>
-        <ChatModeMenu
-          currentMode="simulation"
-          targetMemberId={partnerMemberId}
-          onPractice={practicePath ? () => navigate(practicePath) : undefined}
-          onChat={() => navigate(chatPath)}
-        />
-      </BrandHeader>
-      <ScreenHeader
-        className="chat-room-header conversation-header"
-        title="AI 시뮬레이션"
-        onBack={() => navigate(backPath)}
-      />
+      {conversationHeader}
       <div className="ai-notice">
         ⓘ　실제 상대가 아닌 AI예요. 대화 내용은 상대에게 전달되지 않아요.
       </div>
@@ -163,7 +170,12 @@ export function Report({ simulationId, chatRoomId, navigate }) {
       .catch(
         (requestError) =>
           active &&
-          setError(requestError?.code || "SIMULATION_REPORT_UNAVAILABLE"),
+          setError(
+            apiErrorMessage(
+              requestError,
+              "리포트를 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
+            ),
+          ),
       );
     return () => {
       active = false;
@@ -188,7 +200,7 @@ export function Report({ simulationId, chatRoomId, navigate }) {
             <EmptyState
               icon="!"
               title="리포트를 불러오지 못했어요"
-              description="잠시 후 다시 시도해주세요."
+              description={error}
               action={
                 <PixelButton onClick={() => navigate(simulationPath)}>
                   시뮬레이션으로 돌아가기

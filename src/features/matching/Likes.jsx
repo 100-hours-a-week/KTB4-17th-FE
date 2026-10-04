@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import {
   BrandHeader,
   EmptyState,
@@ -83,7 +84,10 @@ export function Likes({
         [targetTab]: {
           ...current[targetTab],
           loading: false,
-          error: error?.code || "LIKES_UNAVAILABLE",
+          error: apiErrorMessage(
+            error,
+            "좋아요를 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
+          ),
         },
       }));
     } finally {
@@ -118,7 +122,7 @@ export function Likes({
       removeReceivedLike(person.id);
       toast("매칭에 성공했어요");
     } catch (error) {
-      toast(error?.code || "좋아요를 처리하지 못했어요.");
+      toast(apiErrorMessage(error, "좋아요를 처리하지 못했어요."));
     } finally {
       actionInFlight.current = false;
       setActionLikeId(null);
@@ -142,7 +146,7 @@ export function Likes({
       setRejectTarget(null);
       toast("좋아요를 거절했어요");
     } catch (error) {
-      toast(error?.code || "좋아요를 거절하지 못했어요.");
+      toast(apiErrorMessage(error, "좋아요를 거절하지 못했어요."));
     } finally {
       actionInFlight.current = false;
       setActionLikeId(null);
@@ -178,7 +182,7 @@ export function Likes({
           <EmptyState
             icon="!"
             title="좋아요를 불러오지 못했어요"
-            description="잠시 후 다시 시도해주세요."
+            description={page.error}
             action={
               <PixelButton secondary onClick={() => load(tab)}>
                 다시 시도

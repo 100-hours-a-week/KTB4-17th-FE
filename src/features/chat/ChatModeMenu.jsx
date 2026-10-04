@@ -7,7 +7,6 @@ export function ChatModeMenu({
   simulationStartingFor,
   onSimulation,
   onPractice,
-  onChat,
 }) {
   const menuRef = useRef(null);
   useEffect(() => {
@@ -76,11 +75,6 @@ export function ChatModeMenu({
             <small>상대의 성향을 반영한 AI와 연습해요</small>
           </span>
         </button>
-        {onChat && (
-          <button type="button" onClick={() => selectMode(onChat)}>
-            채팅으로 돌아가기
-          </button>
-        )}
       </div>
     </details>
   );
