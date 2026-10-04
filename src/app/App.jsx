@@ -10,6 +10,7 @@ import {
 import { Login, RegistrationRestricted } from "../features/auth/pages.jsx";
 import { useLocalTestLogin } from "../features/auth/useLocalTestLogin.js";
 import { ChatList, ChatRoom } from "../features/chat/Chat.jsx";
+import { useUnreadMessageCount } from "../features/chat/useUnreadMessageCount.js";
 import { Likes } from "../features/matching/Likes.jsx";
 import { Notifications } from "../features/notifications/Notifications.jsx";
 import { Onboarding } from "../features/onboarding/Onboarding.jsx";
@@ -75,6 +76,10 @@ function AppRouter() {
   const [loading, setLoading] = useState(true);
   const [sessionCheckError, setSessionCheckError] = useState(false);
   const [logoutPending, setLogoutPending] = useState(false);
+  const unreadMessageCount = useUnreadMessageCount({
+    enabled: !loading && !sessionCheckError && data.session && data.onboarded,
+    path,
+  });
   const navigate = useCallback((to, options = {}) => {
     const destination = new URL(to, window.location.origin);
     const destinationUrl = `${destination.pathname}${destination.search}${destination.hash}`;
@@ -473,6 +478,7 @@ function AppRouter() {
         {showNav && (
           <BottomNav
             path={path}
+            unreadMessageCount={unreadMessageCount}
             navigate={navigate}
             onRefreshHome={loadRecommendations}
           />
