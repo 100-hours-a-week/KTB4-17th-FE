@@ -94,12 +94,7 @@ const tabItems = [
   ["MY", "/my", "nav-person.svg"],
 ];
 
-export function BottomNav({
-  path,
-  navigate,
-  onRefreshHome,
-  unreadMessageCount = null,
-}) {
+export function BottomNav({ path, navigate, unreadMessageCount = null }) {
   return (
     <nav className="bottom-nav" aria-label="주요 메뉴">
       {tabItems.map(([label, href, icon]) => {
@@ -110,14 +105,7 @@ export function BottomNav({
             type="button"
             key={href}
             className={path.startsWith(href) ? "active" : ""}
-            onClick={() => {
-              if (href === "/home") {
-                navigate(href);
-                onRefreshHome?.();
-                return;
-              }
-              navigate(href);
-            }}
+            onClick={() => navigate(href)}
             aria-current={path.startsWith(href) ? "page" : undefined}
             aria-label={
               badge ? `${label}, 안 읽은 메시지 ${unreadMessageCount}개` : label

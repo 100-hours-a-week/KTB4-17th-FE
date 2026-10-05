@@ -26,6 +26,7 @@ import {
   Home,
   LegacyProfileRedirect,
 } from "../features/recommendation/Home.jsx";
+import { isHomePath } from "../features/recommendation/recommendationRefresh.js";
 import { useRecommendationFeed } from "../features/recommendation/useRecommendationFeed.js";
 import * as userApi from "../features/user/api.js";
 import {
@@ -101,6 +102,7 @@ function AppRouter() {
   });
   const feed = useRecommendationFeed({
     enabled: !loading && data.session && data.onboarded,
+    isHome: isHomePath(path),
   });
   const {
     recommendations,
@@ -390,7 +392,6 @@ function AppRouter() {
         initialTab={new URLSearchParams(search).get("tab")}
         onFindMatch={() => {
           navigate("/home");
-          void loadRecommendations();
         }}
       />
     );
@@ -480,7 +481,6 @@ function AppRouter() {
             path={path}
             unreadMessageCount={unreadMessageCount}
             navigate={navigate}
-            onRefreshHome={loadRecommendations}
           />
         )}
         {toastText && (
