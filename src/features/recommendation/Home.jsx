@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { asset } from "../../shared/assets.js";
 import {
   BrandHeader,
@@ -113,7 +114,7 @@ export function Home({
           : "지금은 새로운 인연을 찾지 못했어요.",
       );
     } catch (error) {
-      toast(error?.code || "추천 목록을 새로고침하지 못했어요.");
+      toast(apiErrorMessage(error, "추천 목록을 새로고침하지 못했어요."));
     }
   }
   function resetCardPosition() {
@@ -327,7 +328,7 @@ export function Home({
       toast(`${person.nickname}님에게 좋아요를 보냈어요`);
       onDismiss();
     } catch (error) {
-      toast(error?.code || "좋아요를 보내지 못했어요.");
+      toast(apiErrorMessage(error, "좋아요를 보내지 못했어요."));
     } finally {
       actionInFlight.current = false;
       setActionBusy("");
@@ -397,7 +398,7 @@ export function Home({
           <EmptyState
             icon="!"
             title="추천을 불러오지 못했어요"
-            description="네트워크를 확인한 뒤 다시 시도해주세요."
+            description={recommendationError}
             action={
               <PixelButton secondary onClick={onRetryRecommendations}>
                 다시 불러오기

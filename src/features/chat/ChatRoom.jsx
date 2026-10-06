@@ -164,6 +164,7 @@ function ChatRoomContent({
   const {
     entry,
     state,
+    visit,
     syncing,
     error,
     connection,
@@ -181,7 +182,7 @@ function ChatRoomContent({
   const imageInputRef = useRef(null);
   const viewerOpenerRef = useRef(null);
   const scroll = useChatScroll({ ...room, viewingImage });
-  const canSend = state.loaded && state.room?.status === "ACTIVE";
+  const canSend = Boolean(visit) && state.room?.status === "ACTIVE";
   const targetMemberId = state.room?.memberId;
   const closeViewer = useCallback(() => setViewingImage(null), []);
   const openViewer = useCallback((message, opener) => {
@@ -348,7 +349,15 @@ function ChatRoomContent({
             {connectionMessage}
           </div>
         )}
-        {error && state.loaded && (
+        {scroll.readError && (
+          <div className="chat-sync-error" role="alert">
+            <span>읽음 상태를 갱신하지 못했어요.</span>
+            <button type="button" onClick={scroll.retryRead}>
+              다시 시도
+            </button>
+          </div>
+        )}
+        {error && state.loaded && visit && (
           <div className="chat-sync-error" role="alert">
             <span>{error.message}</span>
             <button
@@ -365,10 +374,10 @@ function ChatRoomContent({
             ref={scroll.containerRef}
             className="chat-messages chat-room-messages"
             aria-label="대화 메시지"
-            aria-busy={!state.loaded && syncing}
+            aria-busy={!visit && syncing}
             onScroll={scroll.onScroll}
           >
-            {!state.loaded ? (
+            {!visit ? (
               error ? (
                 <div className="chat-room-load-state" role="alert">
                   <p>{error.message}</p>
@@ -420,11 +429,17 @@ function ChatRoomContent({
                   {state.messages.length ? (
                     state.messages.map((message, index) => {
                       const previous = state.messages[index - 1];
-                      const grouped = messagesAreGrouped(previous, message);
-                      const showTime = !messageTimesAreGrouped(
-                        message,
-                        state.messages[index + 1],
-                      );
+                      const startsUnread =
+                        Number(message.id) === visit.unreadBoundaryId;
+                      const grouped =
+                        !startsUnread && messagesAreGrouped(previous, message);
+                      const showTime =
+                        Number(state.messages[index + 1]?.id) ===
+                          visit.unreadBoundaryId ||
+                        !messageTimesAreGrouped(
+                          message,
+                          state.messages[index + 1],
+                        );
                       return (
                         <Fragment key={message.renderKey}>
                           {message.dateKey &&
@@ -433,6 +448,15 @@ function ChatRoomContent({
                                 <span>{message.dateLabel}</span>
                               </div>
                             )}
+                          {startsUnread && (
+                            <div
+                              className="chat-unread-divider"
+                              data-unread-message-id={message.id}
+                              role="status"
+                            >
+                              <span>여기까지 읽었습니다.</span>
+                            </div>
+                          )}
                           <MessageBubble
                             message={message}
                             avatar={state.room?.image || ""}

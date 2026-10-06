@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { useAppState } from "../../shared/appState.jsx";
 import { asset } from "../../shared/assets.js";
 import { getRegistrationAgeRestriction } from "../user/registrationAge.js";
@@ -22,7 +23,13 @@ export function Login({ onLogin, onLocalTestLogin }) {
         setTestTargetMemberId(result?.practiceTargetMemberId || null);
       })
       .catch((error) => {
-        if (active) setTestLoginError(error?.code || "TEST_AUTH_UNAVAILABLE");
+        if (active)
+          setTestLoginError(
+            apiErrorMessage(
+              error,
+              "테스트 계정을 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
+            ),
+          );
       })
       .finally(() => {
         if (active) setTestAccountsLoading(false);
@@ -38,7 +45,12 @@ export function Login({ onLogin, onLocalTestLogin }) {
     try {
       await onLocalTestLogin(account.memberId, testTargetMemberId);
     } catch (error) {
-      setTestLoginError(error?.code || "TEST_LOGIN_FAILED");
+      setTestLoginError(
+        apiErrorMessage(
+          error,
+          "테스트 로그인을 처리하지 못했어요. 잠시 후 다시 시도해주세요.",
+        ),
+      );
     } finally {
       setTestLoginPending(false);
     }
@@ -99,7 +111,7 @@ export function Login({ onLogin, onLocalTestLogin }) {
           )}
           {testLoginError && (
             <div className="local-test-login-error" role="alert">
-              테스트 로그인을 처리하지 못했어요 ({testLoginError})
+              {testLoginError}
             </div>
           )}
         </section>

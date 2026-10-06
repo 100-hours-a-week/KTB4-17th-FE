@@ -1,12 +1,38 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import * as recommendationApi from "./api.js";
 import { mapRecommendationItem } from "./mapRecommendationItem.js";
 import {
   initialRecommendationFeedState,
   recommendationFeedReducer,
 } from "./recommendationFeedState.js";
+import {
+  IMAGE_REFRESH_FALLBACK_MS,
+  nextRecommendationImageRefreshAt,
+} from "./recommendationRefresh.js";
 
-export function useRecommendationFeed({ enabled }) {
+const emptyPage = () => ({
+  batchId: null,
+  nextCursor: null,
+  hasNext: false,
+});
+
+function mapItems(result) {
+  const receivedAt = Date.now();
+  return (Array.isArray(result?.items) ? result.items : [])
+    .map((item) => mapRecommendationItem(item, receivedAt))
+    .filter(Boolean);
+}
+
+function pageFromResult(batchId, result) {
+  return {
+    batchId,
+    nextCursor: result?.pageInfo?.nextCursor || null,
+    hasNext: Boolean(result?.pageInfo?.hasNext),
+  };
+}
+
+export function useRecommendationFeed({ enabled, isHome }) {
   const [feedState, dispatch] = useReducer(
     recommendationFeedReducer,
     initialRecommendationFeedState,
@@ -14,14 +40,17 @@ export function useRecommendationFeed({ enabled }) {
   const { recommendations, currentIndex, exhausted } = feedState;
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState("");
-  const [page, setPage] = useState({
-    batchId: null,
-    nextCursor: null,
-    hasNext: false,
-  });
+  const [page, setPage] = useState(emptyPage);
   const [refreshing, setRefreshing] = useState(false);
+  const [revalidationRetryAt, setRevalidationRetryAt] = useState(null);
   const requestRef = useRef(0);
   const moreRequestRef = useRef(false);
+  const revalidationRequestRef = useRef(null);
+  const feedStateRef = useRef(feedState);
+  const enabledRef = useRef(enabled);
+  const wasHomeRef = useRef(isHome);
+  feedStateRef.current = feedState;
+  enabledRef.current = enabled;
 
   const load = useCallback(async () => {
     const requestId = requestRef.current + 1;
@@ -42,25 +71,26 @@ export function useRecommendationFeed({ enabled }) {
       if (!batchId) {
         if (requestId === requestRef.current) {
           dispatch({ type: "replace", items: [] });
-          setPage({ batchId: null, nextCursor: null, hasNext: false });
+          setPage(emptyPage());
+          setRevalidationRetryAt(null);
         }
         return;
       }
       const result = await recommendationApi.recommendationItems(batchId);
-      const items = (Array.isArray(result?.items) ? result.items : [])
-        .map(mapRecommendationItem)
-        .filter(Boolean);
+      const items = mapItems(result);
       if (requestId === requestRef.current) {
         dispatch({ type: "replace", items });
-        setPage({
-          batchId,
-          nextCursor: result?.pageInfo?.nextCursor || null,
-          hasNext: Boolean(result?.pageInfo?.hasNext),
-        });
+        setPage(pageFromResult(batchId, result));
+        setRevalidationRetryAt(null);
       }
     } catch (requestError) {
       if (requestId === requestRef.current)
-        setError(requestError?.code || "RECOMMENDATIONS_UNAVAILABLE");
+        setError(
+          apiErrorMessage(
+            requestError,
+            "추천 목록을 불러오지 못했어요. 연결을 확인한 뒤 다시 시도해주세요.",
+          ),
+        );
     } finally {
       if (requestId === requestRef.current) setStatus("ready");
     }
@@ -81,21 +111,20 @@ export function useRecommendationFeed({ enabled }) {
         page.batchId,
         page.nextCursor,
       );
-      const items = (result?.items || [])
-        .map(mapRecommendationItem)
-        .filter(Boolean);
+      const items = mapItems(result);
       if (requestId === requestRef.current) {
         dispatch({ type: "append", items });
-        setPage((current) => ({
-          ...current,
-          nextCursor: result?.pageInfo?.nextCursor || null,
-          hasNext: Boolean(result?.pageInfo?.hasNext),
-        }));
+        setPage(pageFromResult(page.batchId, result));
       }
       return items.length > 0;
     } catch (requestError) {
       if (requestId === requestRef.current)
-        setError(requestError?.code || "RECOMMENDATIONS_UNAVAILABLE");
+        setError(
+          apiErrorMessage(
+            requestError,
+            "추천 목록을 불러오지 못했어요. 연결을 확인한 뒤 다시 시도해주세요.",
+          ),
+        );
       return false;
     } finally {
       moreRequestRef.current = false;
@@ -113,22 +142,18 @@ export function useRecommendationFeed({ enabled }) {
       if (!batchId) {
         if (requestId === requestRef.current) {
           dispatch({ type: "replace", items: [] });
-          setPage({ batchId: null, nextCursor: null, hasNext: false });
+          setPage(emptyPage());
+          setRevalidationRetryAt(null);
         }
         return 0;
       }
 
       const result = await recommendationApi.recommendationItems(batchId);
-      const items = (Array.isArray(result?.items) ? result.items : [])
-        .map(mapRecommendationItem)
-        .filter(Boolean);
+      const items = mapItems(result);
       if (requestId === requestRef.current) {
         dispatch({ type: "replace", items });
-        setPage({
-          batchId,
-          nextCursor: result?.pageInfo?.nextCursor || null,
-          hasNext: Boolean(result?.pageInfo?.hasNext),
-        });
+        setPage(pageFromResult(batchId, result));
+        setRevalidationRetryAt(null);
       }
       return items.length;
     } finally {
@@ -136,11 +161,61 @@ export function useRecommendationFeed({ enabled }) {
     }
   }, []);
 
+  const revalidate = useCallback(() => {
+    if (revalidationRequestRef.current) return revalidationRequestRef.current;
+
+    const requestId = requestRef.current;
+    const request = (async () => {
+      const targetCount = Math.max(
+        feedStateRef.current.recommendations.length,
+        1,
+      );
+      const batch = await recommendationApi.activeBatch();
+      const batchId = batch?.batchId;
+      if (!batchId) return false;
+
+      const items = [];
+      const seenCursors = new Set();
+      let cursor = null;
+      let result = null;
+      while (items.length < targetCount) {
+        result = await recommendationApi.recommendationItems(batchId, cursor);
+        items.push(...mapItems(result));
+        const nextCursor = result?.pageInfo?.nextCursor || null;
+        if (!result?.pageInfo?.hasNext) break;
+        if (!nextCursor || seenCursors.has(nextCursor))
+          throw new Error("Invalid recommendation pagination cursor");
+        seenCursors.add(nextCursor);
+        cursor = nextCursor;
+      }
+
+      if (requestId !== requestRef.current || !enabledRef.current) return false;
+      dispatch({ type: "revalidate", items });
+      setPage(pageFromResult(batchId, result));
+      setError("");
+      setRevalidationRetryAt(null);
+      return true;
+    })()
+      .catch(() => {
+        if (requestId === requestRef.current && enabledRef.current)
+          setRevalidationRetryAt(Date.now() + IMAGE_REFRESH_FALLBACK_MS);
+        return false;
+      })
+      .finally(() => {
+        if (revalidationRequestRef.current === request)
+          revalidationRequestRef.current = null;
+      });
+    revalidationRequestRef.current = request;
+    return request;
+  }, []);
+
   useEffect(() => {
     if (!enabled) {
       dispatch({ type: "replace", items: [] });
+      setPage(emptyPage());
       setError("");
       setStatus("idle");
+      setRevalidationRetryAt(null);
       return undefined;
     }
     void load();
@@ -148,6 +223,55 @@ export function useRecommendationFeed({ enabled }) {
       requestRef.current += 1;
     };
   }, [enabled, load]);
+
+  useEffect(() => {
+    const wasHome = wasHomeRef.current;
+    wasHomeRef.current = isHome;
+    if (enabled && isHome && !wasHome && status === "ready") void revalidate();
+  }, [enabled, isHome, revalidate, status]);
+
+  useEffect(() => {
+    if (!enabled || !isHome || status !== "ready") return undefined;
+    const refreshAt = nextRecommendationImageRefreshAt(recommendations);
+    if (refreshAt == null) return undefined;
+    const scheduledAt = Math.max(refreshAt, revalidationRetryAt || 0);
+    const timer = window.setTimeout(
+      () => void revalidate(),
+      Math.max(scheduledAt - Date.now(), 0),
+    );
+    return () => window.clearTimeout(timer);
+  }, [
+    enabled,
+    isHome,
+    recommendations,
+    revalidate,
+    revalidationRetryAt,
+    status,
+  ]);
+
+  useEffect(() => {
+    if (!enabled || !isHome || status !== "ready") return undefined;
+    const refreshIfExpired = () => {
+      if (document.visibilityState !== "visible") return;
+      const refreshAt = nextRecommendationImageRefreshAt(
+        feedStateRef.current.recommendations,
+      );
+      const retryAt = revalidationRetryAt || 0;
+      if (refreshAt != null && refreshAt <= Date.now() && retryAt <= Date.now())
+        void revalidate();
+    };
+    const handlePageShow = (event) => {
+      if (event.persisted) void revalidate();
+    };
+    document.addEventListener("visibilitychange", refreshIfExpired);
+    window.addEventListener("focus", refreshIfExpired);
+    window.addEventListener("pageshow", handlePageShow);
+    return () => {
+      document.removeEventListener("visibilitychange", refreshIfExpired);
+      window.removeEventListener("focus", refreshIfExpired);
+      window.removeEventListener("pageshow", handlePageShow);
+    };
+  }, [enabled, isHome, revalidate, revalidationRetryAt, status]);
 
   const advance = useCallback(() => {
     dispatch({ type: "advance" });
@@ -172,6 +296,7 @@ export function useRecommendationFeed({ enabled }) {
     load,
     loadMore,
     refresh,
+    revalidate,
     advance,
     retreat,
     dismiss,

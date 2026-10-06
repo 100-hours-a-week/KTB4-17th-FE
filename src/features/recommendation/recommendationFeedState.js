@@ -19,6 +19,22 @@ export function recommendationFeedReducer(state, action) {
         recommendations: [...state.recommendations, ...action.items],
         exhausted: false,
       };
+    case "revalidate": {
+      const currentMemberId =
+        state.recommendations[state.currentIndex]?.id ?? null;
+      const matchingIndex = action.items.findIndex(
+        (item) => item.id === currentMemberId,
+      );
+      const currentIndex =
+        matchingIndex >= 0
+          ? matchingIndex
+          : Math.min(state.currentIndex, Math.max(action.items.length - 1, 0));
+      return {
+        recommendations: action.items,
+        currentIndex,
+        exhausted: action.items.length === 0,
+      };
+    }
     case "advance":
       return { ...state, currentIndex: state.currentIndex + 1 };
     case "retreat":

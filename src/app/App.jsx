@@ -10,6 +10,7 @@ import {
 import { Login, RegistrationRestricted } from "../features/auth/pages.jsx";
 import { useLocalTestLogin } from "../features/auth/useLocalTestLogin.js";
 import { ChatList, ChatRoom } from "../features/chat/Chat.jsx";
+import { useUnreadMessageCount } from "../features/chat/useUnreadMessageCount.js";
 import { Likes } from "../features/matching/Likes.jsx";
 import { Notifications } from "../features/notifications/Notifications.jsx";
 import { Onboarding } from "../features/onboarding/Onboarding.jsx";
@@ -25,6 +26,7 @@ import {
   Home,
   LegacyProfileRedirect,
 } from "../features/recommendation/Home.jsx";
+import { isHomePath } from "../features/recommendation/recommendationRefresh.js";
 import { useRecommendationFeed } from "../features/recommendation/useRecommendationFeed.js";
 import * as userApi from "../features/user/api.js";
 import {
@@ -75,6 +77,10 @@ function AppRouter() {
   const [loading, setLoading] = useState(true);
   const [sessionCheckError, setSessionCheckError] = useState(false);
   const [logoutPending, setLogoutPending] = useState(false);
+  const unreadMessageCount = useUnreadMessageCount({
+    enabled: !loading && !sessionCheckError && data.session && data.onboarded,
+    path,
+  });
   const navigate = useCallback((to, options = {}) => {
     const destination = new URL(to, window.location.origin);
     const destinationUrl = `${destination.pathname}${destination.search}${destination.hash}`;
@@ -96,6 +102,7 @@ function AppRouter() {
   });
   const feed = useRecommendationFeed({
     enabled: !loading && data.session && data.onboarded,
+    isHome: isHomePath(path),
   });
   const {
     recommendations,
@@ -385,7 +392,6 @@ function AppRouter() {
         initialTab={new URLSearchParams(search).get("tab")}
         onFindMatch={() => {
           navigate("/home");
-          void loadRecommendations();
         }}
       />
     );
@@ -473,8 +479,8 @@ function AppRouter() {
         {showNav && (
           <BottomNav
             path={path}
+            unreadMessageCount={unreadMessageCount}
             navigate={navigate}
-            onRefreshHome={loadRecommendations}
           />
         )}
         {toastText && (

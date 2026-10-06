@@ -4,23 +4,13 @@ import {
   getAccessToken,
   storeBearerToken,
 } from "./authToken.js";
+import { createApiError } from "./errorMessages.js";
 
 const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 const AUTH_REFRESH_PATH = "/api/v1/auth/token/refresh";
 const AUTH_LOGOUT_PATH = "/api/v1/auth/logout";
 
 let refreshInFlight = null;
-
-function requestError(response, result) {
-  const code =
-    result?.errorCode ||
-    (response.status === 401 ? "AUTH_REQUIRED" : `HTTP_${response.status}`);
-  const error = new Error(code);
-  error.code = code;
-  error.status = response.status;
-  error.fields = result?.errors || [];
-  return error;
-}
 
 async function readJson(response) {
   const contentType = response.headers.get("content-type") || "";
@@ -79,7 +69,7 @@ export async function refreshAuthSession() {
       const result = await readJson(response);
       if (!response.ok) {
         clearAccessToken();
-        throw requestError(response, result);
+        throw createApiError(response, result);
       }
 
       try {
@@ -131,7 +121,7 @@ export async function apiRequest(path, options = {}) {
 
   const result = await readJson(response);
   if (!response.ok) {
-    const error = requestError(response, result);
+    const error = createApiError(response, result);
     if (response.status === 401 && !skipAuth && notifyAuthExpired)
       dispatchAuthExpired();
     throw error;
