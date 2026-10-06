@@ -4,13 +4,11 @@ name: Frontend CI
 #타입스크립트 검사 필요 없어서 삭제함.
 
 on:
-  push:
-    branches:
-      - "chore/**"
-
   pull_request:
     branches:
       - dev
+
+  workflow_dispatch: #push할때마다 동작하지 않고 pr올린 경우와 수동 실행에서만 CI동작
 
 permissions:
   contents: read
