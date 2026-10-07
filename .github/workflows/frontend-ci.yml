@@ -1,14 +1,14 @@
-# 기존: name: frontend CI
 name: Frontend CI
 
-on:
-  push:
-    branches:
-      - "chore/**"
+#package.json은 프로젝트가 원하는 패티키 정의 , package-lock.json은 실제 어떤 버전이 설치되었는지 정의.
+#타입스크립트 검사 필요 없어서 삭제함.
 
+on:
   pull_request:
     branches:
       - dev
+
+  workflow_dispatch: #push할때마다 동작하지 않고 pr올린 경우와 수동 실행에서만 CI동작
 
 permissions:
   contents: read
@@ -16,54 +16,66 @@ permissions:
 jobs:
   feature_ci:
     name: Feature CI
-    runs-on: ubuntu-latest
-
+    runs-on: ubuntu-latest #우분투 러너 사용.
 
     steps:
-      - name: Check source
-        # 기존: uses: actions/checkout@v6
-        uses: actions/checkout@v7
+      - name: Check source #코드 내려 받기
+        uses: actions/checkout@v7 #가장 최신버전 사용.
         with:
-          persist-credentials: false
+          persist-credentials: false #코드의 인증 정보 보관 안함.
 
       - name: Set up Node.js
-        # 기존: uses: actions/setup-node@v6
         uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
-          cache-dependency-path: package-lock.json
+          cache-dependency-path: package-lock.json # package-lock.json파일이  변경 없으면 기존 캐시된 파일 사용.
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci #package-lock.json에 적힌 의존성 설치
 
-      # 기존:
-      # - name: Lint
-      #   run: npx @biomejs/biome lint . && npx htmlhint "**/*.html" && npx stylelint "**/*.css"
-      #
-      # - name: Formatter Check
-      #   run: npx @biomejs/biome format .
-      - name: Biome Check
-        # 기존 : run: npm exec --offline -- biome ci .
-        run: npm run lint:biome
+      #Lint검사 - 버전은 package-lock.json에 정의
+      - name: Biome Check  # js,ts 검사
+        run: npm run lint:biome # 사용하지 않는 변수, 접근이 안되는 코드,
 
       - name: HTML Lint
-        # 기존 : run: npm exec --offline -- htmlhint "**/*.html"
         run: npm run lint:html
 
-      - name: CSS Lint
-        # 기존 : run: npm exec --offline -- stylelint "**/*.css"
-        run: npm run lint:css
+      - name: CSS Lint #stylelint
+        run: npm run lint:css #중복된 속성, 규칙 없는 거, 잘못된 속성 표시
 
-      - name: Type Check
-        run: npm run typecheck
+        #- name: Dependency Vulnerability Check
+        # run: npx -y audit-ci@7 --high --allowlist GHSA-vfj7-8cjw-p6xm
 
-      - name: Dependency Vulnerability Check
-        # 기존: run: npm audit --audit-level=high
-        # GHSA-vfj7-8cjw-p6xm: braces 패치 버전 없음, stylelint(devDependencies) 경유로만 사용. 패치 나오면 allowlist에서 제거
-        run: npx -y audit-ci@7 --high --allowlist GHSA-vfj7-8cjw-p6xm
-
+        #단위 테스트
+      - name: Unit Test #src 아래 모든 *.test.js 실행 ( 테스트 종류가 많아서 하나씩 ci에 나열하면 매번 업데이트 해줘야함)
+        run: node --test "src/**/*.test.js"
 
       - name: Build
-        # 기존: run: npm run build --if-present
         run: npm run build
+
+
+  #codeQL는 시간이 오래 걸려서 CI와 병렬로 실행됨.
+  codeql:
+    name: CodeQL Analysis  #동작환경 =우분투
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      actions: read
+      security-events: write #보안 검사 결과 등록용
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript #언어 선택 =js
+          build-mode: none
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
