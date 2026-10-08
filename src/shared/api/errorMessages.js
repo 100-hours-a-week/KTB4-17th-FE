@@ -79,6 +79,17 @@ export const API_ERROR_MESSAGES = Object.freeze({
   RESOURCE_NOT_AVAILABLE:
     "추천 정보를 더 이상 사용할 수 없어요. 추천 목록을 다시 불러와주세요.",
 
+  PREFERENCE_AGE_OUT_OF_RANGE: "나이는 19~39세로 설정해주세요.",
+  PREFERENCE_HEIGHT_OUT_OF_RANGE: "키는 130~220cm로 설정해주세요.",
+  PREFERENCE_AGE_RANGE_INVALID: "최소 나이는 최대 나이보다 클 수 없어요.",
+  PREFERENCE_HEIGHT_RANGE_INVALID: "최소 키는 최대 키보다 클 수 없어요.",
+  PREFERENCE_RELIGION_NULL_ELEMENT: "종교 선택을 다시 확인해주세요.",
+  PREFERENCE_RELIGION_DUPLICATE_VALUE: "종교 선택을 다시 확인해주세요.",
+  PREFERENCE_DRINKING_NULL_ELEMENT: "음주 선택을 다시 확인해주세요.",
+  PREFERENCE_DRINKING_DUPLICATE_VALUE: "음주 선택을 다시 확인해주세요.",
+  PREFERENCE_SMOKING_NULL_ELEMENT: "흡연 선택을 다시 확인해주세요.",
+  PREFERENCE_SMOKING_DUPLICATE_VALUE: "흡연 선택을 다시 확인해주세요.",
+
   INVALID_CHAT_ROOM_CURSOR:
     "채팅 목록의 조회 위치가 올바르지 않아요. 목록을 다시 불러와주세요.",
   INVALID_CHAT_ROOM_PAGE_SIZE:
