@@ -38,7 +38,6 @@ export function makeInitialState() {
     terms: [false, false, false, false],
     profile: { ...initialProfile },
     notifications: [],
-    preferences: { minAge: 19, maxAge: 39, minHeight: 130, maxHeight: 220 },
   };
 }
 
@@ -60,8 +59,6 @@ export function loadInitialState() {
         initial.profile = { ...initial.profile, ...stored.profile };
       if (Array.isArray(stored.notifications))
         initial.notifications = stored.notifications;
-      if (stored.preferences && typeof stored.preferences === "object")
-        initial.preferences = { ...initial.preferences, ...stored.preferences };
       // Only a successful server session check can confirm registration.
       initial.registrationInfoConfirmed = false;
       initial.onboardingStep = "identity";
@@ -94,7 +91,6 @@ export function AppStateProvider({ children }) {
         terms: storedData.terms,
         profile: storedData.profile,
         notifications: storedData.notifications,
-        preferences: storedData.preferences,
       };
       localStorage.setItem(
         `${APP_STORAGE_PREFIX}:app`,

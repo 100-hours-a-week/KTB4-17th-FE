@@ -41,7 +41,6 @@ export function Home({
   onStartSimulation,
 }) {
   const [photoIndex, setPhotoIndex] = useState(0);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [actionBusy, setActionBusy] = useState("");
   const actionInFlight = useRef(false);
   const [dragOffset, setDragOffset] = useState(0);
@@ -354,38 +353,20 @@ export function Home({
       <BrandHeader navigate={navigate} className="home-header">
         <span className="home-header-spacer" />
         <button
-          className="home-menu-button"
+          className="home-preferences-button"
           type="button"
-          aria-label="메뉴 열기"
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((open) => !open)}
+          onClick={() => navigate("/preferences")}
         >
-          ≡
+          선호 설정
         </button>
-        {menuOpen && (
-          <nav className="home-menu" aria-label="홈 메뉴">
-            <button
-              type="button"
-              aria-disabled="true"
-              onClick={() => {
-                setMenuOpen(false);
-                toast("선호 설정은 준비 중이에요.");
-              }}
-            >
-              선호 설정
-            </button>
-            <button
-              type="button"
-              aria-disabled="true"
-              onClick={() => {
-                setMenuOpen(false);
-                toast("알림 기능은 준비 중이에요.");
-              }}
-            >
-              알림
-            </button>
-          </nav>
-        )}
+        <button
+          className="home-notifications-button"
+          type="button"
+          aria-label="알림"
+          onClick={() => toast("알림 기능은 준비 중이에요.")}
+        >
+          <Icon name="bell.svg" />
+        </button>
       </BrandHeader>
       <main className="main-scroll home-main">
         {recommendationStatus === "loading" ? (

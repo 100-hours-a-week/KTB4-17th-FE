@@ -1,0 +1,16 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="353" height="56" viewBox="0 0 353 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Signal / Pixel surface" filter="url(#filter0_d_0_26)">
+<path d="M8 0H342V3.71429H346V7.42857H350V44.5714H346V48.2857H342V52H8V48.2857H4V44.5714H0V7.42857H4V3.71429H8V0Z" fill="#F6BDE2"/>
+<path d="M341.5 0.5V4.21387H345.5V7.92871H349.5V44.0713H345.5V47.7861H341.5V51.5H8.5V47.7861H4.5V44.0713H0.5V7.92871H4.5V4.21387H8.5V0.5H341.5Z" stroke="#352A48"/>
+</g>
+<defs>
+<filter id="filter0_d_0_26" x="0" y="0" width="353" height="56" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dx="3" dy="4"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0.2078 0 0 0 0 0.1647 0 0 0 0 0.2824 0 0 0 0.3 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_26"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_26" result="shape"/>
+</filter>
+</defs>
+</svg>

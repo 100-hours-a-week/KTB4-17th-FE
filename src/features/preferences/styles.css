@@ -1,9 +1,287 @@
-.range-row {
+.preferences-header {
   display: flex;
-  align-items: center;
-  gap: 9px;
+  justify-content: center;
+  padding-right: 20px;
+  padding-left: 20px;
 }
 
-.range-row input {
-  width: 45%;
+.preferences-header strong {
+  font-size: 18px;
+  line-height: 26px;
+}
+
+.preferences-close,
+.preference-sheet-close {
+  position: absolute;
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 24px;
+}
+
+.preferences-main {
+  inset: 96px 0 0;
+  padding: 0 20px calc(24px + env(safe-area-inset-bottom, 0px));
+}
+
+.preferences-controls {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.preference-range-field {
+  min-width: 0;
+  margin: 0 0 26px;
+  padding: 0;
+  border: 0;
+}
+
+.preference-range-label {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: 14px 0;
+  font-size: 18px;
+  line-height: 26px;
+}
+
+.preference-range {
+  position: relative;
+  height: 24px;
+}
+
+.preference-range-track {
+  position: absolute;
+  inset: 10px 11px auto;
+  height: 4px;
+  border-radius: 6px;
+  background: linear-gradient(
+    to right,
+    var(--soft-lavender) var(--range-start),
+    var(--purple) var(--range-start),
+    var(--purple) var(--range-end),
+    var(--soft-lavender) var(--range-end)
+  );
+}
+
+.preference-range input {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  width: 100%;
+  height: 24px;
+  margin: 0;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+
+.preference-range input::-webkit-slider-runnable-track {
+  height: 24px;
+  background: transparent;
+}
+
+.preference-range input::-moz-range-track {
+  height: 24px;
+  background: transparent;
+}
+
+.preference-range input::-webkit-slider-thumb {
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  appearance: none;
+  border: 0;
+  background: url("/assets/preferences/range-thumb.svg") center no-repeat;
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.preference-range input::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  background: url("/assets/preferences/range-thumb.svg") center no-repeat;
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.preference-range-lower::-webkit-slider-thumb {
+  background-image: url("/assets/preferences/range-thumb-start.svg");
+}
+
+.preference-range-lower::-moz-range-thumb {
+  background-image: url("/assets/preferences/range-thumb-start.svg");
+}
+
+.preference-range input:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+  border-radius: 50%;
+}
+
+.preference-range input:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+  border-radius: 50%;
+}
+
+.preference-choice-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 6px 0 28px;
+}
+
+.preference-choice-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 56px;
+  padding: 14px 12px;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  background: var(--soft-lavender);
+  box-shadow: 3px 4px 0 #352a484d;
+  font-size: 18px;
+  line-height: 26px;
+  text-align: left;
+}
+
+.preference-choice-row > span:first-child {
+  flex-shrink: 0;
+}
+
+.preference-choice-summary {
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.preferences-primary.pixel-button {
+  isolation: isolate;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  font-family: "Galmuri14", "Apple SD Gothic Neo", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 22px;
+}
+
+.preferences-primary::before,
+.preferences-primary::after {
+  position: absolute;
+  z-index: -1;
+  content: "";
+  pointer-events: none;
+  background-size: 100% 100%;
+}
+
+.preferences-primary::before {
+  inset: 0 -3px -4px 0;
+  background-image: url("/assets/preferences/button-shadow.svg");
+}
+
+.preferences-primary::after {
+  inset: 0;
+  background-image: url("/assets/preferences/button-face.svg");
+}
+
+.preferences-error {
+  margin: 0 0 16px;
+}
+
+.preference-sheet {
+  position: fixed;
+  inset: auto 0 0;
+  width: 100%;
+  max-width: 390px;
+  max-height: calc(100dvh - 24px);
+  margin: 0 auto;
+  padding: 14px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  border: 0;
+  background: #faf7fd;
+  color: var(--ink);
+  overscroll-behavior: contain;
+}
+
+.preference-sheet::backdrop {
+  background: #352a4866;
+}
+
+.preference-sheet-handle {
+  width: 44px;
+  height: 4px;
+  margin-bottom: 22px;
+  border-radius: 6px;
+  background: var(--soft-lavender);
+}
+
+.preference-sheet-close {
+  top: 4px;
+}
+
+.preference-sheet h1 {
+  margin-bottom: 14px;
+  font-size: 24px;
+  line-height: 32px;
+}
+
+.preference-sheet-options {
+  margin-bottom: 16px;
+}
+
+.preference-sheet-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 54px;
+  padding: 15px 0;
+  font-family: "Galmuri14", "Apple SD Gothic Neo", sans-serif;
+  font-size: 14px;
+  line-height: 22px;
+  cursor: pointer;
+}
+
+.preference-sheet-option input {
+  display: grid;
+  place-content: center;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  appearance: none;
+  border: 1.5px solid #e8ddf2;
+  border-radius: 6px;
+  background: var(--paper);
+  cursor: pointer;
+}
+
+.preference-sheet-option input:checked {
+  border-color: var(--purple);
+  background: var(--purple);
+}
+
+.preference-sheet-option input:checked::before {
+  width: 6px;
+  height: 12px;
+  border-right: 2px solid var(--paper);
+  border-bottom: 2px solid var(--paper);
+  content: "";
+  transform: translateY(-2px) rotate(45deg);
+}
+
+@media (width >= 600px) {
+  .preference-sheet {
+    bottom: max(24px, calc(100dvh - 868px));
+    max-height: min(820px, calc(100dvh - 72px));
+  }
 }
