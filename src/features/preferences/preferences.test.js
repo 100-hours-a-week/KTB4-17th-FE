@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
+import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import {
   defaultPreferences,
   PREFERENCE_CHOICES,
@@ -114,4 +116,98 @@ test("choice payloads reject unsupported enums, duplicates, null elements and sc
       );
     }
   }
+});
+
+const preferencesSource = readFileSync(
+  new URL("./Preferences.jsx", import.meta.url),
+  "utf8",
+);
+const saveStart = preferencesSource.indexOf("  async function save(event)");
+const saveEnd = preferencesSource.indexOf("\n  return (", saveStart);
+const createSave = new Function(
+  "context",
+  `const { status, saveInFlight, preference, validatePreferences, setSaveError,
+    setSaving, preferencesApi, mounted, onSaved, toast, navigate, apiErrorMessage } = context;
+  ${preferencesSource.slice(saveStart, saveEnd)}
+  return save;`,
+);
+
+function saveHarness(savePreferences) {
+  const events = [];
+  const saveInFlight = { current: false };
+  const mounted = { current: true };
+  const save = createSave({
+    status: "ready",
+    saveInFlight,
+    preference: saved,
+    validatePreferences,
+    setSaveError: (error) => {
+      if (error) events.push(["error", error]);
+    },
+    setSaving: (saving) => events.push(["saving", saving]),
+    preferencesApi: { savePreferences },
+    mounted,
+    onSaved: () => events.push(["reload"]),
+    toast: () => events.push(["toast"]),
+    navigate: (path) => events.push(["navigate", path]),
+    apiErrorMessage,
+  });
+  return {
+    save: () => save({ preventDefault() {} }),
+    events,
+    saveInFlight,
+    mounted,
+  };
+}
+
+test("successful saving reloads recommendations before navigating home", async () => {
+  let completeSave;
+  const pending = new Promise((resolve) => {
+    completeSave = resolve;
+  });
+  const harness = saveHarness(() => pending);
+  const saving = harness.save();
+  assert.deepEqual(harness.events, [["saving", true]]);
+  completeSave();
+  await saving;
+  assert.deepEqual(harness.events, [
+    ["saving", true],
+    ["reload"],
+    ["toast"],
+    ["navigate", "/home"],
+    ["saving", false],
+  ]);
+  assert.equal(harness.saveInFlight.current, false);
+});
+
+test("failed saving stays on preferences and does not reload recommendations", async () => {
+  const harness = saveHarness(async () => {
+    throw new Error("offline");
+  });
+  await harness.save();
+  assert.equal(
+    harness.events.some(
+      ([event]) => event === "reload" || event === "navigate",
+    ),
+    false,
+  );
+  assert.equal(
+    harness.events.some(([event]) => event === "error"),
+    true,
+  );
+  assert.equal(harness.saveInFlight.current, false);
+});
+
+test("saving does not navigate or reload after leaving preferences", async () => {
+  let completeSave;
+  const pending = new Promise((resolve) => {
+    completeSave = resolve;
+  });
+  const harness = saveHarness(() => pending);
+  const saving = harness.save();
+  harness.mounted.current = false;
+  completeSave();
+  await saving;
+  assert.deepEqual(harness.events, [["saving", true]]);
+  assert.equal(harness.saveInFlight.current, false);
 });
