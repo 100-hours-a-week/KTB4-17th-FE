@@ -139,7 +139,7 @@ function PreferenceSheet({ field, selected, onDone, onClose }) {
   );
 }
 
-export function Preferences({ navigate, toast }) {
+export function Preferences({ navigate, toast, onSaved }) {
   const [preference, setPreference] = useState(defaultPreferences);
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
@@ -205,6 +205,7 @@ export function Preferences({ navigate, toast }) {
     try {
       await preferencesApi.savePreferences(preference);
       if (!mounted.current) return;
+      void onSaved();
       toast("선호 조건을 저장했어요.");
       navigate("/home");
     } catch (requestError) {

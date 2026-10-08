@@ -113,6 +113,7 @@ function AppRouter() {
     error: recommendationError,
     refreshing: recommendationRefreshing,
     load: loadRecommendations,
+    reloadAfterPreferences: reloadRecommendationsAfterPreferences,
     loadMore: loadMoreRecommendations,
     refresh: refreshRecommendations,
     advance: advanceRecommendation,
@@ -456,7 +457,13 @@ function AppRouter() {
     );
   else if (path === "/my/persona") page = <Persona navigate={navigate} />;
   else if (path === "/preferences")
-    page = <Preferences navigate={navigate} toast={toast} />;
+    page = (
+      <Preferences
+        navigate={navigate}
+        toast={toast}
+        onSaved={reloadRecommendationsAfterPreferences}
+      />
+    );
   else if (path === "/notifications")
     page = <Notifications navigate={navigate} toast={toast} />;
   else

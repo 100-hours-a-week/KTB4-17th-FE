@@ -44,7 +44,7 @@ export function useRecommendationFeed({ enabled, isHome }) {
   const [refreshing, setRefreshing] = useState(false);
   const [revalidationRetryAt, setRevalidationRetryAt] = useState(null);
   const requestRef = useRef(0);
-  const moreRequestRef = useRef(false);
+  const moreRequestRef = useRef(null);
   const revalidationRequestRef = useRef(null);
   const feedStateRef = useRef(feedState);
   const enabledRef = useRef(enabled);
@@ -52,17 +52,25 @@ export function useRecommendationFeed({ enabled, isHome }) {
   feedStateRef.current = feedState;
   enabledRef.current = enabled;
 
-  const load = useCallback(async () => {
+  const load = useCallback(async ({ createIfMissing = true } = {}) => {
     const requestId = requestRef.current + 1;
     requestRef.current = requestId;
+    revalidationRequestRef.current = null;
+    moreRequestRef.current = null;
+    dispatch({ type: "replace", items: [] });
+    setPage(emptyPage());
+    setRefreshing(false);
+    setRevalidationRetryAt(null);
     setStatus("loading");
     setError("");
     try {
       let batch = await recommendationApi.activeBatch();
       let batchId = batch?.batchId;
-      if (!batchId) {
+      if (requestId !== requestRef.current || !enabledRef.current) return;
+      if (!batchId && createIfMissing) {
         const created = await recommendationApi.createRecommendationBatch();
         batchId = created?.batchId;
+        if (requestId !== requestRef.current || !enabledRef.current) return;
         if (!batchId) {
           batch = await recommendationApi.activeBatch();
           batchId = batch?.batchId;
@@ -96,26 +104,30 @@ export function useRecommendationFeed({ enabled, isHome }) {
     }
   }, []);
 
+  const reloadAfterPreferences = useCallback(
+    () => load({ createIfMissing: false }),
+    [load],
+  );
+
   const loadMore = useCallback(async () => {
     if (
-      moreRequestRef.current ||
+      moreRequestRef.current !== null ||
       !page.batchId ||
       !page.hasNext ||
       !page.nextCursor
     )
       return false;
     const requestId = requestRef.current;
-    moreRequestRef.current = true;
+    moreRequestRef.current = requestId;
     try {
       const result = await recommendationApi.recommendationItems(
         page.batchId,
         page.nextCursor,
       );
+      if (requestId !== requestRef.current || !enabledRef.current) return false;
       const items = mapItems(result);
-      if (requestId === requestRef.current) {
-        dispatch({ type: "append", items });
-        setPage(pageFromResult(page.batchId, result));
-      }
+      dispatch({ type: "append", items });
+      setPage(pageFromResult(page.batchId, result));
       return items.length > 0;
     } catch (requestError) {
       if (requestId === requestRef.current)
@@ -127,13 +139,15 @@ export function useRecommendationFeed({ enabled, isHome }) {
         );
       return false;
     } finally {
-      moreRequestRef.current = false;
+      if (moreRequestRef.current === requestId) moreRequestRef.current = null;
     }
   }, [page]);
 
   const refresh = useCallback(async () => {
     const requestId = requestRef.current + 1;
     requestRef.current = requestId;
+    revalidationRequestRef.current = null;
+    moreRequestRef.current = null;
     setRefreshing(true);
     setError("");
     try {
@@ -172,7 +186,14 @@ export function useRecommendationFeed({ enabled, isHome }) {
       );
       const batch = await recommendationApi.activeBatch();
       const batchId = batch?.batchId;
-      if (!batchId) return false;
+      if (requestId !== requestRef.current || !enabledRef.current) return false;
+      if (!batchId) {
+        dispatch({ type: "replace", items: [] });
+        setPage(emptyPage());
+        setError("");
+        setRevalidationRetryAt(null);
+        return true;
+      }
 
       const items = [];
       const seenCursors = new Set();
@@ -294,6 +315,7 @@ export function useRecommendationFeed({ enabled, isHome }) {
     error,
     refreshing,
     load,
+    reloadAfterPreferences,
     loadMore,
     refresh,
     revalidate,
