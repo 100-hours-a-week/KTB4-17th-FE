@@ -4,7 +4,7 @@ export const createRecommendationBatch = () =>
   apiRequest("/api/v1/recommendation-batches", { method: "POST" });
 
 export const activeBatch = () =>
-  apiRequest("/api/v1/recommendation-batches/active");
+  apiRequest("/api/v1/recommendation-batches/active", { cache: "no-store" });
 
 export const recommendationItems = (batchId, cursor) => {
   const params = new URLSearchParams();
