@@ -9,6 +9,7 @@ import {
   PixelButton,
   ProfilePhoto,
 } from "../../shared/ui/components.jsx";
+import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import { profilePhotoUrls } from "../../shared/utils.js";
 import * as matchingApi from "../matching/api.js";
 import { wheelNavigationIntent } from "./wheelNavigation.js";
@@ -41,6 +42,8 @@ export function Home({
   onStartSimulation,
 }) {
   const [photoIndex, setPhotoIndex] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
   const [actionBusy, setActionBusy] = useState("");
   const actionInFlight = useRef(false);
   const [dragOffset, setDragOffset] = useState(0);
@@ -80,6 +83,25 @@ export function Home({
     },
     [],
   );
+
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const close = (event) => {
+      if (event.type === "keydown" && event.key !== "Escape") return;
+      if (
+        event.type === "pointerdown" &&
+        menuRef.current?.contains(event.target)
+      )
+        return;
+      setMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", close);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", close);
+    };
+  }, [menuOpen]);
 
   useEffect(() => {
     if (personId == null) return;
@@ -352,28 +374,54 @@ export function Home({
     <>
       <BrandHeader navigate={navigate} className="home-header">
         <span className="home-header-spacer" />
-        <button
-          className="home-preferences-button"
-          type="button"
-          onClick={() => navigate("/preferences")}
-        >
-          선호 설정
-        </button>
-        <button
-          className="home-notifications-button"
-          type="button"
-          aria-label="알림"
-          onClick={() => toast("알림 기능은 준비 중이에요.")}
-        >
-          <Icon name="bell.svg" />
-        </button>
+        <div className="home-menu" ref={menuRef}>
+          <button
+            className="home-menu-button"
+            type="button"
+            aria-label="메뉴"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            <PixelIcon name="burger" scale={3} />
+          </button>
+          {menuOpen && (
+            <div className="home-menu-list" role="menu">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false);
+                  navigate("/preferences");
+                }}
+              >
+                선호 설정
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false);
+                  toast("알림 기능은 준비 중이에요.");
+                }}
+              >
+                알림
+              </button>
+            </div>
+          )}
+        </div>
       </BrandHeader>
       <main className="main-scroll home-main">
         {recommendationStatus === "loading" ? (
           <EmptyState
-            icon="✦"
+            icon={<img src={asset("illust/pager.svg")} alt="" />}
             title="추천을 불러오고 있어요"
             description="잠시만 기다려주세요."
+            action={
+              <span className="empty-loader" aria-hidden="true">
+                <i />
+              </span>
+            }
           />
         ) : recommendationError ? (
           <EmptyState
@@ -396,7 +444,7 @@ export function Home({
             onPointerCancel={handlePointerCancel}
           >
             <EmptyState
-              icon="✦"
+              icon={<img src={asset("illust/pager.svg")} alt="" />}
               title={
                 recommendationExhausted || recommendations.length > 0
                   ? "추천을 모두 봤어요"
@@ -441,17 +489,25 @@ export function Home({
               <div className="recommendation-gradient" />
               <div className="recommendation-info">
                 {person.activity && (
-                  <span className="online-badge">{person.activity}</span>
+                  <span className="recommendation-keyword">
+                    ✦ {person.activity}
+                  </span>
                 )}
                 <h1>
                   {person.nickname}
-                  {person.age != null && `, ${person.age}`}
+                  {person.age != null && <span>{person.age}</span>}
                   {person.verified && <Icon name="detail-shield.svg" />}
                 </h1>
-                {person.job && <p>{person.job}</p>}
                 {(person.region || person.mbti) && (
-                  <p>
-                    {[person.region, person.mbti].filter(Boolean).join(" / ")}
+                  <p className="recommendation-meta">
+                    {[person.region, person.mbti]
+                      .filter(Boolean)
+                      .map((item, index) => (
+                        <span key={item}>
+                          {index > 0 && <i aria-hidden="true" />}
+                          {item}
+                        </span>
+                      ))}
                   </p>
                 )}
                 <button
@@ -463,24 +519,14 @@ export function Home({
                     navigate(`/profiles/${person.id}?returnTo=/home`)
                   }
                 >
-                  프로필 상세 보기 <span aria-hidden="true">›</span>
+                  프로필 상세 보기 <PixelIcon name="chev" />
                 </button>
                 <div className="recommendation-actions">
                   {[
-                    [
-                      "시뮬레이션",
-                      "action-simulation.svg",
-                      startSimulation,
-                      "simulation",
-                    ],
-                    [
-                      "AI 연습대화",
-                      "action-practice.svg",
-                      startPractice,
-                      "practice",
-                    ],
-                    ["좋아요", "action-like.svg", like, "like"],
-                  ].map(([label, icon, action, busyKey]) => (
+                    ["시뮬레이션", "sim", 3, startSimulation, "simulation"],
+                    ["좋아요", "heart", 4, like, "like"],
+                    ["AI 연습대화", "chat", 3, startPractice, "practice"],
+                  ].map(([label, icon, scale, action, busyKey]) => (
                     <button
                       type="button"
                       key={label}
@@ -489,12 +535,9 @@ export function Home({
                       disabled={Boolean(actionBusy)}
                     >
                       <span
-                        className="action-key"
-                        style={{
-                          backgroundImage: `url(${asset(icon === "action-like.svg" ? "action-pink.svg" : "action-white.svg")})`,
-                        }}
+                        className={`action-key${busyKey === "like" ? " action-key-like" : ""}`}
                       >
-                        <Icon name={icon} />
+                        <PixelIcon name={icon} scale={scale} />
                       </span>
                       <span>
                         {actionBusy === busyKey ? "처리 중..." : label}

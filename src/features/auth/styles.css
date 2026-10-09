@@ -11,12 +11,37 @@
     max(20px, env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
+  isolation: isolate;
+  background:
+    radial-gradient(60% 40% at 15% 12%, rgb(203 184 255 / 75%), transparent 70%),
+    radial-gradient(55% 35% at 90% 30%, rgb(255 198 231 / 70%), transparent 70%),
+    radial-gradient(
+      70% 40% at 50% 100%,
+      rgb(191 228 255 / 60%),
+      transparent 70%
+    ),
+    #f8f6fc;
 }
 
+/* faint pixel grid that fades out toward the middle of the screen */
+.login-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgb(124 92 250 / 6%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(124 92 250 / 6%) 1px, transparent 1px);
+  background-size: 26px 26px;
+  mask-image: linear-gradient(180deg, #000 0%, transparent 60%);
+}
+
+/* logo · signal card · tagline · (space) · kakao button · terms */
 .login-page:not(.local-test-login-page) {
   display: grid;
   height: 100%;
-  grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto auto minmax(0, 1fr) auto;
   place-items: center;
   row-gap: var(--login-gap);
 }
@@ -39,9 +64,43 @@
 .login-illustration img {
   width: 256px;
   max-width: 100%;
-  height: 116px;
+  height: 256px;
   margin-top: 0;
   object-fit: contain;
+}
+
+.login-signal {
+  width: 100%;
+  padding: 10px 14px 16px;
+  border: 8px solid transparent;
+  border-image: var(--px-frame-dark) 6 fill / 8px;
+  color: #fff;
+  filter: drop-shadow(0 6px 0 rgb(27 20 48 / 16%));
+}
+
+.login-signal-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: #cbb8ff;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.login-signal-status::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  background: #7cf0b4;
+  box-shadow: 0 0 8px #7cf0b4;
+}
+
+.login-signal h1 em {
+  font-style: normal;
+  background: var(--holo);
+  background-clip: text;
+  color: transparent;
 }
 
 .login-page h1 {
@@ -49,30 +108,69 @@
   width: 100%;
   height: auto;
   flex: 0 0 auto;
-  text-align: center;
-  font-size: 24px;
-  line-height: 32px;
-  font-weight: 400;
-  letter-spacing: -0.24px;
+  text-align: left;
+  font-size: 22px;
+  line-height: 33px;
+  font-weight: 700;
+  letter-spacing: 0;
 }
 
+.login-tagline {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 23px;
+  text-align: center;
+}
+
+/* Kakao login keeps Kakao's container color and speech-bubble symbol in the pixel keycap shape. */
 .kakao-login-button {
-  align-self: center;
-  width: min(100%, 336px);
+  position: relative;
+  isolation: isolate;
+  align-self: end;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 54px;
   flex: 0 0 auto;
   margin: 0;
-  padding: 0;
+  padding: 0 16px 4px;
   border: 0;
-  border-radius: 8px;
   background: transparent;
-  box-shadow: none;
-  line-height: 0;
+  color: rgb(0 0 0 / 85%);
+  filter: drop-shadow(0 4px 0 rgb(160 140 0 / 28%));
+  font-size: 16px;
+  font-weight: 700;
 }
 
-.kakao-login-button img {
-  display: block;
-  width: 100%;
-  height: auto;
+.kakao-login-button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  clip-path: var(--pixel-step-shape);
+  background:
+    linear-gradient(#fff9 0 0) 10px 5px / calc(66% - 10px) 3px no-repeat,
+    repeating-linear-gradient(90deg, #fffc 0 3px, transparent 3px 6px)
+    calc(100% - 14px) 5px / 15px 3px no-repeat,
+    #fee500;
+  box-shadow:
+    inset 0 -3px 0 rgb(120 100 0 / 16%),
+    inset 0 2px 0 rgb(255 255 255 / 50%);
+}
+
+.kakao-login-symbol {
+  flex: none;
+}
+
+.login-terms {
+  margin: calc(var(--login-gap) * -0.4) 0 0;
+  color: var(--subtle);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
 }
 
 @media (width < 600px) {

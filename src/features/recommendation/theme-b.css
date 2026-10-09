@@ -1,0 +1,245 @@
+/* B안 홈 — 햄버거 메뉴, 추천 카드 정보, 시뮬레이션 · 좋아요 · AI 연습대화 키. */
+
+.home-menu {
+  position: relative;
+}
+
+.home-menu-button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  margin-right: -10px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #2c203b;
+}
+
+.home-menu-list {
+  position: absolute;
+  z-index: 20;
+  top: 46px;
+  right: -6px;
+  display: flex;
+  min-width: 148px;
+  flex-direction: column;
+  padding: 2px;
+  border: 8px solid transparent;
+  border-image: var(--px-card) 8 fill / 8px;
+  filter: var(--shadow-pixel-strong);
+}
+
+.home-menu-list button {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  text-align: left;
+}
+
+.home-menu-list button + button {
+  border-top: 1px solid var(--line-soft);
+}
+
+.home-menu-list button:hover,
+.home-menu-list button:focus-visible {
+  outline: none;
+  background: var(--soft-lavender);
+  color: var(--purple-deep);
+}
+
+.recommendation-info .recommendation-keyword {
+  display: inline-flex;
+  margin-bottom: 10px;
+  padding: 5px 10px;
+  background: rgb(255 255 255 / 18%);
+  font-size: 12px;
+  font-weight: 700;
+  clip-path: var(--pixel-step-shape);
+  backdrop-filter: blur(8px);
+}
+
+.recommendation-info h1 {
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 36px;
+}
+
+.recommendation-info h1 span {
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+.recommendation-info .recommendation-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  opacity: 0.85;
+}
+
+.recommendation-info .recommendation-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recommendation-info .recommendation-meta i {
+  width: 3px;
+  height: 3px;
+  background: #fff;
+  opacity: 0.6;
+}
+
+.recommendation-info .recommendation-profile-link {
+  gap: 2px;
+  min-height: 36px;
+  margin-top: 4px;
+  color: #e3d9ff;
+  font-size: 13px;
+  font-weight: 700;
+  text-shadow: none;
+}
+
+.recommendation-info .recommendation-actions {
+  align-items: flex-end;
+  margin-top: 18px;
+}
+
+.recommendation-actions .card-action {
+  width: 92px;
+  gap: 8px;
+  color: rgb(255 255 255 / 92%);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.recommendation-actions .action-key {
+  color: #fff;
+}
+
+/* 빈 상태 · 로딩 (픽셀 일러스트) */
+.empty-state .empty-icon img {
+  display: block;
+  width: 190px;
+  height: auto;
+}
+
+.empty-state > strong {
+  margin-top: 10px;
+  font-size: 19px;
+  line-height: 27px;
+}
+
+.empty-state > p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 21px;
+}
+
+.empty-loader {
+  width: 140px;
+  height: 4px;
+  margin-top: 10px;
+  overflow: hidden;
+  background: #e7e1f0;
+}
+
+.empty-state .empty-loader i {
+  display: block;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(90deg, #9c80ff, #ee6ab1);
+  animation: empty-loader 1.4s ease-in-out infinite;
+}
+
+@keyframes empty-loader {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(230%);
+  }
+}
+
+/* 좋아요 탭 — 세그먼트 토글 */
+.segmented-tabs.likes-seg {
+  height: 44px;
+  margin: 14px 16px 0;
+  padding: 4px;
+  border-bottom: 0;
+  background: #ede8f4;
+  clip-path: var(--pixel-step-shape);
+}
+
+.segmented-tabs.likes-seg button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--subtle);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.segmented-tabs.likes-seg button.active {
+  background: var(--paper);
+  box-shadow: none;
+  color: var(--ink);
+  clip-path: var(--pixel-step-shape);
+}
+
+.segmented-tabs.likes-seg button.active::before {
+  content: "✦";
+  margin-right: 6px;
+  color: var(--purple);
+  font-size: 10px;
+}
+
+.empty-state .empty-icon img.empty-letter {
+  width: 162px;
+  margin: 20px 0 11px;
+}
+
+.empty-state .pixel-button.empty-action {
+  width: 220px;
+  min-height: 46px;
+  margin-top: 14px;
+  font-size: 15px;
+}
+
+.pixel-button.pink::before {
+  background:
+    linear-gradient(#ffffff8c 0 0) 10px 5px / calc(66% - 10px) 3px no-repeat,
+    repeating-linear-gradient(90deg, #ffffffbf 0 3px, transparent 3px 6px)
+    calc(100% - 14px) 5px / 15px 3px no-repeat,
+    var(--button-fill-pink);
+  box-shadow:
+    inset 0 -3px 0 rgb(120 10 70 / 20%),
+    inset 0 2px 0 rgb(255 255 255 / 35%);
+}
+
+/* 채팅 목록 — 빈 상태 */
+.chat-empty-state .chat-empty-illustration {
+  width: 190px;
+  height: auto;
+}
+
+.chat-empty-state > strong {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 27px;
+}
+
+.chat-empty-state .pixel-button.empty-action {
+  width: 220px;
+  min-height: 46px;
+  font-size: 15px;
+}

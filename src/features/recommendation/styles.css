@@ -149,7 +149,7 @@
   bottom: 7px;
   z-index: 3;
   color: var(--paper);
-  font-family: "Galmuri14", "Apple SD Gothic Neo", sans-serif;
+  font-family: var(--font-pixel);
 }
 
 .online-badge {
@@ -175,7 +175,7 @@
   display: flex;
   gap: 8px;
   align-items: center;
-  font-family: "Galmuri11", "Apple SD Gothic Neo", sans-serif;
+  font-family: var(--font-pixel);
   font-size: 23px;
   margin-bottom: 5px;
   line-height: 1.25;
@@ -230,8 +230,30 @@
   height: 56px;
   display: grid;
   place-items: center;
-  background-repeat: no-repeat;
-  background-size: 56px 56px;
+  clip-path: var(--pixel-step-shape);
+  background: rgb(255 255 255 / 18%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 34%);
+  backdrop-filter: blur(10px);
+}
+
+.action-key:not(.action-key-like) .icon {
+  filter: brightness(0) invert(1);
+}
+
+.action-key-like {
+  width: 64px;
+  height: 64px;
+  background:
+    linear-gradient(#ffffff8c 0 0) 8px 5px / 50% 3px no-repeat,
+    var(--button-fill-pink);
+  box-shadow:
+    inset 0 -4px 0 rgb(120 10 70 / 25%),
+    inset 0 2px 0 rgb(255 255 255 / 40%);
+  backdrop-filter: none;
+}
+
+.card-action:has(.action-key-like) {
+  filter: drop-shadow(0 4px 0 rgb(120 10 70 / 28%));
 }
 
 .card-detail-link {
@@ -289,7 +311,7 @@
   border: 0;
   background: transparent;
   color: var(--paper);
-  font-family: "Galmuri11", "Apple SD Gothic Neo", sans-serif;
+  font-family: var(--font-pixel);
   font-size: 32px;
   line-height: 32px;
   text-shadow: 0 1px 4px #21172f99;
@@ -316,7 +338,7 @@
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-family: "Galmuri11", "Apple SD Gothic Neo", sans-serif;
+  font-family: var(--font-pixel);
   font-size: 24px;
   line-height: 32px;
 }
@@ -326,7 +348,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-family: "Galmuri14", "Apple SD Gothic Neo", sans-serif;
+  font-family: var(--font-pixel);
   font-size: 14px;
   line-height: 22px;
 }
@@ -344,7 +366,7 @@
   margin-top: 18px;
   padding: 18px;
   background: #faf7fd;
-  font-family: "Galmuri14", "Apple SD Gothic Neo", sans-serif;
+  font-family: var(--font-pixel);
   font-size: 14px;
   line-height: 22px;
 }

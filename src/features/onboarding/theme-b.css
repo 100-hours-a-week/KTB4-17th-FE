@@ -1,0 +1,879 @@
+/*
+ * B안 온보딩 레이아웃 — 시안(byeol-v2-mockup-B)의 상단바·진행도·STEP 머리말,
+ * 안내 카드, 하루와의 대화, 사진 가이드를 그대로 옮긴다. shared/theme-b.css 다음에 로드.
+ */
+
+.onboarding-page {
+  position: relative;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--canvas);
+}
+
+/* ---------- 뒤로가기 · 8칸 진행도 · 단계 번호 ---------- */
+.onboarding-page .onboarding-top {
+  position: relative;
+  flex: none;
+  height: 42px;
+  padding: 0 15px 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.onboarding-dot {
+  position: absolute;
+  top: 26px;
+  width: 4px;
+  height: 4px;
+}
+
+.onboarding-dot.left {
+  left: 8px;
+  background: #dd82b4;
+}
+
+.onboarding-dot.right {
+  right: 8px;
+  background: #c2a0e7;
+}
+
+.onboarding-back,
+.onboarding-page .onboarding-back-placeholder {
+  flex: none;
+  width: 30px;
+  height: 30px;
+}
+
+.onboarding-back {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 4px solid transparent;
+  border-image: var(--px-frame) 6 fill / 4px;
+  background: transparent;
+  color: var(--ink);
+}
+
+.onboarding-progress {
+  flex: 1;
+  display: flex;
+  gap: 4px;
+}
+
+.onboarding-progress i {
+  flex: 1;
+  height: 4px;
+  background: #e7e1f0;
+}
+
+.onboarding-progress i.on {
+  background: linear-gradient(90deg, #9c80ff, #7c5cfa);
+}
+
+.onboarding-progress i.cur {
+  background: linear-gradient(90deg, #7c5cfa, #ee6ab1);
+}
+
+.onboarding-count {
+  flex: none;
+  min-width: 42px;
+  color: #75687f;
+  font-size: 13px;
+  line-height: 15px;
+  text-align: right;
+}
+
+/* ---------- 상단바 (A안) ---------- */
+.onboarding-brand {
+  justify-content: flex-start;
+}
+
+.brand-signal {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 10px;
+  margin-left: auto;
+}
+
+.brand-signal i {
+  display: block;
+  width: 3px;
+  background: #c2a0e7;
+}
+
+.brand-signal i:nth-child(1) {
+  height: 4px;
+}
+
+.brand-signal i:nth-child(2) {
+  height: 6px;
+}
+
+.brand-signal i:nth-child(3) {
+  height: 8px;
+}
+
+.brand-signal i:nth-child(4) {
+  height: 10px;
+  background: #75687f;
+}
+
+.brand-battery {
+  position: relative;
+  width: 20px;
+  height: 9px;
+  margin-left: 10px;
+  border: 1px solid #fff9fd;
+  background: #e4d8ee;
+}
+
+.brand-battery::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  left: 2px;
+  height: 3px;
+  background: #c2a0e7;
+}
+
+/* ---------- STEP 머리말 · 제목 ---------- */
+.onboarding-eyebrow {
+  flex: none;
+  margin: 8px 24px 0;
+  color: var(--purple);
+  font-size: 11px;
+  line-height: 14px;
+  letter-spacing: 0.1em;
+}
+
+.onboarding-eyebrow em {
+  color: var(--subtle);
+  font-style: normal;
+  letter-spacing: 0;
+}
+
+.onboarding-page .onboarding-body {
+  flex: 1;
+  min-height: 0;
+  padding: 6px 24px 20px;
+  overflow-y: auto;
+}
+
+.onboarding-page .onboarding-body h1 {
+  margin: 0 0 6px;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 34px;
+  letter-spacing: 0;
+}
+
+.onboarding-page .onboarding-body .subcopy {
+  margin: 0 0 22px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 21px;
+}
+
+.onboarding-page .onboarding-body h1.onboarding-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.onboarding-title small {
+  color: var(--purple);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.onboarding-page .field {
+  margin-bottom: 22px;
+}
+
+.onboarding-step-profile .field,
+.onboarding-step-lifestyle .field {
+  gap: 7px;
+  margin-bottom: 14px;
+}
+
+.onboarding-step-profile .choice,
+.onboarding-step-lifestyle .choice {
+  min-height: 36px;
+}
+
+.onboarding-page .registration-info-fields {
+  margin-top: 22px;
+}
+
+/* ---------- 안내 카드 (PRIVATE MODE · SELECTED AREA · PHOTO GUIDE · TIP) ---------- */
+.onboarding-note {
+  margin: 0 0 22px;
+  padding: 8px 10px;
+  border: 6px solid transparent;
+  border-image: var(--px-frame) 6 fill / 6px;
+  filter: drop-shadow(0 3px 0 rgb(76 48 150 / 8%));
+}
+
+.onboarding-note.tint {
+  border-image-source: var(--px-frame-tint);
+  filter: none;
+}
+
+.onboarding-note-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--purple-deep);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+}
+
+.onboarding-note p,
+.onboarding-note li {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.onboarding-note b {
+  color: var(--ink);
+}
+
+.onboarding-note ul {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.onboarding-note li {
+  position: relative;
+  padding-left: 14px;
+}
+
+.onboarding-note li::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 2px;
+  width: 4px;
+  height: 4px;
+  background: var(--purple);
+}
+
+/* ---------- 입력 앞뒤 장식 (검색 아이콘 · cm) ---------- */
+.input-affix {
+  position: relative;
+  width: 100%;
+}
+
+.input-lead,
+.input-suffix {
+  position: absolute;
+  top: 50%;
+  color: var(--subtle);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.input-lead {
+  left: 16px;
+}
+
+.input-suffix {
+  right: 16px;
+  font-size: 14px;
+}
+
+.onboarding-page .input-affix input {
+  padding-right: 40px;
+}
+
+.onboarding-page .input-lead + input {
+  padding-left: 32px;
+}
+
+/* ---------- 하단 버튼 ---------- */
+.onboarding-page .onboarding-action {
+  flex: none;
+  display: flex;
+  gap: 10px;
+  padding: 12px 20px max(34px, env(safe-area-inset-bottom));
+  background: var(--canvas);
+}
+
+.onboarding-page .onboarding-action .pixel-button {
+  flex: 1;
+  min-height: 54px;
+  font-size: 16px;
+}
+
+.onboarding-page .onboarding-action .pixel-button.pink::before {
+  background: var(--button-fill-pink);
+  box-shadow:
+    inset 0 -3px 0 rgb(120 10 70 / 20%),
+    inset 0 2px 0 rgb(255 255 255 / 35%);
+}
+
+.onboarding-page .onboarding-action .pixel-button.onboarding-ghost {
+  flex: 0 0 auto;
+  padding: 0 20px;
+  color: var(--ink);
+  filter: none;
+}
+
+.onboarding-page .onboarding-action .pixel-button.onboarding-ghost::before {
+  background: var(--paper);
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    inset 0 -3px 0 rgb(76 48 150 / 8%);
+}
+
+.onboarding-page .onboarding-action .pixel-button.onboarding-ghost::after {
+  display: none;
+}
+
+.onboarding-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #d2468f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ---------- 05 하루와의 대화 ---------- */
+.onboarding-step-questions .onboarding-body {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
+.persona-chat {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 -6px;
+  padding: 6px 0 14px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.persona-chat-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.persona-chat-group.mine {
+  align-items: flex-end;
+}
+
+.persona-chat-system {
+  align-self: center;
+  margin: 2px 0 10px;
+  padding: 2px 6px;
+  border: 4px solid transparent;
+  border-image: var(--px-frame) 6 fill / 4px;
+  color: var(--subtle);
+  font-size: 11px;
+  line-height: 14px;
+}
+
+.persona-chat-system b {
+  margin-right: 4px;
+  color: var(--purple);
+  font-weight: 400;
+}
+
+.persona-chat-who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.persona-chat-who small {
+  padding: 2px 6px;
+  background: var(--soft-lavender);
+  color: var(--purple);
+  font-size: 10px;
+  font-weight: 400;
+  clip-path: var(--pixel-step-shape);
+}
+
+.persona-chat-avatar {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  background: var(--holo);
+  clip-path: var(--pixel-step-shape);
+}
+
+.persona-bubble {
+  max-width: 262px;
+  margin: 0;
+  padding: 4px 8px;
+  border: 6px solid transparent;
+  border-image: var(--px-frame) 6 fill / 6px;
+  font-size: 14px;
+  line-height: 21px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.persona-bubble.left {
+  align-self: flex-start;
+  margin-left: 42px;
+  filter: drop-shadow(0 2px 0 rgb(76 48 150 / 9%));
+}
+
+.persona-bubble.question {
+  border-image-source: var(--px-frame-pink);
+  color: #5a1e43;
+}
+
+.persona-bubble.right {
+  margin-top: 8px;
+  padding: 10px 14px;
+  border: 0;
+  border-image: none;
+  background: linear-gradient(160deg, #9c80ff, #7350f5);
+  color: #fff;
+  clip-path: var(--pixel-step-shape);
+}
+
+.persona-bubble.sending {
+  opacity: 0.6;
+}
+
+.persona-bubble.typing {
+  display: flex;
+  gap: 4px;
+  padding: 8px 10px;
+}
+
+.persona-bubble.typing i {
+  width: 6px;
+  height: 6px;
+  background: var(--purple);
+  animation: persona-typing 1.2s infinite;
+}
+
+.persona-bubble.typing i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.persona-bubble.typing i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes persona-typing {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+
+  30% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+.persona-chat-meta {
+  color: var(--subtle);
+  font-size: 11px;
+  line-height: 14px;
+}
+
+.persona-chat-meta.left {
+  margin-left: 42px;
+}
+
+.onboarding-page .persona-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 0 42px;
+}
+
+.onboarding-page .persona-actions button,
+.onboarding-page .persona-retry {
+  min-height: 34px;
+  padding: 2px 8px;
+  color: var(--purple-deep);
+  font-size: 12px;
+}
+
+.onboarding-page .persona-retry {
+  align-self: center;
+  margin-top: 20px;
+}
+
+.onboarding-step-questions .onboarding-action {
+  padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line-soft);
+  background: rgb(255 255 255 / 86%);
+  backdrop-filter: blur(14px);
+}
+
+.persona-composer {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding-bottom: 32px;
+}
+
+.persona-composer textarea {
+  flex: 1;
+  height: 48px;
+  min-width: 0;
+  padding: 7px 12px;
+  border: 6px solid transparent;
+  border-image: var(--px-frame-soft) 6 fill / 6px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 22px;
+  resize: none;
+}
+
+.persona-composer textarea:focus {
+  outline: none;
+  border-image-source: var(--px-frame-focus);
+}
+
+.persona-composer textarea::placeholder {
+  color: #b2aabf;
+}
+
+.persona-send {
+  display: grid;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 0;
+  background: linear-gradient(160deg, #9c80ff, #6a47f0);
+  color: #fff;
+  clip-path: var(--pixel-step-shape);
+  box-shadow: inset 0 -3px 0 rgb(40 10 120 / 22%);
+}
+
+.persona-send:disabled {
+  background: #e9e5f0;
+  color: #b3abc0;
+  box-shadow: none;
+}
+
+.persona-composer-count,
+.persona-composer-hint {
+  position: absolute;
+  bottom: 10px;
+  color: var(--subtle);
+}
+
+.persona-composer-count {
+  left: 18px;
+  font-size: 10px;
+}
+
+.persona-composer-hint {
+  right: 4px;
+  font-size: 11px;
+}
+
+/* ---------- 07 정면 사진 안내 ---------- */
+.photo-viewfinder {
+  position: relative;
+  height: 200px;
+  margin-bottom: 22px;
+  overflow: hidden;
+  background: linear-gradient(160deg, #f1ebff 0%, #fcf0f7 55%, #eaf5ff 100%);
+  clip-path: var(--pixel-step-shape);
+}
+
+.photo-viewfinder .corner {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--purple);
+}
+
+.photo-viewfinder .tl {
+  top: 18px;
+  left: 18px;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.photo-viewfinder .tr {
+  top: 18px;
+  right: 18px;
+  border-bottom: 0;
+  border-left: 0;
+}
+
+.photo-viewfinder .bl {
+  bottom: 18px;
+  left: 18px;
+  border-top: 0;
+  border-right: 0;
+}
+
+.photo-viewfinder .br {
+  right: 18px;
+  bottom: 18px;
+  border-top: 0;
+  border-left: 0;
+}
+
+.photo-viewfinder > span {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  padding: 4px 10px;
+  background: rgb(255 255 255 / 85%);
+  color: var(--purple-deep);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  transform: translateX(-50%);
+  clip-path: var(--pixel-step-shape);
+}
+
+.photo-viewfinder .pixel-icon {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  color: rgb(124 92 250 / 24%);
+  transform: translateX(-50%);
+}
+
+/* ---------- 06 가치관 요약 ---------- */
+.onboarding-page .persona-summary-list {
+  gap: 14px;
+  margin-top: 0;
+}
+
+.onboarding-page .persona-summary-card {
+  position: relative;
+  padding: 8px 10px;
+  filter: drop-shadow(0 4px 0 rgb(124 92 250 / 14%));
+}
+
+.onboarding-page .persona-summary-card.holo::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  right: -2px;
+  left: -2px;
+  height: 4px;
+  background: var(--holo);
+}
+
+.onboarding-page .persona-summary-card small {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--purple);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.onboarding-page .persona-summary-card h2 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 25px;
+}
+
+.onboarding-page .persona-summary-card h3 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 21px;
+}
+
+.onboarding-page .persona-summary-card p {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.onboarding-page .persona-traits span {
+  padding: 2px 4px;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+/* ---------- 08 사진 등록 ---------- */
+.onboarding-page .photo-front-upload,
+.onboarding-page .onboarding-photo-add {
+  position: relative;
+  isolation: isolate;
+  border: 0;
+  border-image: none;
+  background: none;
+}
+
+.onboarding-page .photo-front-upload::before,
+.onboarding-page .onboarding-photo-add::before,
+.onboarding-page .photo-front-upload::after,
+.onboarding-page .onboarding-photo-add::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  clip-path: var(--pixel-step-shape);
+}
+
+.onboarding-page .photo-front-upload::before,
+.onboarding-page .onboarding-photo-add::before {
+  inset: 0;
+  background:
+    repeating-conic-gradient(#b9a8da 0 25%, transparent 0 50%) 0 0 / 8px 8px;
+}
+
+.onboarding-page .photo-front-upload::after,
+.onboarding-page .onboarding-photo-add::after {
+  inset: 2px;
+  background: var(--paper);
+}
+
+.onboarding-page .photo-front-upload {
+  min-height: 200px;
+  margin-bottom: 22px;
+  padding: 20px;
+  gap: 8px;
+}
+
+.photo-front-plus {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 4px;
+  place-items: center;
+  background: var(--soft-lavender);
+  color: var(--purple);
+  clip-path: var(--pixel-step-shape);
+}
+
+.onboarding-page .photo-front-upload strong {
+  font-size: 16px;
+}
+
+.onboarding-page .photo-formats {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.onboarding-page .photo-formats span {
+  padding: 3px 7px;
+  background: #f4f1f8;
+  color: var(--subtle);
+  font-size: 10px;
+  clip-path: var(--pixel-step-shape);
+}
+
+.onboarding-page .photo-front-upload > span:not(.photo-front-plus) {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.onboarding-page .onboarding-photo-grid {
+  margin: 0 0 22px;
+}
+
+.onboarding-page .onboarding-photo-tile,
+.onboarding-page .onboarding-photo-add {
+  aspect-ratio: 3 / 4;
+}
+
+.onboarding-page .onboarding-photo-tile button {
+  display: grid;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 0;
+  background: rgb(27 20 48 / 55%);
+  clip-path: var(--pixel-step-shape);
+}
+
+.onboarding-page .onboarding-photo-tile b {
+  left: 6px;
+  bottom: 6px;
+  padding: 4px 8px;
+  background: rgb(255 255 255 / 92%);
+  color: var(--purple-deep);
+  font-size: 11px;
+  clip-path: var(--pixel-step-shape);
+}
+
+.onboarding-page .onboarding-photo-add {
+  gap: 6px;
+  color: var(--purple-deep);
+  font-size: 12px;
+}
+
+/* ---------- 활동 지역 목록 ---------- */
+.onboarding-page .region-list.has-items {
+  margin-bottom: 22px;
+  border: 6px solid transparent;
+  border-image: var(--px-frame) 6 fill / 6px;
+}
+
+.onboarding-page .region-list.has-selection {
+  border-image-source: var(--px-frame-selected);
+}
+
+.onboarding-page .region-list button {
+  min-height: 50px;
+  align-items: center;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.onboarding-page .region-list button:last-child {
+  border-bottom: 0;
+}
+
+.onboarding-page .region-list button .pixel-icon {
+  color: #b9aec9;
+}
+
+.onboarding-page .region-list button.selected {
+  color: var(--purple-deep);
+  font-weight: 700;
+}
+
+.onboarding-page .region-list button.selected .pixel-icon {
+  color: var(--purple);
+}
+
+@media (width >= 600px) {
+  .onboarding-page {
+    height: 100%;
+  }
+}

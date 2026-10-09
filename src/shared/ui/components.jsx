@@ -2,6 +2,7 @@ import { formatUnreadCount } from "../../features/chat/unreadCount.js";
 import { useProfileImage } from "../../features/profile/useProfileImage.js";
 import { asset } from "../assets.js";
 import { profilePhotoUrls } from "../utils.js";
+import { PixelIcon } from "./pixel.jsx";
 
 export function Icon({ name, className = "" }) {
   return (
@@ -46,7 +47,7 @@ export function BrandHeader({ children, className = "", navigate }) {
       >
         <img
           className="brand-header-logo"
-          src={asset("logo-login.png")}
+          src={asset("logo-header.png")}
           alt="*23#"
         />
       </button>
@@ -77,7 +78,7 @@ export function ScreenHeader({
       {brandLogo && (
         <img
           className="screen-header-logo"
-          src={asset("logo-login.png")}
+          src={asset("logo-header.png")}
           alt="*23#"
         />
       )}
@@ -88,10 +89,10 @@ export function ScreenHeader({
 }
 
 const tabItems = [
-  ["HOME", "/home", "nav-home.svg"],
-  ["LIKES", "/likes", "nav-heart.svg"],
-  ["CHAT", "/chats", "nav-chat.svg"],
-  ["MY", "/my", "nav-person.svg"],
+  ["HOME", "/home", "home"],
+  ["LIKES", "/likes", "heart"],
+  ["CHAT", "/chats", "chat"],
+  ["MY", "/my", "user"],
 ];
 
 export function BottomNav({ path, navigate, unreadMessageCount = null }) {
@@ -112,7 +113,7 @@ export function BottomNav({ path, navigate, unreadMessageCount = null }) {
             }
           >
             <span className="bottom-nav-icon">
-              <Icon name={icon} />
+              <PixelIcon name={icon} scale={3} />
               {badge && (
                 <span className="bottom-nav-badge" aria-hidden="true">
                   {badge}

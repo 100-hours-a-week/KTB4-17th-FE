@@ -175,8 +175,6 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-right: 3px;
-  scrollbar-color: #bda6d0 transparent;
-  scrollbar-width: thin;
 }
 
 .birth-date-calendar-list .birth-date-calendar-option {
@@ -256,14 +254,14 @@
 .onboarding-page .onboarding-action .pixel-button {
   position: relative;
   isolation: isolate;
-  min-height: 50px;
+  min-height: 52px;
   border: 0;
   background: transparent;
-  color: var(--ink);
-  font-size: 14px;
-  font-weight: 400;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
   box-shadow: none;
-  filter: drop-shadow(3px 4px 0 #352a4850);
+  filter: var(--shadow-pixel-strong);
 }
 
 .onboarding-page .onboarding-action .pixel-button::before,
@@ -298,31 +296,43 @@
 
 .onboarding-page .onboarding-action .pixel-button::before {
   inset: 0;
-  background: #704394;
+  background: var(--button-fill);
+  box-shadow:
+    inset 0 -3px 0 rgb(40 10 120 / 22%),
+    inset 0 2px 0 rgb(255 255 255 / 35%);
 }
 
 .onboarding-page .onboarding-action .pixel-button::after {
   inset: 3px;
   background:
-    linear-gradient(#ffe7f8 0 0) 7px 4px / calc(100% - 112px) 3px no-repeat,
-    linear-gradient(#ffe7f8 0 0) calc(100% - 48px) 4px / 4px 3px no-repeat,
-    linear-gradient(#ffe7f8 0 0) calc(100% - 36px) 4px / 4px 3px no-repeat,
-    linear-gradient(#ffe7f8 0 0) calc(100% - 24px) 4px / 4px 3px no-repeat,
-    linear-gradient(#dc95cd 0 0) left bottom / 100% 4px no-repeat,
-    #f2b5df;
+    linear-gradient(#ffffff8c 0 0) 7px 2px / calc(66% - 10px) 3px no-repeat,
+    repeating-linear-gradient(90deg, #ffffffbf 0 3px, transparent 3px 6px)
+    calc(100% - 11px) 2px / 15px 3px no-repeat;
 }
 
 .pixel-button:active:not(:disabled) {
-  transform: translate(2px, 2px);
-  box-shadow:
-    1px 2px 0 #352a484d,
-    inset -2px -2px 0 #d993ce;
+  transform: translateY(2px);
+  filter: drop-shadow(0 2px 0 rgb(91 63 214 / 22%));
+}
+
+.onboarding-page .onboarding-action .pixel-button:disabled {
+  color: #b3abc0;
+  filter: none;
+}
+
+.onboarding-page .onboarding-action .pixel-button:disabled::before {
+  background: #e9e5f0;
+  box-shadow: none;
+}
+
+.onboarding-page .onboarding-action .pixel-button:disabled::after {
+  display: none;
 }
 
 .onboarding-page .onboarding-action .pixel-button:active:not(:disabled) {
-  transform: translate(2px, 2px);
+  transform: translateY(2px);
   box-shadow: none;
-  filter: drop-shadow(1px 2px 0 #352a4850);
+  filter: drop-shadow(0 2px 0 rgb(91 63 214 / 22%));
 }
 
 .registration-info-page .birth-date-part,
@@ -353,7 +363,7 @@
 .registration-info-page .pixel-field-frame::before,
 .registration-info-page .registration-info-fields .choice::before {
   inset: 0;
-  background: #d1c6db;
+  background: var(--line);
 }
 
 .registration-info-page .birth-date-part::after,
@@ -386,11 +396,17 @@
 }
 
 .registration-info-page .registration-info-fields .choice.selected {
+  color: var(--purple-deep);
   font-weight: 700;
+  filter: drop-shadow(0 2px 0 rgb(124 92 250 / 28%));
+}
+
+.registration-info-page .registration-info-fields .choice.selected::before {
+  background: var(--purple);
 }
 
 .registration-info-page .registration-info-fields .choice.selected::after {
-  inset: 2px;
+  background: var(--soft-lavender);
 }
 
 .registration-info-page .birth-date-part:focus-within::before,
@@ -400,7 +416,7 @@
 
 .registration-info-page .identity-age-helper,
 .registration-info-page .identity-name-helper {
-  color: #ba386d;
+  color: var(--danger);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -420,7 +436,7 @@
   overflow-y: auto;
   background: #fff;
   color: #111;
-  font-family: "Galmuri11", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-family: var(--font-pixel);
   -webkit-font-smoothing: antialiased;
 }
 

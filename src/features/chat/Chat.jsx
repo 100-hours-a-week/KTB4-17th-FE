@@ -289,11 +289,18 @@ export function ChatList({ navigate }) {
           <div className="chat-empty-state">
             <img
               className="chat-empty-illustration"
-              src={asset("chat-empty-illustration.svg")}
+              src={asset("illust/chat.svg")}
               alt=""
             />
-            <strong>좋아요를 수락하면 여기서 대화할 수 있어요</strong>
-            <PixelButton onClick={() => navigate("/likes")}>
+            <strong>
+              좋아요를 수락하면
+              <br />
+              여기서 대화할 수 있어요
+            </strong>
+            <PixelButton
+              className="empty-action pink"
+              onClick={() => navigate("/likes")}
+            >
               받은 좋아요 보기
             </PixelButton>
           </div>
