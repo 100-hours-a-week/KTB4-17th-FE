@@ -16,6 +16,38 @@ import { wheelNavigationIntent } from "./wheelNavigation.js";
 
 const recommendation = (id) => ({ id });
 
+test("dismissing a requested member keeps another current card in place", () => {
+  const result = recommendationFeedReducer(
+    {
+      recommendations: [
+        recommendation(11),
+        recommendation(12),
+        recommendation(13),
+      ],
+      currentIndex: 1,
+      exhausted: false,
+    },
+    { type: "dismiss", memberId: 11 },
+  );
+  assert.deepEqual(
+    result.recommendations.map(({ id }) => id),
+    [12, 13],
+  );
+  assert.equal(result.recommendations[result.currentIndex].id, 12);
+});
+
+test("a repeated dismissal of an absent member cannot remove the next card", () => {
+  const state = {
+    recommendations: [recommendation(12)],
+    currentIndex: 0,
+    exhausted: false,
+  };
+  assert.equal(
+    recommendationFeedReducer(state, { type: "dismiss", memberId: 11 }),
+    state,
+  );
+});
+
 test("wheel down advances and wheel up returns to the previous card", () => {
   assert.equal(wheelNavigationIntent(120), "next");
   assert.equal(wheelNavigationIntent(-120), "previous");
@@ -287,6 +319,148 @@ function deferred() {
   });
   return { promise, resolve, reject };
 }
+
+test("a pass keeps the current card until the server succeeds, then shows the next member", async () => {
+  const pending = deferred();
+  const requests = [];
+  const harness = feedHarness({
+    activeBatch: async () => ({ batchId: 1 }),
+    recommendationItems: async () => feedPage([11, 12]),
+    saveRecommendationPass: (memberId) => {
+      requests.push(memberId);
+      return pending.promise;
+    },
+  });
+  await harness.render().load();
+  const passing = harness.render().pass(11);
+  assert.deepEqual(
+    harness.render().recommendations.map(({ id }) => id),
+    [11, 12],
+  );
+  pending.resolve({ targetMemberId: 11, permanent: true });
+  assert.equal(await passing, true);
+  const feed = harness.render();
+  assert.deepEqual(requests, [11]);
+  assert.deepEqual(
+    feed.recommendations.map(({ id }) => id),
+    [12],
+  );
+  assert.equal(feed.recommendations[feed.currentIndex].id, 12);
+});
+
+test("failed passes keep the card and can be retried", async () => {
+  let requests = 0;
+  const failure = Object.assign(new Error("unavailable"), { status: 500 });
+  const harness = feedHarness({
+    activeBatch: async () => ({ batchId: 1 }),
+    recommendationItems: async () => feedPage([11, 12]),
+    saveRecommendationPass: async () => {
+      requests++;
+      if (requests === 1) throw failure;
+      return { targetMemberId: 11, permanent: true };
+    },
+  });
+  await harness.render().load();
+  await assert.rejects(harness.render().pass(11), (error) => error === failure);
+  assert.deepEqual(
+    harness.render().recommendations.map(({ id }) => id),
+    [11, 12],
+  );
+  assert.equal(await harness.render().pass(11), true);
+  assert.deepEqual(
+    harness.render().recommendations.map(({ id }) => id),
+    [12],
+  );
+  assert.equal(requests, 2);
+});
+
+test("a pass response removes its requested member after card navigation", async () => {
+  const pending = deferred();
+  const harness = feedHarness({
+    activeBatch: async () => ({ batchId: 1 }),
+    recommendationItems: async () => feedPage([11, 12, 13]),
+    saveRecommendationPass: () => pending.promise,
+  });
+  await harness.render().load();
+  const passing = harness.render().pass(11);
+  harness.render().advance();
+  pending.resolve({ targetMemberId: 11, permanent: true });
+  await passing;
+  const feed = harness.render();
+  assert.deepEqual(
+    feed.recommendations.map(({ id }) => id),
+    [12, 13],
+  );
+  assert.equal(feed.recommendations[feed.currentIndex].id, 12);
+});
+
+test("a stale revalidation cannot bring back a successfully passed member", async () => {
+  let reads = 0;
+  const pending = deferred();
+  const harness = feedHarness({
+    activeBatch: async () => ({ batchId: 1 }),
+    recommendationItems: () =>
+      ++reads === 1 ? feedPage([11, 12]) : pending.promise,
+    saveRecommendationPass: async () => ({
+      targetMemberId: 11,
+      permanent: true,
+    }),
+  });
+  await harness.render().load();
+  const revalidating = harness.render().revalidate();
+  await Promise.resolve();
+  await harness.render().pass(11);
+  pending.resolve(feedPage([11, 12]));
+  await revalidating;
+  assert.deepEqual(
+    harness.render().recommendations.map(({ id }) => id),
+    [12],
+  );
+});
+
+test("a page requested before passing cannot append that member again", async () => {
+  const pending = deferred();
+  const harness = feedHarness({
+    activeBatch: async () => ({ batchId: 1 }),
+    recommendationItems: (_, cursor) =>
+      cursor ? pending.promise : feedPage([11], true),
+    saveRecommendationPass: async () => ({
+      targetMemberId: 11,
+      permanent: true,
+    }),
+  });
+  await harness.render().load();
+  const loading = harness.render().loadMore();
+  await harness.render().pass(11);
+  pending.resolve(feedPage([11, 12]));
+  await loading;
+  assert.deepEqual(
+    harness.render().recommendations.map(({ id }) => id),
+    [12],
+  );
+});
+
+test("passing the final candidate does not create a new recommendation batch", async () => {
+  let created = 0;
+  const harness = feedHarness({
+    activeBatch: async () => ({ batchId: 1 }),
+    recommendationItems: async () => feedPage([11]),
+    createRecommendationBatch: async () => {
+      created++;
+    },
+    saveRecommendationPass: async () => ({
+      targetMemberId: 11,
+      permanent: true,
+    }),
+  });
+  await harness.render().load();
+  await harness.render().pass(11);
+  const feed = harness.render();
+  assert.deepEqual(feed.recommendations, []);
+  assert.equal(feed.exhausted, true);
+  assert.equal(feed.hasNext, false);
+  assert.equal(created, 0);
+});
 
 test("saving preferences clears the old feed while reading the new batch and resets the card index", async () => {
   let batchId = 1;

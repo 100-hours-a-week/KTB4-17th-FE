@@ -17,11 +17,11 @@ const emptyPage = () => ({
   hasNext: false,
 });
 
-function mapItems(result) {
+function mapItems(result, excludedMemberIds) {
   const receivedAt = Date.now();
   return (Array.isArray(result?.items) ? result.items : [])
     .map((item) => mapRecommendationItem(item, receivedAt))
-    .filter(Boolean);
+    .filter((item) => item && !excludedMemberIds?.has(item.id));
 }
 
 function pageFromResult(batchId, result) {
@@ -49,6 +49,8 @@ export function useRecommendationFeed({ enabled, isHome }) {
   const feedStateRef = useRef(feedState);
   const enabledRef = useRef(enabled);
   const wasHomeRef = useRef(isHome);
+  const passedMemberIdsRef = useRef(new Set());
+  const sessionRef = useRef(0);
   feedStateRef.current = feedState;
   enabledRef.current = enabled;
 
@@ -85,7 +87,7 @@ export function useRecommendationFeed({ enabled, isHome }) {
         return;
       }
       const result = await recommendationApi.recommendationItems(batchId);
-      const items = mapItems(result);
+      const items = mapItems(result, passedMemberIdsRef.current);
       if (requestId === requestRef.current) {
         dispatch({ type: "replace", items });
         setPage(pageFromResult(batchId, result));
@@ -125,7 +127,7 @@ export function useRecommendationFeed({ enabled, isHome }) {
         page.nextCursor,
       );
       if (requestId !== requestRef.current || !enabledRef.current) return false;
-      const items = mapItems(result);
+      const items = mapItems(result, passedMemberIdsRef.current);
       dispatch({ type: "append", items });
       setPage(pageFromResult(page.batchId, result));
       return items.length > 0;
@@ -163,7 +165,7 @@ export function useRecommendationFeed({ enabled, isHome }) {
       }
 
       const result = await recommendationApi.recommendationItems(batchId);
-      const items = mapItems(result);
+      const items = mapItems(result, passedMemberIdsRef.current);
       if (requestId === requestRef.current) {
         dispatch({ type: "replace", items });
         setPage(pageFromResult(batchId, result));
@@ -201,7 +203,7 @@ export function useRecommendationFeed({ enabled, isHome }) {
       let result = null;
       while (items.length < targetCount) {
         result = await recommendationApi.recommendationItems(batchId, cursor);
-        items.push(...mapItems(result));
+        items.push(...mapItems(result, passedMemberIdsRef.current));
         const nextCursor = result?.pageInfo?.nextCursor || null;
         if (!result?.pageInfo?.hasNext) break;
         if (!nextCursor || seenCursors.has(nextCursor))
@@ -211,7 +213,10 @@ export function useRecommendationFeed({ enabled, isHome }) {
       }
 
       if (requestId !== requestRef.current || !enabledRef.current) return false;
-      dispatch({ type: "revalidate", items });
+      dispatch({
+        type: "revalidate",
+        items: items.filter((item) => !passedMemberIdsRef.current.has(item.id)),
+      });
       setPage(pageFromResult(batchId, result));
       setError("");
       setRevalidationRetryAt(null);
@@ -232,6 +237,7 @@ export function useRecommendationFeed({ enabled, isHome }) {
 
   useEffect(() => {
     if (!enabled) {
+      passedMemberIdsRef.current.clear();
       dispatch({ type: "replace", items: [] });
       setPage(emptyPage());
       setError("");
@@ -242,6 +248,7 @@ export function useRecommendationFeed({ enabled, isHome }) {
     void load();
     return () => {
       requestRef.current += 1;
+      sessionRef.current += 1;
     };
   }, [enabled, load]);
 
@@ -302,8 +309,17 @@ export function useRecommendationFeed({ enabled, isHome }) {
     dispatch({ type: "retreat" });
   }, []);
 
-  const dismiss = useCallback(() => {
-    dispatch({ type: "dismiss" });
+  const dismiss = useCallback((memberId) => {
+    dispatch({ type: "dismiss", memberId });
+  }, []);
+
+  const pass = useCallback(async (memberId) => {
+    const session = sessionRef.current;
+    await recommendationApi.saveRecommendationPass(memberId);
+    if (!enabledRef.current || session !== sessionRef.current) return false;
+    passedMemberIdsRef.current.add(memberId);
+    dispatch({ type: "dismiss", memberId });
+    return true;
   }, []);
 
   return {
@@ -322,5 +338,6 @@ export function useRecommendationFeed({ enabled, isHome }) {
     advance,
     retreat,
     dismiss,
+    pass,
   };
 }
