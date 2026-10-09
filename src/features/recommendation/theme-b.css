@@ -205,7 +205,7 @@
 
 .empty-state .empty-icon img.empty-letter {
   width: 162px;
-  margin: 20px 0 11px;
+  margin: 16px 0;
 }
 
 .empty-state .pixel-button.empty-action {
@@ -242,4 +242,40 @@
   width: 220px;
   min-height: 46px;
   font-size: 15px;
+}
+
+/* 빈 상태 일러스트는 상단바와 하단바 사이 정중앙에 */
+.main-scroll > .empty-state,
+.main-scroll > .chat-empty-state,
+.recommendation-empty-refresh > .empty-state {
+  min-height: 100%;
+  margin: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.home-main:has(> .empty-state, > .recommendation-empty-refresh) {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.home-main > .recommendation-empty-refresh {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+}
+
+.recommendation-empty-refresh > .empty-state {
+  flex: 1;
+}
+
+/* 좋아요는 탭 줄만큼 위로 넓혀 상단바 기준으로 가운데 정렬 */
+.likes-main:has(> .empty-state) {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.likes-main > .empty-state {
+  min-height: calc(100% + 48px);
+  margin-top: -48px;
 }

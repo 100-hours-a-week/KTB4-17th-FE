@@ -7,7 +7,11 @@ import {
   completeOAuthCallback,
   logout as logoutAuth,
 } from "../features/auth/api.js";
-import { Login, RegistrationRestricted } from "../features/auth/pages.jsx";
+import {
+  Login,
+  RegistrationRestricted,
+  SplashScreen,
+} from "../features/auth/pages.jsx";
 import { useLocalTestLogin } from "../features/auth/useLocalTestLogin.js";
 import { ChatList, ChatRoom } from "../features/chat/Chat.jsx";
 import { useUnreadMessageCount } from "../features/chat/useUnreadMessageCount.js";
@@ -40,7 +44,6 @@ import {
   makeInitialState,
   useAppState,
 } from "../shared/appState.jsx";
-import { asset } from "../shared/assets.js";
 import {
   BottomNav,
   EmptyState,
@@ -323,22 +326,17 @@ function AppRouter() {
     data.onboarded && ["/", "/home", "/likes", "/chats", "/my"].includes(path);
 
   let page;
-  if (loading)
-    page = (
-      <div className="loading-page">
-        <img src={asset("logo.png?v=6cf477a")} alt="" />
-        <span>잠시만 기다려주세요</span>
-      </div>
-    );
+  if (loading) page = <SplashScreen message="잠시만 기다려주세요" />;
   else if (sessionCheckError)
     page = (
-      <div className="loading-page">
-        <img src={asset("logo.png?v=6cf477a")} alt="" />
-        <span>서버에 연결하지 못해 로그인 상태를 확인할 수 없어요.</span>
-        <PixelButton onClick={() => window.location.reload()}>
-          다시 시도
-        </PixelButton>
-      </div>
+      <SplashScreen
+        message="서버에 연결하지 못해 로그인 상태를 확인할 수 없어요."
+        action={
+          <PixelButton onClick={() => window.location.reload()}>
+            다시 시도
+          </PixelButton>
+        }
+      />
     );
   else if (path === "/registration/restricted")
     page = (

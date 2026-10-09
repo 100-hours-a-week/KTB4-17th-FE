@@ -5,6 +5,81 @@ import { asset } from "../../shared/assets.js";
 import { getRegistrationAgeRestriction } from "../user/registrationAge.js";
 import { localTestAccounts, localTestAuthEnabled } from "./api.js";
 
+function LoginBrand() {
+  return (
+    <>
+      <div className="login-illustration">
+        <img src={asset("logo.png?v=d41514e")} alt="*23#" />
+      </div>
+      <section className="login-signal">
+        <span className="login-signal-status" aria-hidden="true">
+          SIGNAL · ONLINE
+        </span>
+        <h1>
+          좋아하는 사람 앞에서는,
+          <br />
+          누구나 <em>연습</em>이 필요하니까.
+        </h1>
+      </section>
+      <p className="login-tagline">
+        가볍게 시작하는
+        <br />
+        새로운 관계의 신호.
+      </p>
+    </>
+  );
+}
+
+const SPLASH_BLOCKS = Array.from({ length: 12 }, (_, index) => index);
+
+// 앱 실행 직후 로그인 상태를 확인하는 동안 보여주는 Y2K 로딩 화면
+export function SplashScreen({ message, action }) {
+  return (
+    <div className="splash-page">
+      <div className="splash-hero">
+        <img
+          className="splash-logo"
+          src={asset("logo.png?v=d41514e")}
+          alt="*23#"
+        />
+        <p className="splash-copy">
+          좋아하는 사람 앞에서
+          <br />
+          누구나 <em className="splash-accent">연습</em>이 필요하니까
+        </p>
+      </div>
+      <div className="splash-status" role="status">
+        {action ? (
+          <>
+            <p className="splash-message">{message}</p>
+            {action}
+          </>
+        ) : (
+          <>
+            <div className="splash-bar" aria-hidden="true">
+              {SPLASH_BLOCKS.map((index) => (
+                <i key={index} style={{ "--i": index }} />
+              ))}
+            </div>
+            <p className="splash-label">
+              <span>SIGNAL CONNECTING</span>
+              <span className="splash-dots" aria-hidden="true">
+                <i>.</i>
+                <i>.</i>
+                <i>.</i>
+              </span>
+            </p>
+            <span className="visually-hidden">{message}</span>
+          </>
+        )}
+      </div>
+      <p className="splash-footer" aria-hidden="true">
+        ✦ *23# · LITTLE PIXELS, REAL CONNECTIONS ✦
+      </p>
+    </div>
+  );
+}
+
 export function Login({ onLogin, onLocalTestLogin }) {
   const [testAccounts, setTestAccounts] = useState([]);
   const [testTargetMemberId, setTestTargetMemberId] = useState(null);
@@ -61,24 +136,7 @@ export function Login({ onLogin, onLocalTestLogin }) {
       className={`login-page${localTestAuthEnabled ? " local-test-login-page" : ""}`}
     >
       <div className="login-top-space" aria-hidden="true" />
-      <div className="login-illustration">
-        <img src={asset("logo.png?v=6cf477a")} alt="*23#" />
-      </div>
-      <section className="login-signal">
-        <span className="login-signal-status" aria-hidden="true">
-          SIGNAL · ONLINE
-        </span>
-        <h1>
-          좋아하는 사람 앞에서는,
-          <br />
-          누구나 <em>연습</em>이 필요하니까.
-        </h1>
-      </section>
-      <p className="login-tagline">
-        가볍게 시작하는
-        <br />
-        새로운 관계의 신호.
-      </p>
+      <LoginBrand />
       <button className="kakao-login-button" type="button" onClick={onLogin}>
         <svg
           className="kakao-login-symbol"
