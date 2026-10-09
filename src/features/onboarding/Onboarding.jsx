@@ -1057,7 +1057,7 @@ export function Onboarding({ navigate, toast }) {
       <header className="brand-header onboarding-brand">
         <img
           className="brand-header-logo"
-          src={asset("logo-header.png")}
+          src={asset("logo-header.png?v=6cf477a")}
           alt="*23#"
         />
         <span className="brand-signal" aria-hidden="true">

@@ -62,7 +62,7 @@ export function Login({ onLogin, onLocalTestLogin }) {
     >
       <div className="login-top-space" aria-hidden="true" />
       <div className="login-illustration">
-        <img src={asset("logo.png")} alt="*23#" />
+        <img src={asset("logo.png?v=6cf477a")} alt="*23#" />
       </div>
       <section className="login-signal">
         <span className="login-signal-status" aria-hidden="true">
