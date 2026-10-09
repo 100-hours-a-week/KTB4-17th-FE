@@ -8,6 +8,20 @@ import {
 import { profilePhotoErrorMessage } from "../../features/profile/photoUpload.js";
 import { apiErrorMessage, createApiError } from "./errorMessages.js";
 
+test("pass errors have messages specific to the failed action", () => {
+  assert.match(
+    apiErrorMessage({ code: "SELF_PASS_NOT_ALLOWED", status: 422 }),
+    /내 프로필.*패스/,
+  );
+  assert.match(
+    apiErrorMessage({
+      code: "RECOMMENDATION_TARGET_NOT_AVAILABLE",
+      status: 404,
+    }),
+    /프로필.*패스.*추천 목록/,
+  );
+});
+
 test("API errors show a translated message and preserve control flow metadata", () => {
   const fields = [{ field: "nickname", message: "must not be blank" }];
   const error = createApiError(

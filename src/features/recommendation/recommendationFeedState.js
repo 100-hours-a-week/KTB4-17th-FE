@@ -43,14 +43,17 @@ export function recommendationFeedReducer(state, action) {
         currentIndex: Math.max(state.currentIndex - 1, 0),
       };
     case "dismiss": {
-      if (
-        state.currentIndex < 0 ||
-        state.currentIndex >= state.recommendations.length
-      )
+      const dismissedIndex =
+        action.memberId == null
+          ? state.currentIndex
+          : state.recommendations.findIndex(
+              (item) => item.id === action.memberId,
+            );
+      if (dismissedIndex < 0 || dismissedIndex >= state.recommendations.length)
         return state;
 
       const recommendations = state.recommendations.filter(
-        (_, index) => index !== state.currentIndex,
+        (_, index) => index !== dismissedIndex,
       );
       if (recommendations.length === 0) {
         return { recommendations, currentIndex: 0, exhausted: true };
@@ -58,7 +61,12 @@ export function recommendationFeedReducer(state, action) {
 
       return {
         recommendations,
-        currentIndex: Math.min(state.currentIndex, recommendations.length - 1),
+        currentIndex: Math.min(
+          dismissedIndex < state.currentIndex
+            ? state.currentIndex - 1
+            : state.currentIndex,
+          recommendations.length - 1,
+        ),
         exhausted: false,
       };
     }

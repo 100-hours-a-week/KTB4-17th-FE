@@ -119,6 +119,7 @@ function AppRouter() {
     advance: advanceRecommendation,
     retreat: retreatRecommendation,
     dismiss: dismissRecommendation,
+    pass: passRecommendation,
   } = feed;
 
   useEffect(() => {
@@ -371,6 +372,7 @@ function AppRouter() {
         onAdvance={advanceRecommendation}
         onRetreat={retreatRecommendation}
         onDismiss={dismissRecommendation}
+        onPass={passRecommendation}
         onLoadMore={loadMoreRecommendations}
         onStartSimulation={startSimulation}
       />
