@@ -265,3 +265,44 @@
   margin-top: 10px;
   color: #b42318;
 }
+
+/* 앱 실행 직후 화면: 로그인과 같은 구성, 카카오 버튼 자리에 진행 막대 */
+.splash-status {
+  align-self: end;
+  display: flex;
+  width: 100%;
+  min-height: 54px;
+  align-items: center;
+  justify-content: center;
+}
+
+.splash-status .pixel-button {
+  width: 100%;
+  min-height: 54px;
+}
+
+.splash-loader {
+  width: 160px;
+  height: 6px;
+  overflow: hidden;
+  background: #e7e1f0;
+  clip-path: var(--pixel-step-shape);
+}
+
+.splash-loader i {
+  display: block;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(90deg, #9c80ff, #ee6ab1);
+  animation: splash-loader 1.4s ease-in-out infinite;
+}
+
+@keyframes splash-loader {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(230%);
+  }
+}

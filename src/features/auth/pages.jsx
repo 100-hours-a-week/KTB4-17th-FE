@@ -5,6 +5,50 @@ import { asset } from "../../shared/assets.js";
 import { getRegistrationAgeRestriction } from "../user/registrationAge.js";
 import { localTestAccounts, localTestAuthEnabled } from "./api.js";
 
+function LoginBrand() {
+  return (
+    <>
+      <div className="login-illustration">
+        <img src={asset("logo.png?v=d41514e")} alt="*23#" />
+      </div>
+      <section className="login-signal">
+        <span className="login-signal-status" aria-hidden="true">
+          SIGNAL · ONLINE
+        </span>
+        <h1>
+          좋아하는 사람 앞에서는,
+          <br />
+          누구나 <em>연습</em>이 필요하니까.
+        </h1>
+      </section>
+      <p className="login-tagline">
+        가볍게 시작하는
+        <br />
+        새로운 관계의 신호.
+      </p>
+    </>
+  );
+}
+
+// 앱 실행 직후 로그인 상태를 확인하는 동안 보여주는 화면 (로그인 화면과 같은 구성, 카카오 버튼 대신 진행 상태)
+export function SplashScreen({ message, action }) {
+  return (
+    <div className="login-page splash-page">
+      <LoginBrand />
+      <div className="splash-status">
+        {action || (
+          <span className="splash-loader" aria-hidden="true">
+            <i />
+          </span>
+        )}
+      </div>
+      <p className="login-terms" role="status">
+        {message}
+      </p>
+    </div>
+  );
+}
+
 export function Login({ onLogin, onLocalTestLogin }) {
   const [testAccounts, setTestAccounts] = useState([]);
   const [testTargetMemberId, setTestTargetMemberId] = useState(null);
@@ -61,24 +105,7 @@ export function Login({ onLogin, onLocalTestLogin }) {
       className={`login-page${localTestAuthEnabled ? " local-test-login-page" : ""}`}
     >
       <div className="login-top-space" aria-hidden="true" />
-      <div className="login-illustration">
-        <img src={asset("logo.png?v=6cf477a")} alt="*23#" />
-      </div>
-      <section className="login-signal">
-        <span className="login-signal-status" aria-hidden="true">
-          SIGNAL · ONLINE
-        </span>
-        <h1>
-          좋아하는 사람 앞에서는,
-          <br />
-          누구나 <em>연습</em>이 필요하니까.
-        </h1>
-      </section>
-      <p className="login-tagline">
-        가볍게 시작하는
-        <br />
-        새로운 관계의 신호.
-      </p>
+      <LoginBrand />
       <button className="kakao-login-button" type="button" onClick={onLogin}>
         <svg
           className="kakao-login-symbol"
