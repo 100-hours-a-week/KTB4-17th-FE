@@ -62,25 +62,41 @@ export function Login({ onLogin, onLocalTestLogin }) {
     >
       <div className="login-top-space" aria-hidden="true" />
       <div className="login-illustration">
-        <img src={asset("logo-login.png")} alt="*23#" />
+        <img src={asset("logo.png")} alt="*23#" />
       </div>
-      <h1>
-        좋아하는 사람 앞에서는,
+      <section className="login-signal">
+        <span className="login-signal-status" aria-hidden="true">
+          SIGNAL · ONLINE
+        </span>
+        <h1>
+          좋아하는 사람 앞에서는,
+          <br />
+          누구나 <em>연습</em>이 필요하니까.
+        </h1>
+      </section>
+      <p className="login-tagline">
+        가볍게 시작하는
         <br />
-        누구나 연습이 필요하니까.
-      </h1>
-      <button
-        className="kakao-login-button"
-        type="button"
-        aria-label="카카오 로그인"
-        onClick={onLogin}
-      >
-        <img
-          src={asset("kakao_login_kr_large.svg")}
-          alt=""
+        새로운 관계의 신호.
+      </p>
+      <button className="kakao-login-button" type="button" onClick={onLogin}>
+        <svg
+          className="kakao-login-symbol"
+          viewBox="0 0 24 24"
+          width="20"
+          height="20"
           aria-hidden="true"
-        />
+        >
+          <path
+            fill="currentColor"
+            d="M12 4C7 4 3 7.1 3 11c0 2.5 1.7 4.7 4.2 6l-.9 3.3c-.1.3.3.6.6.4l3.9-2.6c.4 0 .8.1 1.2.1 5 0 9-3.1 9-7s-4-7.2-9-7.2z"
+          />
+        </svg>
+        <span>카카오로 시작하기</span>
       </button>
+      <p className="login-terms">
+        가입 시 이용약관과 개인정보 처리방침에 동의합니다.
+      </p>
       {localTestAuthEnabled && (
         <section
           className="local-test-login-card"

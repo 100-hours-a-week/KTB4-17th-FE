@@ -960,13 +960,11 @@
   padding: 12px 16px 20px;
   gap: 0;
   overflow-anchor: none;
-  scrollbar-width: thin;
-  scrollbar-color: #c5addb transparent;
+  scrollbar-width: none;
 }
 
 .chat-room-view .chat-room-messages::-webkit-scrollbar {
-  display: block;
-  width: 4px;
+  display: none;
 }
 
 .chat-message-list {

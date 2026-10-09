@@ -31,7 +31,7 @@
 }
 
 .my-settings-button span {
-  font-family: "Galmuri14", sans-serif;
+  font-family: var(--font-pixel);
   font-size: 22px;
   line-height: 1;
   color: var(--purple);
@@ -203,7 +203,7 @@
   border: 1px solid #d7b2cc;
   background: #f8e0ec;
   color: #705078;
-  font-family: "Galmuri11", sans-serif;
+  font-family: var(--font-pixel);
   font-size: 10px;
   letter-spacing: 0.04em;
 }
@@ -300,7 +300,7 @@
 
 .settings-kicker {
   color: #705078;
-  font-family: "Galmuri11", sans-serif;
+  font-family: var(--font-pixel);
   font-size: 11px;
 }
 
@@ -356,7 +356,7 @@
   background: #f4ebff;
   box-shadow: inset -3px -3px 0 #e3d2f4;
   color: var(--purple);
-  font-family: "Galmuri14", sans-serif;
+  font-family: var(--font-pixel);
   font-size: 23px;
   line-height: 1;
 }

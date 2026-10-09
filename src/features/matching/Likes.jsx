@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
+import { asset } from "../../shared/assets.js";
 import {
   BrandHeader,
   EmptyState,
@@ -155,10 +156,11 @@ export function Likes({
   return (
     <>
       <BrandHeader navigate={navigate} />
-      <div className="segmented-tabs">
+      <div className="segmented-tabs likes-seg">
         <button
           type="button"
           className={tab === "received" ? "active" : ""}
+          aria-pressed={tab === "received"}
           onClick={() => setTab("received")}
         >
           받은 좋아요
@@ -166,6 +168,7 @@ export function Likes({
         <button
           type="button"
           className={tab === "sent" ? "active" : ""}
+          aria-pressed={tab === "sent"}
           onClick={() => setTab("sent")}
         >
           보낸 좋아요
@@ -191,7 +194,15 @@ export function Likes({
           />
         ) : page.items.length === 0 ? (
           <EmptyState
-            icon="♡"
+            icon={
+              <img
+                className={tab === "received" ? "empty-letter" : undefined}
+                src={asset(
+                  tab === "received" ? "illust/letter.png" : "illust/plane.svg",
+                )}
+                alt=""
+              />
+            }
             title={
               tab === "received"
                 ? "아직 도착한 마음이 없어요"
@@ -199,7 +210,11 @@ export function Likes({
             }
             action={
               tab === "sent" ? (
-                <PixelButton secondary onClick={onFindMatch}>
+                <PixelButton
+                  secondary
+                  className="empty-action"
+                  onClick={onFindMatch}
+                >
                   인연 찾으러 가기
                 </PixelButton>
               ) : undefined

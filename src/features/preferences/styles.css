@@ -164,36 +164,6 @@
   text-align: right;
 }
 
-.preferences-primary.pixel-button {
-  isolation: isolate;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  font-family: "Galmuri14", "Apple SD Gothic Neo", sans-serif;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 22px;
-}
-
-.preferences-primary::before,
-.preferences-primary::after {
-  position: absolute;
-  z-index: -1;
-  content: "";
-  pointer-events: none;
-  background-size: 100% 100%;
-}
-
-.preferences-primary::before {
-  inset: 0 -3px -4px 0;
-  background-image: url("/assets/preferences/button-shadow.svg");
-}
-
-.preferences-primary::after {
-  inset: 0;
-  background-image: url("/assets/preferences/button-face.svg");
-}
-
 .preferences-error {
   margin: 0 0 16px;
 }
@@ -246,7 +216,7 @@
   gap: 12px;
   min-height: 54px;
   padding: 15px 0;
-  font-family: "Galmuri14", "Apple SD Gothic Neo", sans-serif;
+  font-family: var(--font-pixel);
   font-size: 14px;
   line-height: 22px;
   cursor: pointer;

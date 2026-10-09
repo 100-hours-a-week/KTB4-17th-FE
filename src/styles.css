@@ -13,3 +13,6 @@
 @import url("./features/onboarding/overrides.css");
 @import url("./features/auth/overrides.css");
 @import url("./app/overrides.css");
+@import url("./shared/theme-b.css");
+@import url("./features/onboarding/theme-b.css");
+@import url("./features/recommendation/theme-b.css");

@@ -1,0 +1,139 @@
+/*
+ * B안 · Refined Pixel Y2K — container layer.
+ * Loaded last. Turns the A-style boxes (1–2px dark outline + soft offset shadow)
+ * into stepped pixel frames: a 1px soft line drawn by border-image (see --px-* in
+ * shared/styles.css) and a hard pixel drop-shadow that follows the stepped corners.
+ * Selectors repeat the originals' specificity so this file only needs to come last.
+ */
+
+/* ---------- Cards: 6px stair, white ---------- */
+.like-card,
+.report-metric,
+.score-card,
+.notification-card,
+.persona-summary-card,
+.photo-guide,
+.persona-hero,
+.other-profile-info,
+.other-profile-error,
+.edit-photo-section,
+.preference-choice-row,
+.settings-action,
+.practice-dialog,
+.like-confirm-dialog,
+.local-test-login-card,
+.chat-assistance-menu {
+  border: 8px solid transparent;
+  border-image: var(--px-card) 8 fill / 8px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  filter: var(--shadow-pixel);
+}
+
+/* ---------- Tinted cards ---------- */
+.report-intro,
+.simulation-participants > div,
+.info-panel,
+.selected-region {
+  border: 8px solid transparent;
+  border-image: var(--px-card-tint) 8 fill / 8px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  filter: none;
+}
+
+.my-identity {
+  border: 8px solid transparent;
+  border-image: var(--px-card-cream) 8 fill / 8px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  filter: var(--shadow-pixel);
+}
+
+/* ---------- Small framed controls ---------- */
+.persona-actions button,
+.persona-retry,
+div.practice-state button.practice-inline-button,
+div.practice-retry button.practice-retry-button,
+section.practice-dialog button.practice-dialog-button,
+.like-confirm-dialog button,
+.settings-confirm-actions button,
+.other-profile-error button,
+.other-profile-detail-tile,
+.home-preferences-button,
+.chat-assistance summary,
+.agreement.all,
+.chat-latest-button {
+  border: 6px solid transparent;
+  border-image: var(--px-frame) 6 fill / 6px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.settings-action-icon {
+  border: 6px solid transparent;
+  border-image: var(--px-frame-tint) 6 fill / 6px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+/* ---------- Tags & badges ---------- */
+.persona-traits span,
+.my-profile-kicker,
+.other-profile-section-title > span {
+  border: 6px solid transparent;
+  border-image: var(--px-frame-tint) 6 fill / 6px;
+  border-radius: 0;
+  background: none;
+  color: var(--purple-deep);
+}
+
+.online-badge,
+.my-profile-region {
+  border: 6px solid transparent;
+  border-image: var(--px-frame-pink) 6 fill / 6px;
+  border-radius: 0;
+  background: none;
+  color: var(--ink);
+}
+
+/* ---------- Photos & avatars: clip to the stepped shape (content fills the box) ---------- */
+.recommendation-card,
+.onboarding-photo-tile,
+.person-avatar,
+.my-profile-skeleton-avatar {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  clip-path: var(--pixel-step-shape);
+}
+
+.onboarding-photo-add,
+.photo-front-upload {
+  border: 6px solid transparent;
+  border-image: var(--px-frame-tint) 6 fill / 6px;
+  border-radius: 0;
+  background: none;
+}
+
+/* ---------- Tab strips (likes / notifications / preferences) ---------- */
+.segmented-tabs,
+.notification-tabs {
+  border-bottom: 1px solid var(--line);
+}
+
+/* ---------- Danger card (logout) ---------- */
+.settings-action.settings-logout,
+.settings-logout-confirm {
+  border: 8px solid transparent;
+  border-image: var(--px-frame-danger) 6 fill / 8px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  filter: drop-shadow(0 3px 0 rgb(194 64 126 / 14%));
+}
