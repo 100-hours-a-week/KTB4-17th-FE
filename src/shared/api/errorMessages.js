@@ -75,6 +75,9 @@ export const API_ERROR_MESSAGES = Object.freeze({
   MATCH_ALREADY_EXISTS: "이미 매칭된 상대예요. 채팅 목록을 확인해주세요.",
   LIKE_ALREADY_RESOLVED: "이미 처리된 좋아요예요. 목록을 다시 불러와주세요.",
   SELF_LIKE_NOT_ALLOWED: "내 프로필에는 좋아요를 보낼 수 없어요.",
+  SELF_PASS_NOT_ALLOWED: "내 프로필은 패스할 수 없어요.",
+  RECOMMENDATION_TARGET_NOT_AVAILABLE:
+    "현재 이 프로필을 패스할 수 없어요. 추천 목록을 다시 불러와주세요.",
   REQUESTER_NOT_ACTIVE: "가입을 완료한 뒤 추천을 받을 수 있어요.",
   RESOURCE_NOT_AVAILABLE:
     "추천 정보를 더 이상 사용할 수 없어요. 추천 목록을 다시 불러와주세요.",
