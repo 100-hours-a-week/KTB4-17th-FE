@@ -266,14 +266,184 @@
   color: #b42318;
 }
 
-/* 앱 실행 직후 화면: 로그인과 같은 구성, 카카오 버튼 자리에 진행 막대 */
-.splash-status {
-  align-self: end;
+/* 앱 실행 직후 화면 — Y2K: 홀로그램 배경, 픽셀 그리드·스캔라인, 블록 로딩 막대 */
+.splash-page {
+  position: relative;
+  isolation: isolate;
   display: flex;
-  width: 100%;
-  min-height: 54px;
+  height: 100dvh;
+  min-height: 100%;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  padding: max(24px, env(safe-area-inset-top, 0px)) 24px
+    max(24px, env(safe-area-inset-bottom, 0px));
+  background:
+    radial-gradient(55% 35% at 12% 14%, rgb(203 184 255 / 85%), transparent 70%),
+    radial-gradient(50% 32% at 92% 28%, rgb(255 198 231 / 80%), transparent 70%),
+    radial-gradient(60% 38% at 20% 88%, rgb(191 228 255 / 75%), transparent 70%),
+    radial-gradient(45% 30% at 88% 92%, rgb(255 214 236 / 70%), transparent 70%),
+    #f8f6fc;
+}
+
+/* pixel grid + CRT scanlines */
+.splash-page::before,
+.splash-page::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.splash-page::before {
+  background-image:
+    linear-gradient(rgb(124 92 250 / 7%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(124 92 250 / 7%) 1px, transparent 1px);
+  background-size: 26px 26px;
+  mask-image: radial-gradient(80% 60% at 50% 45%, transparent 30%, #000 100%);
+}
+
+.splash-page::after {
+  background: repeating-linear-gradient(
+    180deg,
+    rgb(255 255 255 / 22%) 0 1px,
+    transparent 1px 3px
+  );
+  mix-blend-mode: soft-light;
+}
+
+.splash-hero {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 26px;
+  width: 100%;
+}
+
+.splash-logo {
+  display: block;
+  width: min(300px, 78%);
+  height: auto;
+  filter: drop-shadow(0 0 22px rgb(203 184 255 / 85%))
+    drop-shadow(0 6px 0 rgb(91 63 214 / 14%));
+  animation: splash-float 2.8s ease-in-out infinite;
+}
+
+@keyframes splash-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.splash-copy {
+  margin: 0;
+  color: var(--ink);
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 30px;
+  text-align: center;
+  text-shadow:
+    0 2px 0 #fff,
+    0 0 14px rgb(255 255 255 / 90%);
+}
+
+.splash-accent {
+  font-style: normal;
+  background: linear-gradient(90deg, #7c5cfa, #ee6ab1);
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+}
+
+.splash-status {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 26px;
+}
+
+.splash-bar {
+  display: flex;
+  gap: 3px;
+  padding: 4px;
+  border: 6px solid transparent;
+  border-image: var(--px-frame) 6 fill / 6px;
+  filter: var(--shadow-pixel);
+}
+
+.splash-bar i {
+  width: 12px;
+  height: 14px;
+  background: #ece6f6;
+  animation: splash-block 2.4s steps(1) infinite;
+  animation-delay: calc(var(--i) * 0.15s);
+}
+
+@keyframes splash-block {
+  0% {
+    background: #ece6f6;
+  }
+
+  10%,
+  70% {
+    background: linear-gradient(180deg, #ffb3dd, #b18cff);
+  }
+
+  80%,
+  100% {
+    background: #ece6f6;
+  }
+}
+
+.splash-label {
+  display: flex;
+  margin: 0;
+  color: var(--purple-deep);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+}
+
+.splash-dots i {
+  font-style: normal;
+  animation: splash-dot 1.2s steps(1) infinite;
+}
+
+.splash-dots i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.splash-dots i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes splash-dot {
+  0%,
+  100% {
+    opacity: 0;
+  }
+
+  40%,
+  80% {
+    opacity: 1;
+  }
+}
+
+.splash-message {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
 }
 
 .splash-status .pixel-button {
@@ -281,28 +451,32 @@
   min-height: 54px;
 }
 
-.splash-loader {
-  width: 160px;
-  height: 6px;
+.splash-footer {
+  margin: 0;
+  color: var(--subtle);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+}
+
+.splash-page .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
   overflow: hidden;
-  background: #e7e1f0;
-  clip-path: var(--pixel-step-shape);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
-.splash-loader i {
-  display: block;
-  width: 45%;
-  height: 100%;
-  background: linear-gradient(90deg, #9c80ff, #ee6ab1);
-  animation: splash-loader 1.4s ease-in-out infinite;
-}
-
-@keyframes splash-loader {
-  0% {
-    transform: translateX(-100%);
+@media (width >= 600px) {
+  .splash-page {
+    height: 100%;
   }
+}
 
-  100% {
-    transform: translateX(230%);
+@media (prefers-reduced-motion: reduce) {
+  .splash-logo,
+  .splash-bar i,
+  .splash-dots i {
+    animation: none;
   }
 }

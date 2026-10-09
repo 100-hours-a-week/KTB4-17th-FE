@@ -30,20 +30,51 @@ function LoginBrand() {
   );
 }
 
-// 앱 실행 직후 로그인 상태를 확인하는 동안 보여주는 화면 (로그인 화면과 같은 구성, 카카오 버튼 대신 진행 상태)
+const SPLASH_BLOCKS = Array.from({ length: 12 }, (_, index) => index);
+
+// 앱 실행 직후 로그인 상태를 확인하는 동안 보여주는 Y2K 로딩 화면
 export function SplashScreen({ message, action }) {
   return (
-    <div className="login-page splash-page">
-      <LoginBrand />
-      <div className="splash-status">
-        {action || (
-          <span className="splash-loader" aria-hidden="true">
-            <i />
-          </span>
+    <div className="splash-page">
+      <div className="splash-hero">
+        <img
+          className="splash-logo"
+          src={asset("logo.png?v=d41514e")}
+          alt="*23#"
+        />
+        <p className="splash-copy">
+          좋아하는 사람 앞에서
+          <br />
+          누구나 <em className="splash-accent">연습</em>이 필요하니까
+        </p>
+      </div>
+      <div className="splash-status" role="status">
+        {action ? (
+          <>
+            <p className="splash-message">{message}</p>
+            {action}
+          </>
+        ) : (
+          <>
+            <div className="splash-bar" aria-hidden="true">
+              {SPLASH_BLOCKS.map((index) => (
+                <i key={index} style={{ "--i": index }} />
+              ))}
+            </div>
+            <p className="splash-label">
+              <span>SIGNAL CONNECTING</span>
+              <span className="splash-dots" aria-hidden="true">
+                <i>.</i>
+                <i>.</i>
+                <i>.</i>
+              </span>
+            </p>
+            <span className="visually-hidden">{message}</span>
+          </>
         )}
       </div>
-      <p className="login-terms" role="status">
-        {message}
+      <p className="splash-footer" aria-hidden="true">
+        ✦ *23# · LITTLE PIXELS, REAL CONNECTIONS ✦
       </p>
     </div>
   );

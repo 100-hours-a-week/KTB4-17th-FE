@@ -162,7 +162,7 @@ export function EmptyState({ icon = "♡", title, description, action }) {
     <div className="empty-state">
       <div className="empty-icon">{icon}</div>
       <strong>{title}</strong>
-      <p>{description}</p>
+      {description && <p>{description}</p>}
       {action}
     </div>
   );

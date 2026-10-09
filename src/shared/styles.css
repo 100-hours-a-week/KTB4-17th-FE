@@ -221,7 +221,7 @@ button:focus-visible {
 .brand-header-home {
   display: flex;
   align-items: center;
-  flex: 0 0 84px;
+  flex: 0 0 100px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -229,9 +229,9 @@ button:focus-visible {
 
 .brand-header-logo {
   display: block;
-  width: 84px;
-  height: 34px;
-  flex: 0 0 84px;
+  width: 100px;
+  height: 38px;
+  flex: 0 0 100px;
   object-fit: contain;
 }
 
