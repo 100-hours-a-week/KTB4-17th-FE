@@ -38,6 +38,7 @@ export function Home({
   onAdvance,
   onRetreat,
   onDismiss,
+  onPass,
   onLoadMore,
   onStartSimulation,
 }) {
@@ -191,6 +192,8 @@ export function Home({
   function handlePointerDown(event) {
     if (
       isCardSettling ||
+      actionInFlight.current ||
+      recommendationRefreshing ||
       event.isPrimary === false ||
       (event.pointerType === "mouse" && event.button !== 0) ||
       event.target.closest?.("button")
@@ -256,6 +259,7 @@ export function Home({
   }
   function handleWheel(event) {
     if (
+      actionInFlight.current ||
       actionBusy ||
       recommendationRefreshing ||
       Math.abs(event.deltaY) <= Math.abs(event.deltaX)
@@ -340,6 +344,27 @@ export function Home({
     });
   }, []);
 
+  async function pass() {
+    if (
+      !person ||
+      actionInFlight.current ||
+      isCardSettling ||
+      recommendationRefreshing
+    )
+      return;
+    actionInFlight.current = true;
+    setActionBusy("pass");
+    try {
+      if (await onPass(person.id)) toast(`${person.nickname}님을 패스했어요.`);
+    } catch (error) {
+      toast(
+        apiErrorMessage(error, "패스하지 못했어요. 잠시 후 다시 시도해주세요."),
+      );
+    } finally {
+      actionInFlight.current = false;
+      setActionBusy("");
+    }
+  }
   async function like() {
     if (!person || actionInFlight.current) return;
     actionInFlight.current = true;
@@ -347,7 +372,7 @@ export function Home({
     try {
       await matchingApi.sendLike(person.id);
       toast(`${person.nickname}님에게 좋아요를 보냈어요`);
-      onDismiss();
+      onDismiss(person.id);
     } catch (error) {
       toast(apiErrorMessage(error, "좋아요를 보내지 못했어요."));
     } finally {
@@ -523,21 +548,31 @@ export function Home({
                 </button>
                 <div className="recommendation-actions">
                   {[
+                    ["패스", "action-pass.svg", 3, pass, "pass"],
                     ["시뮬레이션", "sim", 3, startSimulation, "simulation"],
+                    ["연습 대화", "chat", 3, startPractice, "practice"],
                     ["좋아요", "heart", 4, like, "like"],
-                    ["AI 연습대화", "chat", 3, startPractice, "practice"],
                   ].map(([label, icon, scale, action, busyKey]) => (
                     <button
                       type="button"
                       key={label}
                       className="card-action"
                       onClick={action}
-                      disabled={Boolean(actionBusy)}
+                      disabled={
+                        Boolean(actionBusy) ||
+                        isCardSettling ||
+                        recommendationRefreshing
+                      }
+                      aria-busy={actionBusy === busyKey}
                     >
                       <span
                         className={`action-key${busyKey === "like" ? " action-key-like" : ""}`}
                       >
-                        <PixelIcon name={icon} scale={scale} />
+                        {busyKey === "pass" ? (
+                          <Icon name={icon} />
+                        ) : (
+                          <PixelIcon name={icon} scale={scale} />
+                        )}
                       </span>
                       <span>
                         {actionBusy === busyKey ? "처리 중..." : label}
