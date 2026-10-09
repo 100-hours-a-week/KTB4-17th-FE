@@ -47,7 +47,7 @@ export function BrandHeader({ children, className = "", navigate }) {
       >
         <img
           className="brand-header-logo"
-          src={asset("logo-header.png")}
+          src={asset("logo-header.png?v=6cf477a")}
           alt="*23#"
         />
       </button>
@@ -78,7 +78,7 @@ export function ScreenHeader({
       {brandLogo && (
         <img
           className="screen-header-logo"
-          src={asset("logo-header.png")}
+          src={asset("logo-header.png?v=6cf477a")}
           alt="*23#"
         />
       )}
