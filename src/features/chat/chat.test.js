@@ -18,9 +18,13 @@ window.sessionStorage = {
 const { setAccessToken, clearAccessToken } = await import(
   "../../shared/api/authToken.js"
 );
-const { clearChatSessions, getRoomSession, updateRoomSession } = await import(
-  "./session.js"
-);
+const {
+  clearChatSessions,
+  endRoomAfterBlock,
+  getRoomSession,
+  updateRoomSession,
+} = await import("./session.js");
+const { blockUser } = await import("./api.js");
 const { enqueueMessages, retryMessage } = await import("./outbox.js");
 const { applyMessagePage, fetchMessageGap } = await import("./roomData.js");
 const { loadChatVisit, unreadBoundary } = await import("./unread.js");
@@ -71,6 +75,56 @@ function activeEntry() {
   });
   return entry;
 }
+
+test("member block sends PUT and accepts created or existing responses", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, options });
+    const status = calls.length === 1 ? 201 : 200;
+    return new Response(
+      JSON.stringify({
+        data: { targetUserId: 23, blockedAt: "2026-10-10T12:30:00" },
+      }),
+      {
+        status,
+        headers: { "content-type": "application/json" },
+      },
+    );
+  };
+
+  try {
+    assert.equal((await blockUser(23)).targetUserId, 23);
+    assert.equal((await blockUser(23)).targetUserId, 23);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.equal(calls.length, 2);
+  for (const call of calls) {
+    assert.equal(call.url, "/api/v1/users/me/blocks/23");
+    assert.equal(call.options.method, "PUT");
+  }
+});
+
+test("successful block ends the room without removing message history", () => {
+  const entry = activeEntry();
+  updateRoomSession(entry, {
+    messages: [message(1), message(2)],
+    draft: "작성 중인 메시지",
+    attachment: { file: new Blob(["photo"]), previewUrl: "" },
+  });
+
+  endRoomAfterBlock(entry);
+
+  assert.equal(entry.snapshot.room.status, "ENDED");
+  assert.equal(entry.snapshot.attachment, null);
+  assert.equal(entry.snapshot.draft, "작성 중인 메시지");
+  assert.deepEqual(
+    entry.snapshot.messages.map((item) => item.id),
+    [1, 2],
+  );
+});
 
 function apiFixture() {
   let id = 100;

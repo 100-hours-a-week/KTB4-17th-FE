@@ -100,3 +100,12 @@ export function releasePreview(entry, url) {
   if (!url || !entry.urls.delete(url)) return;
   URL.revokeObjectURL(url);
 }
+
+export function endRoomAfterBlock(entry) {
+  releasePreview(entry, entry.snapshot.attachment?.previewUrl);
+  updateRoomSession(entry, (current) => ({
+    ...current,
+    attachment: null,
+    room: current.room ? { ...current.room, status: "ENDED" } : null,
+  }));
+}

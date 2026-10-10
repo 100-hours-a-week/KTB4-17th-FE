@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { asset } from "../../shared/assets.js";
 import {
   BrandHeader,
@@ -17,6 +18,7 @@ import {
   profilePhotoErrorMessage,
 } from "../profile/photoUpload.js";
 import * as chatApi from "./api.js";
+import { ChatDetailMenu } from "./ChatDetailMenu.jsx";
 import { ChatImage } from "./ChatImage.jsx";
 import { ChatModeMenu } from "./ChatModeMenu.jsx";
 import { MessageBubble } from "./MessageBubble.jsx";
@@ -27,12 +29,75 @@ import {
 } from "./model.js";
 import { enqueueMessages, retryMessage } from "./outbox.js";
 import {
+  endRoomAfterBlock,
   isSessionActive,
   releasePreview,
   updateRoomSession,
 } from "./session.js";
 import { useChatRoom } from "./useChatRoom.js";
 import { useChatScroll } from "./useChatScroll.js";
+
+function BlockConfirmationDialog({
+  memberName,
+  blocking,
+  onCancel,
+  onConfirm,
+}) {
+  const cancelRef = useRef(null);
+
+  useLayoutEffect(() => {
+    cancelRef.current?.focus();
+  }, []);
+
+  return (
+    <div className="chat-block-dialog-backdrop">
+      <button
+        type="button"
+        className="chat-block-dialog-dismiss"
+        aria-label="회원 차단 취소"
+        tabIndex={-1}
+        onClick={onCancel}
+        disabled={blocking}
+      />
+      <section
+        className="chat-block-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="chat-block-title"
+        aria-describedby="chat-block-description"
+        onKeyDown={(event) => {
+          if (event.key !== "Escape" || blocking) return;
+          event.preventDefault();
+          onCancel();
+        }}
+      >
+        <h2 id="chat-block-title">{memberName}님을 차단할까요?</h2>
+        <p id="chat-block-description">
+          차단하면 더 이상 메시지를 주고받을 수 없으며, 차단은 되돌릴 수 없어요.
+        </p>
+        <div>
+          <button
+            ref={cancelRef}
+            type="button"
+            className="chat-block-dialog-button"
+            onClick={onCancel}
+            disabled={blocking}
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            className="chat-block-dialog-button chat-block-dialog-primary"
+            onClick={onConfirm}
+            disabled={blocking}
+          >
+            {blocking ? "차단 중…" : "차단하기"}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
 
 function ImageViewer({ message, entry, onClose }) {
   const dialogRef = useRef(null);
@@ -175,8 +240,11 @@ function ChatRoomContent({
   } = room;
   const [viewingImage, setViewingImage] = useState(null);
   const [preparingImage, setPreparingImage] = useState(false);
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  const [blocking, setBlocking] = useState(false);
   const imageSelectionVersion = useRef(0);
   const imagePreparationPending = useRef(false);
+  const blockRequestRef = useRef(null);
   const rootRef = useRef(null);
   const inputRef = useRef(null);
   const imageInputRef = useRef(null);
@@ -184,6 +252,9 @@ function ChatRoomContent({
   const scroll = useChatScroll({ ...room, viewingImage });
   const canSend = Boolean(visit) && state.room?.status === "ACTIVE";
   const targetMemberId = state.room?.memberId;
+  const parsedTargetMemberId = Number(targetMemberId);
+  const canBlockMember =
+    Number.isSafeInteger(parsedTargetMemberId) && parsedTargetMemberId > 0;
   const closeViewer = useCallback(() => setViewingImage(null), []);
   const openViewer = useCallback((message, opener) => {
     viewerOpenerRef.current = opener;
@@ -194,6 +265,9 @@ function ChatRoomContent({
   useEffect(
     () => () => {
       imageSelectionVersion.current += 1;
+      const blockRequest = blockRequestRef.current;
+      blockRequestRef.current = null;
+      blockRequest?.abort();
     },
     [],
   );
@@ -268,6 +342,44 @@ function ChatRoomContent({
       );
   }
 
+  async function blockMember() {
+    if (!canBlockMember || blocking) return;
+
+    const controller = new AbortController();
+    blockRequestRef.current = controller;
+    setBlocking(true);
+    try {
+      await chatApi.blockUser(parsedTargetMemberId, {
+        signal: controller.signal,
+      });
+      if (blockRequestRef.current !== controller || !isSessionActive(entry))
+        return;
+
+      imageSelectionVersion.current += 1;
+      imagePreparationPending.current = false;
+      setPreparingImage(false);
+      endRoomAfterBlock(entry);
+      setBlockDialogOpen(false);
+      toast("회원을 차단했어요.");
+    } catch (requestError) {
+      if (
+        requestError.name !== "AbortError" &&
+        blockRequestRef.current === controller
+      )
+        toast(
+          apiErrorMessage(
+            requestError,
+            "회원을 차단하지 못했어요. 잠시 후 다시 시도해주세요.",
+          ),
+        );
+    } finally {
+      if (blockRequestRef.current === controller) {
+        blockRequestRef.current = null;
+        setBlocking(false);
+      }
+    }
+  }
+
   const connectionMessage =
     connection === "offline"
       ? "인터넷 연결이 끊겼어요. 연결 후 다시 시도해주세요."
@@ -285,7 +397,10 @@ function ChatRoomContent({
 
   return (
     <section ref={rootRef} className="chat-room-view" aria-label="채팅방">
-      <div className="chat-room-content" inert={Boolean(viewingImage)}>
+      <div
+        className="chat-room-content"
+        inert={Boolean(viewingImage || blockDialogOpen)}
+      >
         <BrandHeader navigate={navigate}>
           <ChatModeMenu
             targetMemberId={targetMemberId}
@@ -333,14 +448,12 @@ function ChatRoomContent({
           onBack={() => navigate("/chats")}
           right={
             <div className="chat-header-actions">
-              <button
-                type="button"
-                className="more-button"
-                aria-label="채팅방 더보기"
-                onClick={() => toast("채팅방 설정은 준비 중이에요.")}
-              >
-                •••
-              </button>
+              <ChatDetailMenu
+                canBlock={canBlockMember}
+                blocking={blocking}
+                onBlock={() => setBlockDialogOpen(true)}
+                toast={toast}
+              />
             </div>
           }
         />
@@ -631,6 +744,14 @@ function ChatRoomContent({
           )}
         </form>
       </div>
+      {blockDialogOpen && (
+        <BlockConfirmationDialog
+          memberName={state.room?.name || "상대 회원"}
+          blocking={blocking}
+          onCancel={() => setBlockDialogOpen(false)}
+          onConfirm={() => void blockMember()}
+        />
+      )}
       {viewingImage && (
         <ImageViewer
           message={viewerMessage}
