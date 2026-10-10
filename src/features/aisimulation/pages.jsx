@@ -3,10 +3,10 @@ import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import {
   BrandHeader,
   EmptyState,
-  Icon,
   PixelButton,
   ScreenHeader,
 } from "../../shared/ui/components.jsx";
+import { AiAvatar, PixelIcon } from "../../shared/ui/pixel.jsx";
 import { MessageBubble } from "../chat/Chat.jsx";
 import { ChatModeMenu } from "../chat/ChatModeMenu.jsx";
 import * as aiSimulationApi from "./api.js";
@@ -108,7 +108,7 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
       <div className="simulation-body">
         <div className="simulation-participants">
           <div>
-            <Icon name="ai-avatar.svg" />
+            <AiAvatar size={34} />
             <span>
               {partner.nickname || "상대"} AI
               <small>{partner.headline || "상대의 성향을 반영했어요"}</small>
@@ -116,7 +116,7 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
           </div>
           <b>↔</b>
           <div>
-            <Icon name="ai-avatar.svg" />
+            <AiAvatar size={34} />
             <span>
               {me.nickname || "나"}의 AI
               <small>{me.headline || "내 성향을 반영했어요"}</small>
@@ -159,6 +159,22 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
   );
 }
 
+const SCORE_BLOCKS = Array.from({ length: 10 }, (_, index) => index);
+const AREA_ICONS = {
+  DISTANCE: "target",
+  COMMUNICATION: "chat",
+  CONFLICT: "alert",
+  IDEAL: "heart",
+  DIRECTION: "send",
+};
+const hasGrade = (grade) => Boolean(grade) && grade.trim() !== "-";
+// 긴 종합 분석을 문장 단위로 나눠 읽기 쉽게 보여준다 (내용은 그대로).
+const splitSentences = (text) =>
+  text
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+
 export function Report({ simulationId, chatRoomId, navigate }) {
   const [report, setReport] = useState(null);
   const [error, setError] = useState("");
@@ -181,6 +197,11 @@ export function Report({ simulationId, chatRoomId, navigate }) {
       active = false;
     };
   }, [simulationId]);
+  const rawScore = Number(report?.overall?.score);
+  const score =
+    report?.overall?.score != null && Number.isFinite(rawScore)
+      ? Math.max(0, Math.min(100, rawScore))
+      : null;
   const roomId = Number(chatRoomId);
   const simulationPath =
     Number.isSafeInteger(roomId) && roomId > 0
@@ -226,7 +247,7 @@ export function Report({ simulationId, chatRoomId, navigate }) {
         onBack={() => navigate(simulationPath)}
       />
       <main className="main-scroll report-main">
-        <div className="report-intro">
+        <section className="report-intro">
           <span>AI SIMULATION REPORT</span>
           <h1>
             AI가 분석한
@@ -237,22 +258,62 @@ export function Report({ simulationId, chatRoomId, navigate }) {
             {report.overall?.headline ||
               "AI가 나눈 대화를 바탕으로 살펴봤어요."}
           </p>
-        </div>
-        <div className="score-card">
-          <strong>{report.overall?.score ?? "-"}</strong>
-          <span>/ 100</span>
-          <p>{report.overall?.summary || "분석 결과를 준비하지 못했어요."}</p>
-        </div>
-        {(report.areas || []).map((area) => (
-          <div className="report-metric" key={area.area || area.label}>
-            <div className="report-metric-heading">
-              <span>{area.label || area.area}</span>
-              <b>{area.gradeLabel || area.grade || "-"}</b>
-            </div>
-            <small>{area.comment || "분석 결과를 확인해주세요."}</small>
+        </section>
+        <section className="score-card" aria-label="종합 점수">
+          <div className="score-card-top">
+            <p className="score-card-value">
+              <strong>{score ?? "-"}</strong>
+              <span>/ 100</span>
+            </p>
+            {hasGrade(report.overall?.gradeLabel) && (
+              <b className="report-grade">{report.overall.gradeLabel}</b>
+            )}
           </div>
-        ))}
+          {score != null && (
+            <div className="score-meter" aria-hidden="true">
+              {SCORE_BLOCKS.map((index) => (
+                <i
+                  key={index}
+                  className={index < Math.round(score / 10) ? "on" : ""}
+                />
+              ))}
+            </div>
+          )}
+          <h2 className="report-section-label">종합 분석</h2>
+          <div className="score-card-summary">
+            {splitSentences(
+              report.overall?.summary || "분석 결과를 준비하지 못했어요.",
+            ).map((sentence) => (
+              <p key={sentence}>{sentence}</p>
+            ))}
+          </div>
+        </section>
+        {(report.areas || []).length > 0 && (
+          <section className="report-areas" aria-label="영역별 분석">
+            <h2 className="report-section-label">영역별 분석</h2>
+            {report.areas.map((area) => {
+              const grade = area.gradeLabel || area.grade;
+              return (
+                <article className="report-area" key={area.area || area.label}>
+                  <span className="report-area-icon" aria-hidden="true">
+                    <PixelIcon name={AREA_ICONS[area.area] || "spark"} />
+                  </span>
+                  <div className="report-area-body">
+                    <div className="report-area-heading">
+                      <h3>{area.label || area.area}</h3>
+                      {hasGrade(grade) && (
+                        <b className="report-grade">{grade}</b>
+                      )}
+                    </div>
+                    <p>{area.comment || "분석 결과를 확인해주세요."}</p>
+                  </div>
+                </article>
+              );
+            })}
+          </section>
+        )}
         <p className="report-disclaimer">
+          <PixelIcon name="alert" />
           AI가 대화 방식을 분석한 결과예요. 실제 관계의 성공을 보장하지 않아요.
         </p>
         <PixelButton onClick={() => navigate("/home")}>

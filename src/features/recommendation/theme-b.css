@@ -19,19 +19,19 @@
 .home-menu-list {
   position: absolute;
   z-index: 20;
-  top: 46px;
-  right: -6px;
+  top: 35.5px; /* ☰ 아이콘 바로 아래 6px */
+  right: 1.5px; /* 오른쪽 끝을 아이콘 오른쪽 끝에 맞춤 */
   display: flex;
   min-width: 148px;
   flex-direction: column;
-  padding: 2px;
+  padding: 0;
   border: 8px solid transparent;
   border-image: var(--px-card) 8 fill / 8px;
   filter: var(--shadow-pixel-strong);
 }
 
 .home-menu-list button {
-  min-height: 44px;
+  min-height: 36px;
   padding: 0 10px;
   border: 0;
   background: transparent;
@@ -173,7 +173,7 @@
 /* 좋아요 탭 — 세그먼트 토글 */
 .segmented-tabs.likes-seg {
   height: 44px;
-  margin: 14px 16px 0;
+  margin: 16px 16px 0;
   padding: 4px;
   border-bottom: 0;
   background: #ede8f4;
@@ -276,6 +276,97 @@
 }
 
 .likes-main > .empty-state {
-  min-height: calc(100% + 48px);
-  margin-top: -48px;
+  min-height: calc(100% + 60px);
+  margin-top: -60px;
+}
+
+/* 추천 카드 활동 상태 배지 */
+.recommendation-info .recommendation-status {
+  align-items: center;
+  gap: 6px;
+}
+
+.recommendation-info .recommendation-status i {
+  width: 6px;
+  height: 6px;
+  background: #7cf0b4;
+  box-shadow: 0 0 6px #7cf0b4;
+}
+
+/* 좋아요 목록: 탭 바와 같은 좌우 16px, 탭 바 아래 · 카드 사이 모두 16px */
+.segmented-tabs.likes-seg + .likes-main {
+  top: 116px;
+  padding: 16px 16px 24px;
+}
+
+.likes-main .like-list {
+  gap: 16px;
+}
+
+.segmented-tabs.likes-seg + .likes-main:has(> .empty-state) {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* 인증 방패: 어두운 카드 위에서 보이도록 연보라 + 흰 테두리 */
+.recommendation-info h1 .verified-shield {
+  width: 22px;
+  height: 22px;
+  filter: drop-shadow(0 0 4px rgb(203 184 255 / 70%));
+}
+
+/* 패스 키: 보라색 키캡 */
+.recommendation-actions .action-key-pass {
+  background:
+    linear-gradient(#ffffff8c 0 0) 8px 5px / 50% 3px no-repeat,
+    var(--button-fill);
+  box-shadow:
+    inset 0 -4px 0 rgb(40 10 120 / 25%),
+    inset 0 2px 0 rgb(255 255 255 / 40%);
+  backdrop-filter: none;
+}
+
+.card-action:has(.action-key-pass) {
+  filter: drop-shadow(0 4px 0 rgb(40 10 120 / 28%));
+}
+
+/* 좋아요 키도 패스 · 시뮬레이션 · 연습 대화와 같은 56px */
+.recommendation-actions .action-key-like {
+  width: 56px;
+  height: 56px;
+}
+
+/* 추천 카드: 상단바 · 하단바와의 간격을 위아래 같게 */
+.home-main:has(> .recommendation-stack) {
+  padding-bottom: 16px;
+}
+
+/* 추천 카드가 상단바와 하단바 사이를 채우고, 위아래 16px만 남긴다 */
+.home-main:has(> .recommendation-stack) > .recommendation-stack {
+  height: 100%;
+  min-height: 0;
+}
+
+.home-main:has(> .recommendation-stack) .recommendation-card {
+  height: 100%;
+}
+
+/* 카드 정보 · 버튼을 카드 바닥에서 띄우기 (좌우 15px보다 조금 넉넉하게) */
+.recommendation-card .recommendation-info {
+  bottom: 18px;
+}
+
+/* 홈 카드 사진 막대: 프로필 상세와 같은 방식, 색은 한 톤 연하게 */
+.recommendation-card .photo-steps button {
+  height: 4px;
+  border-radius: 0;
+  background: rgb(255 255 255 / 55%);
+}
+
+.recommendation-card .photo-steps button.seen {
+  background: linear-gradient(90deg, #d4c6ff, #bba6ff);
+}
+
+.recommendation-card .photo-steps button.active {
+  background: linear-gradient(90deg, #bba6ff, #f7b3d9);
 }

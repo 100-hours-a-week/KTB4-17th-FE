@@ -34,7 +34,7 @@
   font-family: var(--font-pixel);
   font-size: 22px;
   line-height: 1;
-  color: var(--purple);
+  color: inherit;
 }
 
 .my-topbar i,
@@ -99,12 +99,21 @@
   color: var(--purple);
 }
 
+/* 선택 표시: 들리지 않고 바탕·아이콘이 진해진다 */
 @media (hover: hover) and (pointer: fine) {
   .my-identity > .my-settings-button:hover {
-    transform: translate(-1px, -1px);
-    background: #efe3fa;
-    box-shadow: none;
+    background: #e6dcff;
+    color: var(--purple-deep);
+    clip-path: var(--pixel-step-shape);
   }
+}
+
+.my-identity > .my-settings-button:active,
+.my-identity > .my-settings-button:focus-visible {
+  transform: none;
+  background: #d9ccff;
+  color: var(--purple-deep);
+  clip-path: var(--pixel-step-shape);
 }
 
 .my-identity-loading {
@@ -117,7 +126,7 @@
   margin: 0;
   padding: 0;
   border: 0;
-  border-radius: 50%;
+  border-radius: 0;
   background: transparent;
 }
 
@@ -146,7 +155,7 @@
   width: 88px;
   height: 88px;
   border: 1px solid #bda6d0;
-  border-radius: 50%;
+  border-radius: 0;
 }
 
 .my-profile-skeleton {
@@ -192,13 +201,14 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 4px;
+  gap: 0;
   min-width: 0;
   padding-right: 32px;
 }
 
 .my-profile-kicker {
   align-self: flex-start;
+  margin-bottom: 10px;
   padding: 2px 6px;
   border: 1px solid #d7b2cc;
   background: #f8e0ec;
@@ -210,13 +220,13 @@
 
 .my-identity h1 {
   overflow-wrap: anywhere;
-  margin: 0;
+  margin: 0 0 2px;
   font-size: 18px;
   line-height: 1.35;
 }
 
 .my-identity .my-profile-age {
-  margin: 0;
+  margin: 0 0 10px;
   color: var(--muted);
   font-size: 12px;
 }
@@ -227,7 +237,7 @@
   gap: 5px;
   width: fit-content;
   max-width: 100%;
-  margin: 3px 0 0;
+  margin: 0;
   padding: 4px 7px;
   border: 1px solid #dfcfaa;
   background: #fff9eb;
@@ -623,4 +633,28 @@
   display: block;
   color: var(--muted);
   margin: 24px 0;
+}
+
+/* 플레이어 카드: MY PLAYER CARD 칩과 지역 칩의 높이를 같게 (28px, 글자 세로 가운데) */
+.my-identity-copy .my-profile-kicker,
+.my-identity-copy .my-profile-region {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: 1;
+}
+
+/* 플레이어 카드: 사진 + 글자 묶음을 오른쪽으로 4px, 글자는 사진에서 22px 띄움 */
+.my-main .my-identity {
+  gap: 22px;
+  padding-left: 18px;
+}
+
+/* 마이 메뉴: AI 아바타(30px)와 다른 아이콘 칸 너비를 같게 해 글자 시작 위치 정렬 */
+.my-menu button > .icon,
+.my-menu button > .menu-glyph {
+  width: 30px;
+  object-fit: contain;
 }

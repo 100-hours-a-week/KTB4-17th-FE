@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { PhotoSegments, ProfilePhoto } from "../../shared/ui/components.jsx";
+import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import { dateAge } from "../../shared/utils.js";
 import { getMemberProfile, getMyProfile } from "./api.js";
 import {
@@ -152,6 +153,15 @@ export function OtherProfile({ memberId, returnTo, navigate, isOwn = false }) {
 
   return (
     <main className="other-profile-page">
+      {profile && (
+        <div className="other-profile-backdrop" aria-hidden="true">
+          <ProfilePhoto
+            person={profile}
+            index={photoIndex}
+            className="other-profile-backdrop-photo"
+          />
+        </div>
+      )}
       <section
         className="other-profile-hero"
         onPointerDown={handlePointerDown}
@@ -187,7 +197,7 @@ export function OtherProfile({ memberId, returnTo, navigate, isOwn = false }) {
           aria-label="이전 화면으로"
           onClick={() => navigate(returnTo, { replace: true })}
         >
-          ‹
+          <PixelIcon name="back" scale={3} />
         </button>
         {isOwn && (
           <button
@@ -228,13 +238,17 @@ export function OtherProfile({ memberId, returnTo, navigate, isOwn = false }) {
           <div className="other-profile-facts">
             {profile.job && (
               <p>
-                <span aria-hidden="true">▣</span>
+                <span aria-hidden="true">
+                  <PixelIcon name="briefcase" />
+                </span>
                 {profile.job}
               </p>
             )}
             {profile.region && (
               <p>
-                <span aria-hidden="true">⌖</span>
+                <span aria-hidden="true">
+                  <PixelIcon name="pin" />
+                </span>
                 {profile.region}
               </p>
             )}

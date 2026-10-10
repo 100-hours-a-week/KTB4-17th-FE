@@ -210,7 +210,7 @@ button:focus-visible {
   height: 56px;
   min-height: 56px;
   flex-shrink: 0;
-  padding: 0 16px 0 12px;
+  padding: 0 16px 0 10px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -221,7 +221,7 @@ button:focus-visible {
 .brand-header-home {
   display: flex;
   align-items: center;
-  flex: 0 0 100px;
+  flex: 0 0 120px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -229,9 +229,9 @@ button:focus-visible {
 
 .brand-header-logo {
   display: block;
-  width: 100px;
-  height: 38px;
-  flex: 0 0 100px;
+  width: 120px;
+  height: 45px;
+  flex: 0 0 120px;
   object-fit: contain;
 }
 
@@ -543,6 +543,7 @@ small {
   justify-content: center;
   flex-direction: column;
   gap: 4px;
+  padding: 3px 6px 1px; /* 아이콘 위 · 글자 아래 실제 여백을 같게 (글자 아래 빈 줄 높이 보정) */
   color: var(--subtle);
   font-family: var(--font-pixel);
   font-size: 11px;

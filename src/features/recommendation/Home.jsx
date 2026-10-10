@@ -408,7 +408,7 @@ export function Home({
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((open) => !open)}
           >
-            <PixelIcon name="burger" scale={3} />
+            <PixelIcon name="burgerSm" scale={3} />
           </button>
           {menuOpen && (
             <div className="home-menu-list" role="menu">
@@ -514,14 +514,20 @@ export function Home({
               <div className="recommendation-gradient" />
               <div className="recommendation-info">
                 {person.activity && (
-                  <span className="recommendation-keyword">
-                    ✦ {person.activity}
+                  <span className="recommendation-keyword recommendation-status">
+                    <i aria-hidden="true" />
+                    {person.activity}
                   </span>
                 )}
                 <h1>
                   {person.nickname}
                   {person.age != null && <span>{person.age}</span>}
-                  {person.verified && <Icon name="detail-shield.svg" />}
+                  {person.verified && (
+                    <Icon
+                      name="verified-shield.svg"
+                      className="verified-shield"
+                    />
+                  )}
                 </h1>
                 {(person.region || person.mbti) && (
                   <p className="recommendation-meta">
@@ -551,7 +557,7 @@ export function Home({
                     ["패스", "action-pass.svg", 3, pass, "pass"],
                     ["시뮬레이션", "sim", 3, startSimulation, "simulation"],
                     ["연습 대화", "chat", 3, startPractice, "practice"],
-                    ["좋아요", "heart", 4, like, "like"],
+                    ["좋아요", "heart", 3, like, "like"],
                   ].map(([label, icon, scale, action, busyKey]) => (
                     <button
                       type="button"
@@ -566,7 +572,7 @@ export function Home({
                       aria-busy={actionBusy === busyKey}
                     >
                       <span
-                        className={`action-key${busyKey === "like" ? " action-key-like" : ""}`}
+                        className={`action-key${busyKey === "like" ? " action-key-like" : ""}${busyKey === "pass" ? " action-key-pass" : ""}`}
                       >
                         {busyKey === "pass" ? (
                           <Icon name={icon} />

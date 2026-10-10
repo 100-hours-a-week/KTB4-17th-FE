@@ -99,91 +99,199 @@
 .report-main {
   top: 96px;
   bottom: 0;
-  padding: 25px 20px;
+  padding: 20px 18px 28px;
 }
 
+/* 리포트 상단 */
 .report-intro {
-  padding: 22px 15px;
-  background: var(--soft-lavender);
-  border: 1px solid #bda6d0;
-  box-shadow: 3px 4px 0 #8758cf40;
+  padding: 10px 12px 14px;
 }
 
-.report-intro span {
+.report-intro > span {
   color: var(--purple);
   font-size: 11px;
+  letter-spacing: 0.1em;
 }
 
 .report-intro h1 {
-  margin: 14px 0 7px;
+  margin: 10px 0 12px;
+  font-size: 22px;
+  line-height: 30px;
 }
 
 .report-intro p {
-  font-size: 12px;
+  display: inline-block;
   margin: 0;
-  color: var(--muted);
-}
-
-.score-card {
-  margin: 22px 0;
-  padding: 20px;
-  text-align: center;
-  border: 1px solid #38205f;
+  padding: 6px 10px;
   background: var(--paper);
-}
-
-.score-card strong {
-  color: var(--purple);
-  font-size: 65px;
-  font-weight: 400;
-}
-
-.score-card span {
-  font-size: 18px;
-  color: var(--muted);
-}
-
-.score-card p {
-  margin: 10px 0 0;
+  color: var(--purple-deep);
   font-size: 13px;
-  line-height: 1.6;
+  font-weight: 700;
+  line-height: 1.5;
+  clip-path: var(--pixel-step-shape);
 }
 
-.report-metric {
-  margin-bottom: 10px;
-  border: 1px solid var(--line);
-  padding: 13px;
-  background: var(--paper);
+/* 종합 점수 */
+.report-main .score-card {
+  margin: 16px 0;
+  padding: 10px 12px 6px;
+  text-align: left;
 }
 
-.report-metric-heading {
+.score-card-top {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.report-metric-heading span {
-  font-size: 13px;
+.score-card-value {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
 }
 
-.report-metric small {
-  display: block;
-  margin-top: 5px;
-  color: var(--muted);
-  line-height: 1.5;
-}
-
-.report-metric b {
-  font-size: 15px;
+.score-card-value strong {
   color: var(--purple);
+  font-size: 56px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.score-card-value span {
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.report-grade {
+  flex: none;
+  padding: 4px 10px;
+  background: var(--soft-lavender);
+  color: var(--purple-deep);
+  font-size: 13px;
+  font-weight: 700;
   white-space: nowrap;
+  clip-path: var(--pixel-step-shape);
+}
+
+.score-meter {
+  display: flex;
+  gap: 3px;
+  margin: 14px 0 18px;
+}
+
+.score-meter i {
+  flex: 1;
+  height: 10px;
+  background: #ece6f6;
+}
+
+.score-meter i.on {
+  background: linear-gradient(180deg, #b18cff, #ee6ab1);
+}
+
+.report-section-label {
+  margin: 0 0 10px;
+  color: var(--purple);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.score-card-summary p {
+  position: relative;
+  margin: 0 0 10px;
+  padding-left: 12px;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.score-card-summary p::before {
+  content: "";
+  position: absolute;
+  top: 9px;
+  left: 0;
+  width: 4px;
+  height: 4px;
+  background: var(--purple);
+}
+
+/* 영역별 분석 */
+.report-areas {
+  margin: 0 0 16px;
+  padding: 10px 12px 2px;
+  border: 8px solid transparent;
+  border-image: var(--px-card) 8 fill / 8px;
+  filter: var(--shadow-pixel);
+}
+
+.report-area {
+  display: flex;
+  gap: 12px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.report-section-label + .report-area {
+  padding-top: 4px;
+  border-top: 0;
+}
+
+.report-area-icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  place-items: center;
+  background: var(--soft-lavender);
+  color: var(--purple);
+  clip-path: var(--pixel-step-shape);
+}
+
+.report-area-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.report-area-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 24px;
+}
+
+.report-area-heading h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.report-area-body p {
+  margin: 4px 0 0;
+  color: #3d3550;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .report-disclaimer {
-  font-size: 11px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  background: rgb(255 255 255 / 60%);
   color: var(--muted);
+  font-size: 12px;
   line-height: 1.6;
-  margin: 22px 0;
+  clip-path: var(--pixel-step-shape);
+}
+
+.report-disclaimer .pixel-icon {
+  margin-top: 4px;
+  color: var(--subtle);
 }
 
 /* My, settings and notifications */

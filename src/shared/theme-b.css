@@ -137,3 +137,71 @@ section.practice-dialog button.practice-dialog-button,
   box-shadow: none;
   filter: drop-shadow(0 3px 0 rgb(194 64 126 / 14%));
 }
+
+/* ---------- 발신자 제한 모드 칩 (채팅 · 연습대화 · 시뮬레이션 상단) ---------- */
+.brand-header .chat-assistance {
+  filter: drop-shadow(0 2px 0 rgb(124 92 250 / 22%));
+}
+
+.brand-header .chat-assistance summary {
+  flex-direction: row;
+  width: auto;
+  height: 32px;
+  min-height: 32px;
+  gap: 6px;
+  padding: 0 10px 0 11px;
+  border: 0;
+  border-image: none;
+  background: linear-gradient(135deg, #f2edff 0%, #ffe9f5 100%);
+  box-shadow:
+    inset 0 -2px 0 rgb(124 92 250 / 18%),
+    inset 0 1px 0 #fff;
+  color: var(--purple-deep);
+  clip-path: var(--pixel-step-shape);
+}
+
+.brand-header .chat-assistance[open] summary {
+  background: linear-gradient(135deg, #e6dcff 0%, #ffd9ee 100%);
+}
+
+.brand-header .chat-assistance .chat-assistance-title {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.chat-assistance-spark {
+  color: #ee6ab1;
+}
+
+.chat-assistance-caret {
+  color: var(--purple);
+  transform: rotate(90deg) scale(0.8);
+  transition: transform 160ms steps(2);
+}
+
+.chat-assistance[open] .chat-assistance-caret {
+  transform: rotate(-90deg) scale(0.8);
+}
+
+/* ---------- AI 아바타 (하루 · AI 연습대화 · 시뮬레이션 · 페르소나) ---------- */
+.ai-avatar {
+  position: relative;
+  isolation: isolate;
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: var(--ai-avatar-size);
+  height: var(--ai-avatar-size);
+  background: #fff;
+  clip-path: var(--pixel-step-shape);
+}
+
+.ai-avatar::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 2px;
+  background: var(--holo);
+  clip-path: var(--pixel-step-shape);
+}

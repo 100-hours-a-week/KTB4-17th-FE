@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { EmptyState, PixelButton } from "../../shared/ui/components.jsx";
+import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import * as preferencesApi from "./api.js";
 import {
   defaultPreferences,
@@ -23,10 +24,10 @@ function RangeField({ name, preference, onChange }) {
     <fieldset className="preference-range-field">
       <legend className="preference-range-label">
         <span>{label}</span>
-        <span>
+        <b className="preference-range-value">
           {lower} ~ {upper}
           {unit}
-        </span>
+        </b>
       </legend>
       <div
         className="preference-range"
@@ -109,7 +110,7 @@ function PreferenceSheet({ field, selected, onDone, onClose }) {
         aria-label="선택 취소"
         onClick={onClose}
       >
-        ×
+        <PixelIcon name="x" scale={3} />
       </button>
       <h1 id="preference-sheet-title">
         {field.label}
@@ -233,7 +234,7 @@ export function Preferences({ navigate, toast, onSaved }) {
           disabled={saving}
           onClick={() => navigate("/home")}
         >
-          ×
+          <PixelIcon name="x" scale={3} />
         </button>
       </header>
       <main
@@ -284,6 +285,7 @@ export function Preferences({ navigate, toast, onSaved }) {
                     <span className="preference-choice-summary">
                       {preferenceSummary(preference[field.key], field.options)}
                     </span>
+                    <PixelIcon name="chev" className="preference-choice-chev" />
                   </button>
                 ))}
               </div>

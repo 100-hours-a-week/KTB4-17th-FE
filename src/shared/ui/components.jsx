@@ -51,7 +51,17 @@ export function BrandHeader({ children, className = "", navigate }) {
           alt="*23#"
         />
       </button>
-      {children}
+      {children ?? (
+        <>
+          <span className="brand-signal" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+            <i />
+          </span>
+          <span className="brand-battery" aria-hidden="true" />
+        </>
+      )}
     </header>
   );
 }
@@ -226,7 +236,9 @@ export function PhotoSegments({ person, index, onSelect, className = "" }) {
         <button
           key={`${person.id}-${photo}`}
           type="button"
-          className={photoIndex === index ? "active" : ""}
+          className={
+            photoIndex === index ? "active" : photoIndex < index ? "seen" : ""
+          }
           aria-label={`사진 ${photoIndex + 1} 보기`}
           aria-pressed={photoIndex === index}
           onClick={() => onSelect(photoIndex)}

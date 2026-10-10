@@ -9,7 +9,7 @@
 
 .other-profile-hero {
   position: relative;
-  flex: 0 0 clamp(220px, 43dvh, 380px);
+  flex: 0 0 clamp(220px, 40dvh, 360px);
   width: 100%;
   min-height: 0;
   overflow: hidden;
@@ -51,21 +51,27 @@
   text-shadow: 0 1px 3px #0008;
 }
 
-.other-profile-back {
-  left: 14px;
+/* 뒤로가기와 사진 단계 막대를 한 줄에: 버튼 세로 중심 = 막대 세로 중심 */
+.other-profile-hero .other-profile-back {
+  top: calc(env(safe-area-inset-top, 0px) + 18px);
+  left: 8.5px;
+  width: 30px;
+  height: 21px;
+  padding: 0;
+  filter: drop-shadow(0 1px 2px #0008);
+}
+
+.other-profile-hero .other-profile-segments {
+  z-index: 6;
+  top: calc(env(safe-area-inset-top, 0px) + 26.5px);
+  left: 44px;
+  right: 16px; /* 왼쪽 화살표 여백(16px)과 같게 */
 }
 
 .other-profile-settings {
   right: 14px;
   padding: 0;
   font-size: 24px;
-}
-
-.other-profile-segments {
-  z-index: 6;
-  top: calc(env(safe-area-inset-top, 0px) + 70px);
-  left: 16px;
-  right: 16px;
 }
 
 .other-profile-loading {
@@ -94,7 +100,7 @@
 
 .other-profile-kicker {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
   color: var(--purple);
   font-size: 9px;
   letter-spacing: 0.08em;
@@ -113,7 +119,7 @@
 }
 
 .other-profile-info h1 {
-  margin: 0 0 8px;
+  margin: 0 0 14px;
   color: var(--ink);
   font-size: 20px;
   line-height: 1.25;
@@ -132,9 +138,9 @@
 
 .other-profile-facts {
   display: grid;
-  gap: 4px;
+  gap: 8px;
   color: #51445f;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .other-profile-facts p {
@@ -146,22 +152,23 @@
 }
 
 .other-profile-facts p > span {
-  display: inline-grid;
+  display: grid;
+  flex: none;
   place-items: center;
   width: 18px;
+  height: 18px;
   color: var(--purple);
-  font-size: 16px;
 }
 
 .other-profile-detail-section {
-  margin-top: 12px;
+  margin-top: 22px;
 }
 
 .other-profile-section-title {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin: 0 0 6px;
+  gap: 8px;
+  margin: 0 0 10px;
   color: var(--ink);
   font-size: 12px;
   line-height: 1.4;
@@ -170,7 +177,7 @@
 .other-profile-detail-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  gap: 8px;
   margin: 0;
 }
 
@@ -181,11 +188,11 @@
 .other-profile-detail-tile {
   display: flex;
   min-width: 0;
-  min-height: 54px;
+  min-height: 0;
   flex-direction: column;
   justify-content: center;
-  gap: 5px;
-  padding: 8px 9px;
+  gap: 3px;
+  padding: 6px 12px;
   border: 1px solid #e5d9ee;
   background: #fbf8ff;
   box-shadow: 2px 2px 0 #8758cf1c;
@@ -216,7 +223,7 @@
   }
 
   .other-profile-detail-section {
-    margin-top: 9px;
+    margin-top: 16px;
   }
 
   .other-profile-detail-tile {
@@ -322,4 +329,59 @@
 
 .chat-message-row.theirs .profile-bubble-avatar-button .profile-bubble-avatar {
   margin-top: 0;
+}
+
+/* 사진 단계 막대: 홈 카드와 같은 연한 색 (지난 칸 연보라 · 현재 칸 연보라→연분홍 · 남은 칸 반투명 흰색) */
+.other-profile-hero .other-profile-segments button {
+  height: 4px;
+  border-radius: 0;
+  background: rgb(255 255 255 / 55%);
+}
+
+.other-profile-hero .other-profile-segments button.seen {
+  background: linear-gradient(90deg, #d4c6ff, #bba6ff);
+}
+
+.other-profile-hero .other-profile-segments button.active {
+  background: linear-gradient(90deg, #bba6ff, #f7b3d9);
+}
+
+/* 정보 카드: 반투명 흰 유리 느낌, 사진 위로 살짝 겹쳐 뒤가 은은하게 비침 */
+.other-profile-page .other-profile-info {
+  position: relative;
+  z-index: 2;
+  margin-top: -18px;
+  border: 0;
+  border-image: none;
+  padding: 20px 20px 22px;
+  background: rgb(255 255 255 / 78%);
+  box-shadow:
+    inset 0 0 0 1px rgb(220 211 232 / 90%),
+    inset 0 -3px 0 rgb(124 92 250 / 8%);
+  clip-path: var(--pixel-step-shape);
+  backdrop-filter: blur(12px);
+}
+
+/* 카드 바깥 여백: 사진을 흐리게 깔아 투명하게 비쳐 보이도록 */
+.other-profile-backdrop {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.other-profile-backdrop > * {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.55;
+  filter: blur(24px) saturate(1.1);
+  transform: scale(1.15);
+}
+
+.other-profile-page > .other-profile-hero {
+  z-index: 1;
 }
