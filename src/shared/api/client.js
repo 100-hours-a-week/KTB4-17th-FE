@@ -6,7 +6,7 @@ import {
 } from "./authToken.js";
 import { createApiError } from "./errorMessages.js";
 
-const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+const baseUrl = (import.meta.env?.VITE_API_BASE_URL || "").replace(/\/$/, "");
 const AUTH_REFRESH_PATH = "/api/v1/auth/token/refresh";
 const AUTH_LOGOUT_PATH = "/api/v1/auth/logout";
 

@@ -81,6 +81,9 @@ export const API_ERROR_MESSAGES = Object.freeze({
   REQUESTER_NOT_ACTIVE: "가입을 완료한 뒤 추천을 받을 수 있어요.",
   RESOURCE_NOT_AVAILABLE:
     "추천 정보를 더 이상 사용할 수 없어요. 추천 목록을 다시 불러와주세요.",
+  BLOCK_ACCESS_DENIED: "현재 상태에서는 회원을 차단할 수 없어요.",
+  USER_NOT_AVAILABLE: "차단할 회원을 찾을 수 없어요.",
+  SELF_BLOCK_NOT_ALLOWED: "자기 자신은 차단할 수 없어요.",
 
   PREFERENCE_AGE_OUT_OF_RANGE: "나이는 19~39세로 설정해주세요.",
   PREFERENCE_HEIGHT_OUT_OF_RANGE: "키는 130~220cm로 설정해주세요.",

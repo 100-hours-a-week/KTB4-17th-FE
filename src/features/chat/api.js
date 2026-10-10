@@ -64,4 +64,10 @@ export const sendImageMessage = (
 export const chatImageAccessUrl = (roomId, fileId) =>
   apiRequest(`/api/v1/chat-rooms/${roomId}/images/${fileId}/access-url`);
 
+export const blockUser = (targetUserId, { signal } = {}) =>
+  apiRequest(`/api/v1/users/me/blocks/${targetUserId}`, {
+    method: "PUT",
+    signal,
+  });
+
 export const uploadChatImage = uploadFile;
