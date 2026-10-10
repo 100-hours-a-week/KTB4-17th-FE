@@ -64,7 +64,8 @@
 }
 
 .chat-room-avatar.has-photo {
-  border-radius: 50%;
+  border-radius: 0;
+  clip-path: var(--pixel-step-shape);
 }
 
 .chat-room-copy {
@@ -778,7 +779,7 @@
   place-items: center;
   padding: 0;
   border: 0;
-  border-radius: 50%;
+  border-radius: 0;
   background: transparent;
   cursor: pointer;
 }
@@ -796,7 +797,8 @@
   width: 34px;
   height: 34px;
   flex: 0 0 34px;
-  border-radius: 50%;
+  border-radius: 0;
+  clip-path: var(--pixel-step-shape);
 }
 
 .chat-room-partner-name {

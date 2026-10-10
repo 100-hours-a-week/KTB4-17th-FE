@@ -877,3 +877,8 @@
     height: 100%;
   }
 }
+
+/* 성별 선택과 PRIVATE MODE 안내 사이 간격 */
+.onboarding-page .registration-info-fields + .onboarding-note {
+  margin-top: 22px;
+}

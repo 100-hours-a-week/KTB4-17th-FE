@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Icon } from "../../shared/ui/components.jsx";
+import { PixelIcon } from "../../shared/ui/pixel.jsx";
 
 export function ChatModeMenu({
   currentMode = "chat",
@@ -36,11 +37,10 @@ export function ChatModeMenu({
     simulationStartingFor != null && simulationStartingFor === targetMemberId;
   return (
     <details ref={menuRef} className="chat-assistance">
-      <summary aria-label="AI 대화: 시뮬레이션과 연습대화">
-        <span className="chat-assistance-title">
-          <span aria-hidden="true">✦</span> AI 대화
-        </span>
-        <span className="chat-assistance-subtitle">시뮬레이션 · 연습대화</span>
+      <summary aria-label="발신자 제한 모드: 시뮬레이션과 연습대화">
+        <PixelIcon name="spark" className="chat-assistance-spark" />
+        <span className="chat-assistance-title">발신자 제한 모드</span>
+        <PixelIcon name="chev" className="chat-assistance-caret" />
       </summary>
       <div className="chat-assistance-menu">
         <button

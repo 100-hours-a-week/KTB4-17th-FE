@@ -49,6 +49,15 @@ const ICONS = {
     "..XXX..",
     "...X...",
   ],
+  briefcase: [
+    "..XXX..",
+    "..X.X..",
+    "XXXXXXX",
+    "X.....X",
+    "XXX.XXX",
+    "X.....X",
+    "XXXXXXX",
+  ],
   plus: ["..X..", "..X..", "XXXXX", "..X..", "..X.."],
   x: ["X...X", ".X.X.", "..X..", ".X.X.", "X...X"],
   spark: [
@@ -117,6 +126,7 @@ const ICONS = {
     "X.....X",
     "XXXXXXX",
   ],
+  burgerSm: ["XXXXXXX", ".......", "XXXXXXX", ".......", "XXXXXXX"],
   heart: [".XX.XX.", "XXXXXXX", "XXXXXXX", ".XXXXX.", "..XXX..", "...X..."],
   chat: [
     "XXXXXXXX",
