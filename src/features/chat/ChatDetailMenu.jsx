@@ -50,7 +50,6 @@ export function ChatDetailMenu({ canBlock, blocking, onBlock, toast }) {
           onClick={() => select(unavailable)}
         >
           <span>채팅 알림 설정</span>
-          <small className="chat-detail-menu-note">준비 중</small>
         </button>
         <button
           type="button"
@@ -58,8 +57,7 @@ export function ChatDetailMenu({ canBlock, blocking, onBlock, toast }) {
           aria-disabled="true"
           onClick={() => select(unavailable)}
         >
-          <span>신고하기</span>
-          <small className="chat-detail-menu-note">준비 중</small>
+          <span>AI로 대화 종료</span>
         </button>
         <button
           type="button"
@@ -76,7 +74,6 @@ export function ChatDetailMenu({ canBlock, blocking, onBlock, toast }) {
           onClick={() => select(unavailable)}
         >
           <span>채팅방 나가기</span>
-          <small className="chat-detail-menu-note">준비 중</small>
         </button>
       </fieldset>
     </details>

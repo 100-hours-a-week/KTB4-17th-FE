@@ -883,12 +883,6 @@
   opacity: 0.55;
 }
 
-.chat-detail-menu-note {
-  flex: none;
-  color: var(--muted);
-  font-size: 10px;
-}
-
 .chat-detail-menu .chat-detail-danger {
   color: #9e2342;
 }
