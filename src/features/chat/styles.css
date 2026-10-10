@@ -1295,3 +1295,8 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* 상단바 → 첫 채팅방 간격을 채팅방 사이 간격(28px)과 같게 */
+.chat-list-main .chat-list-items {
+  padding-top: 14px;
+}

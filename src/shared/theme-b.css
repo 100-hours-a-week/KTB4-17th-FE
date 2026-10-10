@@ -183,3 +183,25 @@ section.practice-dialog button.practice-dialog-button,
 .chat-assistance[open] .chat-assistance-caret {
   transform: rotate(-90deg) scale(0.8);
 }
+
+/* ---------- AI 아바타 (하루 · AI 연습대화 · 시뮬레이션 · 페르소나) ---------- */
+.ai-avatar {
+  position: relative;
+  isolation: isolate;
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: var(--ai-avatar-size);
+  height: var(--ai-avatar-size);
+  background: #fff;
+  clip-path: var(--pixel-step-shape);
+}
+
+.ai-avatar::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 2px;
+  background: var(--holo);
+  clip-path: var(--pixel-step-shape);
+}

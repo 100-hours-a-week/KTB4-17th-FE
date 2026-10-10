@@ -345,3 +345,43 @@
 .other-profile-hero .other-profile-segments button.active {
   background: linear-gradient(90deg, #bba6ff, #f7b3d9);
 }
+
+/* 정보 카드: 반투명 흰 유리 느낌, 사진 위로 살짝 겹쳐 뒤가 은은하게 비침 */
+.other-profile-page .other-profile-info {
+  position: relative;
+  z-index: 2;
+  margin-top: -18px;
+  border: 0;
+  border-image: none;
+  padding: 20px 20px 22px;
+  background: rgb(255 255 255 / 78%);
+  box-shadow:
+    inset 0 0 0 1px rgb(220 211 232 / 90%),
+    inset 0 -3px 0 rgb(124 92 250 / 8%);
+  clip-path: var(--pixel-step-shape);
+  backdrop-filter: blur(12px);
+}
+
+/* 카드 바깥 여백: 사진을 흐리게 깔아 투명하게 비쳐 보이도록 */
+.other-profile-backdrop {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.other-profile-backdrop > * {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.55;
+  filter: blur(24px) saturate(1.1);
+  transform: scale(1.15);
+}
+
+.other-profile-page > .other-profile-hero {
+  z-index: 1;
+}

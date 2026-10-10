@@ -3,11 +3,10 @@ import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import {
   BrandHeader,
   EmptyState,
-  Icon,
   PixelButton,
   ScreenHeader,
 } from "../../shared/ui/components.jsx";
-import { PixelIcon } from "../../shared/ui/pixel.jsx";
+import { AiAvatar, PixelIcon } from "../../shared/ui/pixel.jsx";
 import { MessageBubble } from "../chat/Chat.jsx";
 import { ChatModeMenu } from "../chat/ChatModeMenu.jsx";
 import * as aiSimulationApi from "./api.js";
@@ -109,7 +108,7 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
       <div className="simulation-body">
         <div className="simulation-participants">
           <div>
-            <Icon name="ai-avatar.svg" />
+            <AiAvatar size={34} />
             <span>
               {partner.nickname || "상대"} AI
               <small>{partner.headline || "상대의 성향을 반영했어요"}</small>
@@ -117,7 +116,7 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
           </div>
           <b>↔</b>
           <div>
-            <Icon name="ai-avatar.svg" />
+            <AiAvatar size={34} />
             <span>
               {me.nickname || "나"}의 AI
               <small>{me.headline || "내 성향을 반영했어요"}</small>

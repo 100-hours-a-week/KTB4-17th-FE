@@ -8,7 +8,7 @@ import {
   Field,
   PixelButton,
 } from "../../shared/ui/components.jsx";
-import { PixelIcon } from "../../shared/ui/pixel.jsx";
+import { AiAvatar, PixelIcon } from "../../shared/ui/pixel.jsx";
 import { onboardingStepFromStatus } from "../../shared/utils.js";
 import { regions as searchActivityRegions } from "../activity-region/api.js";
 import { beginKakaoLogin } from "../auth/api.js";
@@ -1420,9 +1420,7 @@ export function Onboarding({ navigate, toast }) {
                         : "다음 질문"}
                     </p>
                     <div className="persona-chat-who">
-                      <span className="persona-chat-avatar">
-                        <PixelIcon name="robot" />
-                      </span>
+                      <AiAvatar size={34} />
                       하루
                       <small>AI MATE</small>
                     </div>

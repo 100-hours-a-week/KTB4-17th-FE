@@ -651,3 +651,10 @@
   gap: 22px;
   padding-left: 18px;
 }
+
+/* 마이 메뉴: AI 아바타(30px)와 다른 아이콘 칸 너비를 같게 해 글자 시작 위치 정렬 */
+.my-menu button > .icon,
+.my-menu button > .menu-glyph {
+  width: 30px;
+  object-fit: contain;
+}

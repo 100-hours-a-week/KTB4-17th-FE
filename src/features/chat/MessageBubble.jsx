@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { asset } from "../../shared/assets.js";
-import { Icon } from "../../shared/ui/components.jsx";
+import { AiAvatar } from "../../shared/ui/pixel.jsx";
 import { ChatImage } from "./ChatImage.jsx";
 
 function MessageText({ text }) {
@@ -77,9 +77,7 @@ export function MessageBubble({
       data-server-id={message.status === "SENT" ? message.id : undefined}
       className={`message-row ${message.mine ? "mine" : "theirs"} ${chatRoom ? "chat-message-row" : ""} ${grouped ? "is-grouped" : ""}`}
     >
-      {ai && !message.mine && (
-        <Icon name="ai-avatar.svg" className="bubble-avatar" />
-      )}
+      {ai && !message.mine && <AiAvatar size={30} className="bubble-avatar" />}
       {!ai &&
         !message.mine &&
         (grouped ? (

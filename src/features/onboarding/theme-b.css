@@ -417,15 +417,6 @@
   clip-path: var(--pixel-step-shape);
 }
 
-.persona-chat-avatar {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  background: var(--holo);
-  clip-path: var(--pixel-step-shape);
-}
-
 .persona-bubble {
   max-width: 262px;
   margin: 0;

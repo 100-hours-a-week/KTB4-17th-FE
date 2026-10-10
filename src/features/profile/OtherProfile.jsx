@@ -153,6 +153,15 @@ export function OtherProfile({ memberId, returnTo, navigate, isOwn = false }) {
 
   return (
     <main className="other-profile-page">
+      {profile && (
+        <div className="other-profile-backdrop" aria-hidden="true">
+          <ProfilePhoto
+            person={profile}
+            index={photoIndex}
+            className="other-profile-backdrop-photo"
+          />
+        </div>
+      )}
       <section
         className="other-profile-hero"
         onPointerDown={handlePointerDown}

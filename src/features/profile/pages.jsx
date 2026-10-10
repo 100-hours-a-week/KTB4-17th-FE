@@ -11,6 +11,7 @@ import {
   PixelButton,
   ScreenHeader,
 } from "../../shared/ui/components.jsx";
+import { AiAvatar } from "../../shared/ui/pixel.jsx";
 import { dateAge } from "../../shared/utils.js";
 import { ActivityRegionPicker } from "../activity-region/ActivityRegionPicker.jsx";
 import {
@@ -170,7 +171,7 @@ export function MyPage({ navigate, toast }) {
         )}
         <div className="my-menu">
           <button type="button" onClick={() => navigate("/my/persona")}>
-            <Icon name="ai-avatar.svg" />내 페르소나 <span>활성　›</span>
+            <AiAvatar size={30} />내 페르소나 <span>활성　›</span>
           </button>
           <button
             type="button"
@@ -806,7 +807,7 @@ export function Persona({ navigate }) {
       <ScreenHeader title="내 페르소나" onBack={() => navigate("/my")} />
       <main className="main-scroll persona-main">
         <div className="persona-hero">
-          <Icon name="ai-avatar.svg" />
+          <AiAvatar size={72} />
           <h1>나를 닮은 AI가 준비됐어요</h1>
           <p>
             가치관 문답을 바탕으로 상대와의 AI 연습대화와 시뮬레이션에 참여해요.

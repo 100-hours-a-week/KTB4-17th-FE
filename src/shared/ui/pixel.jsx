@@ -221,3 +221,17 @@ export function PixelIcon({ name, scale = 2, colors, className = "" }) {
     </svg>
   );
 }
+
+// AI 캐릭터 아바타: 홀로그램 바탕 + 흰 계단 테두리 + 픽셀 로봇 (온보딩 '하루'와 같은 모양)
+export function AiAvatar({ size = 34, className = "" }) {
+  const scale = Math.max(1, Math.round((size * 0.6) / 12));
+  return (
+    <span
+      className={`ai-avatar ${className}`}
+      style={{ "--ai-avatar-size": `${size}px` }}
+      aria-hidden="true"
+    >
+      <PixelIcon name="robot" scale={scale} />
+    </span>
+  );
+}
