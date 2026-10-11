@@ -133,16 +133,27 @@ export const API_ERROR_MESSAGES = Object.freeze({
     "AI 답변을 확인하지 못했어요. 잠시 후 다시 시도해주세요.",
   AI_CALLBACK_INVALID:
     "AI 답변 정보를 처리하지 못했어요. 잠시 후 다시 시도해주세요.",
-  SIMULATION_NOT_FOUND:
-    "시뮬레이션 결과를 찾을 수 없어요. 시뮬레이션을 다시 시작해주세요.",
+  SIMULATION_NOT_FOUND: "시뮬레이션을 찾을 수 없거나 접근할 수 없어요.",
   ME_PERSONA_NOT_FOUND:
     "내 AI 성향 정보가 없어 시뮬레이션을 만들 수 없어요. 가치관 문답을 완료해주세요.",
   TARGET_PERSONA_NOT_FOUND:
     "상대의 AI 성향 정보가 없어 시뮬레이션을 만들 수 없어요.",
+  SIMULATION_RESULT_NOT_READY:
+    "아직 결과가 준비되지 않았어요. 상태를 다시 확인해주세요.",
+  SIMULATION_CAPACITY_EXCEEDED:
+    "시뮬레이션 요청을 처리하지 못했어요. 기존 요청 상태를 확인해주세요.",
+  SIMULATION_RESPONSE_INVALID:
+    "시뮬레이션 응답을 확인하지 못했어요. 상태를 다시 확인해주세요.",
+  SIMULATION_PARTICIPANT_INVALID:
+    "시뮬레이션 참여자 정보를 확인하지 못했어요. 로그인 상태를 확인해주세요.",
+  SIMULATION_POLLING_PAUSED:
+    "자동 상태 확인을 멈췄어요. 상태 다시 확인을 눌러 현재 결과를 확인해주세요.",
+  SIMULATION_STATUS_TIMEOUT:
+    "상태 조회 응답이 늦어지고 있어요. 연결 상태를 확인해주세요.",
   SIMULATION_ALREADY_RUNNING:
     "시뮬레이션을 만들고 있어요. 잠시만 기다려주세요.",
   SIMULATION_GENERATION_FAILED:
-    "시뮬레이션을 생성하지 못했어요. 잠시 후 다시 시도해주세요.",
+    "시뮬레이션 생성에 실패했어요. 현재 재생성은 지원하지 않아요.",
 
   AUTH_TOKEN_MISSING: "로그인 정보를 확인하지 못했어요. 다시 로그인해주세요.",
   LOCAL_TEST_LOGIN_DISABLED:

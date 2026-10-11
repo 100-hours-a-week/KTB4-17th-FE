@@ -102,7 +102,6 @@
   padding: 20px 18px 28px;
 }
 
-/* 리포트 상단 */
 .report-intro {
   padding: 10px 12px 14px;
 }
@@ -131,7 +130,6 @@
   clip-path: var(--pixel-step-shape);
 }
 
-/* 종합 점수 */
 .report-main .score-card {
   margin: 16px 0;
   padding: 10px 12px 6px;
@@ -218,7 +216,6 @@
   background: var(--purple);
 }
 
-/* 영역별 분석 */
 .report-areas {
   margin: 0 0 16px;
   padding: 10px 12px 2px;
@@ -294,4 +291,58 @@
   color: var(--subtle);
 }
 
-/* My, settings and notifications */
+.simulation-completion-toast {
+  position: absolute;
+  z-index: 20;
+  inset-inline: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: var(--paper);
+  border: 1px solid var(--purple);
+  box-shadow: 0 4px 12px rgb(27 20 48 / 14%);
+  color: var(--ink);
+  font-size: 12px;
+  animation: simulation-toast-enter 160ms ease-out;
+}
+
+.simulation-completion-toast > span {
+  flex: 1;
+}
+
+.simulation-completion-toast button {
+  min-height: 32px;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--purple-deep);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.simulation-completion-toast .simulation-toast-close {
+  min-width: 28px;
+  color: var(--muted);
+  font-size: 20px;
+}
+
+@keyframes simulation-toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .simulation-completion-toast {
+    animation: none;
+  }
+}
