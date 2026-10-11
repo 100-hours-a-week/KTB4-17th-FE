@@ -7,8 +7,20 @@ export const createAiSimulation = (targetMemberId, { signal } = {}) =>
     signal,
   });
 
-export const aiSimulation = (simulationId) =>
-  apiRequest(`/api/v1/ai-simulations/${simulationId}`);
+export const aiSimulationPair = (targetUserId, { signal } = {}) =>
+  apiRequest(`/api/v1/ai-simulations/targets/${targetUserId}`, {
+    signal,
+    cache: "no-store",
+  });
 
-export const aiSimulationReport = (simulationId) =>
-  apiRequest(`/api/v1/ai-simulations/${simulationId}/report`);
+export const aiSimulationState = (simulationId, { signal } = {}) =>
+  apiRequest(`/api/v1/ai-simulations/${simulationId}/status`, {
+    signal,
+    cache: "no-store",
+  });
+
+export const aiSimulation = (simulationId, { signal } = {}) =>
+  apiRequest(`/api/v1/ai-simulations/${simulationId}`, {
+    signal,
+    cache: "no-store",
+  });

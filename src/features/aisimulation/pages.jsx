@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import {
   BrandHeader,
@@ -9,42 +8,17 @@ import {
 import { AiAvatar, PixelIcon } from "../../shared/ui/pixel.jsx";
 import { MessageBubble } from "../chat/Chat.jsx";
 import { ChatModeMenu } from "../chat/ChatModeMenu.jsx";
-import * as aiSimulationApi from "./api.js";
+import { useSimulationResult } from "./useSimulationResult.js";
 
 export function Simulation({ simulationId, chatRoomId, navigate }) {
   const roomId = Number(chatRoomId);
   const chatPath =
     Number.isSafeInteger(roomId) && roomId > 0 ? `/chats/${roomId}` : "/chats";
   const backPath = chatPath === "/chats" ? "/home" : chatPath;
-  const [simulation, setSimulation] = useState(null);
-  const [error, setError] = useState("");
-  useEffect(() => {
-    let active = true;
-    setSimulation(null);
-    setError("");
-    if (!Number.isSafeInteger(simulationId) || simulationId <= 0) {
-      setError(apiErrorMessage("SIMULATION_NOT_FOUND"));
-      return () => {
-        active = false;
-      };
-    }
-    aiSimulationApi
-      .aiSimulation(simulationId)
-      .then((result) => active && setSimulation(result))
-      .catch(
-        (requestError) =>
-          active &&
-          setError(
-            apiErrorMessage(
-              requestError,
-              "시뮬레이션을 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
-            ),
-          ),
-      );
-    return () => {
-      active = false;
-    };
-  }, [simulationId]);
+  const { simulation, status, error, refresh } = useSimulationResult(
+    simulationId,
+    chatRoomId,
+  );
 
   const partner = simulation?.partner || {};
   const me = simulation?.me || {};
@@ -77,24 +51,7 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
       <section className="ai-conversation-view" aria-label="AI 시뮬레이션">
         {conversationHeader}
         <main className="ai-conversation-state">
-          {error ? (
-            <EmptyState
-              icon="!"
-              title="시뮬레이션을 불러오지 못했어요"
-              description={error}
-              action={
-                <PixelButton onClick={() => navigate("/home")}>
-                  홈으로 가기
-                </PixelButton>
-              }
-            />
-          ) : (
-            <EmptyState
-              icon="✦"
-              title="시뮬레이션 결과를 불러오고 있어요"
-              description="잠시만 기다려주세요."
-            />
-          )}
+          <SimulationState status={status} error={error} refresh={refresh} />
         </main>
       </section>
     );
@@ -103,7 +60,8 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
     <section className="ai-conversation-view" aria-label="AI 시뮬레이션">
       {conversationHeader}
       <div className="ai-notice">
-        ⓘ　실제 상대가 아닌 AI예요. 대화 내용은 상대에게 전달되지 않아요.
+        ⓘ　AI가 두 사람의 성향을 바탕으로 나눈 대화예요. 두 사람 모두 같은
+        결과를 확인할 수 있어요.
       </div>
       <div className="simulation-body">
         <div className="simulation-participants">
@@ -132,7 +90,7 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
               key={message.index}
               message={{
                 id: message.index,
-                mine: message.speaker === "a",
+                mine: message.speaker === simulation.mySpeaker,
                 text: message.text,
               }}
             />
@@ -168,7 +126,6 @@ const AREA_ICONS = {
   DIRECTION: "send",
 };
 const hasGrade = (grade) => Boolean(grade) && grade.trim() !== "-";
-// 긴 종합 분석을 문장 단위로 나눠 읽기 쉽게 보여준다 (내용은 그대로).
 const splitSentences = (text) =>
   text
     .split(/(?<=[.!?])\s+/)
@@ -176,27 +133,11 @@ const splitSentences = (text) =>
     .filter(Boolean);
 
 export function Report({ simulationId, chatRoomId, navigate }) {
-  const [report, setReport] = useState(null);
-  const [error, setError] = useState("");
-  useEffect(() => {
-    let active = true;
-    aiSimulationApi
-      .aiSimulationReport(simulationId)
-      .then((result) => active && setReport(result))
-      .catch(
-        (requestError) =>
-          active &&
-          setError(
-            apiErrorMessage(
-              requestError,
-              "리포트를 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
-            ),
-          ),
-      );
-    return () => {
-      active = false;
-    };
-  }, [simulationId]);
+  const { simulation, status, error, refresh } = useSimulationResult(
+    simulationId,
+    chatRoomId,
+  );
+  const report = simulation?.report;
   const rawScore = Number(report?.overall?.score);
   const score =
     report?.overall?.score != null && Number.isFinite(rawScore)
@@ -217,24 +158,7 @@ export function Report({ simulationId, chatRoomId, navigate }) {
           onBack={() => navigate(simulationPath)}
         />
         <main className="main-scroll ai-screen-state-main">
-          {error ? (
-            <EmptyState
-              icon="!"
-              title="리포트를 불러오지 못했어요"
-              description={error}
-              action={
-                <PixelButton onClick={() => navigate(simulationPath)}>
-                  시뮬레이션으로 돌아가기
-                </PixelButton>
-              }
-            />
-          ) : (
-            <EmptyState
-              icon="✦"
-              title="리포트를 불러오고 있어요"
-              description="잠시만 기다려주세요."
-            />
-          )}
+          <SimulationState status={status} error={error} refresh={refresh} />
         </main>
       </>
     );
@@ -321,5 +245,64 @@ export function Report({ simulationId, chatRoomId, navigate }) {
         </PixelButton>
       </main>
     </>
+  );
+}
+
+function SimulationState({ status, error, refresh }) {
+  if (error) {
+    const unavailable = [401, 403, 404].includes(error.status);
+    return (
+      <EmptyState
+        icon="!"
+        title={
+          unavailable
+            ? "시뮬레이션을 확인할 수 없어요"
+            : "결과 확인이 잠시 중단됐어요"
+        }
+        description={apiErrorMessage(
+          error,
+          "연결 상태를 확인한 뒤 상태를 다시 확인해주세요.",
+        )}
+        action={
+          unavailable ? undefined : (
+            <PixelButton onClick={refresh}>상태 다시 확인</PixelButton>
+          )
+        }
+      />
+    );
+  }
+  if (status === "FAILED" || status === "CANCELED") {
+    return (
+      <EmptyState
+        icon="!"
+        title={
+          status === "FAILED"
+            ? "시뮬레이션을 생성하지 못했어요"
+            : "종료된 시뮬레이션이에요"
+        }
+        description={
+          status === "FAILED"
+            ? "이 시뮬레이션의 생성이 실패했어요. 현재 재생성은 지원하지 않아요."
+            : "이 시뮬레이션은 완료 결과를 제공할 수 없어요."
+        }
+      />
+    );
+  }
+  return (
+    <EmptyState
+      icon="✦"
+      title={
+        status === "IN_PROGRESS"
+          ? "AI가 두 사람의 궁합을 분석하고 있어요"
+          : status === "COMPLETED"
+            ? "완료된 결과를 불러오고 있어요"
+            : "시뮬레이션 상태를 확인하고 있어요"
+      }
+      description={
+        status === "IN_PROGRESS"
+          ? "보통 수십 초가 걸리며 요청이 몰리면 더 오래 걸릴 수 있어요. 다른 화면을 이용한 뒤 다시 확인해도 돼요."
+          : "잠시만 기다려주세요."
+      }
+    />
   );
 }

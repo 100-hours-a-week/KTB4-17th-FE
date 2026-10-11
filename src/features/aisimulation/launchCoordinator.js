@@ -1,10 +1,16 @@
-export function createSimulationLaunchCoordinator() {
+export function createSimulationLaunchCoordinator({
+  getOwner = () => null,
+} = {}) {
   let current = null;
 
   return {
     begin(memberId) {
       if (current) return null;
-      current = { memberId, controller: new AbortController() };
+      current = {
+        memberId,
+        owner: getOwner(),
+        controller: new AbortController(),
+      };
       return current;
     },
     cancel(memberId) {
@@ -22,7 +28,11 @@ export function createSimulationLaunchCoordinator() {
       return true;
     },
     isCurrent(request) {
-      return current === request && !request.controller.signal.aborted;
+      return (
+        current === request &&
+        !request.controller.signal.aborted &&
+        request.owner === getOwner()
+      );
     },
   };
 }

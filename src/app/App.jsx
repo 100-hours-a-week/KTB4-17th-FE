@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { Practice } from "../features/aipractice/Practice.jsx";
+import { CompletionToast } from "../features/aisimulation/CompletionToast.jsx";
+import { SimulationTrackingContext } from "../features/aisimulation/context.jsx";
 import { Report, Simulation } from "../features/aisimulation/pages.jsx";
 import { useSimulationLaunch } from "../features/aisimulation/useSimulationLaunch.js";
+import { useSimulationTracking } from "../features/aisimulation/useSimulationTracking.js";
 import {
   beginKakaoLogin,
   completeOAuthCallback,
@@ -96,8 +99,22 @@ function AppRouter() {
     setSearch(destination.search);
     window.scrollTo(0, 0);
   }, []);
+  const tracking = useSimulationTracking({
+    enabled: !loading && !sessionCheckError && data.session && data.onboarded,
+  });
+  const completion = tracking.snapshot.completions[0];
+  const viewingCompletion =
+    completion &&
+    (path === `/ai/simulations/${completion.simulationId}` ||
+      path === `/ai/simulations/${completion.simulationId}/report`);
+  useEffect(() => {
+    if (viewingCompletion)
+      tracking.manager.acknowledge(completion.simulationId);
+  }, [viewingCompletion, completion, tracking.manager]);
   const { startSimulation, cancelSimulation, simulationStartingFor } =
     useSimulationLaunch({
+      path,
+      tracking: tracking.manager,
       navigate: (to) => navigate(to),
       toast: (message) => toast(message),
     });
@@ -482,26 +499,39 @@ function AppRouter() {
     );
 
   return (
-    <div className="app-shell">
-      <div className="app-screen">
-        {page}
-        {showNav && (
-          <BottomNav
-            path={path}
-            unreadMessageCount={unreadMessageCount}
-            navigate={navigate}
-          />
-        )}
-        {toastText && (
-          <div
-            className={`toast${path === "/" || path === "/home" ? " toast-home" : ""}`}
-            role="status"
-          >
-            {toastText}
-          </div>
-        )}
+    <SimulationTrackingContext.Provider value={tracking}>
+      <div className="app-shell">
+        <div className="app-screen">
+          {page}
+          {showNav && (
+            <BottomNav
+              path={path}
+              unreadMessageCount={unreadMessageCount}
+              navigate={navigate}
+            />
+          )}
+          {completion && !viewingCompletion && (
+            <CompletionToast
+              key={`${tracking.subject}:${completion.simulationId}`}
+              completion={completion}
+              navigate={navigate}
+              blocked={Boolean(toastText)}
+              onDismiss={() =>
+                tracking.manager.acknowledge(completion.simulationId)
+              }
+            />
+          )}
+          {toastText && (
+            <div
+              className={`toast${path === "/" || path === "/home" ? " toast-home" : ""}`}
+              role="status"
+            >
+              {toastText}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </SimulationTrackingContext.Provider>
   );
 }
 

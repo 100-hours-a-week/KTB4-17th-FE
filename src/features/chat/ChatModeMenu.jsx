@@ -72,9 +72,7 @@ export function ChatModeMenu({
         >
           <Icon name="action-simulation.svg" />
           <span className="chat-assistance-copy">
-            <span>
-              {generating ? "AI 시뮬레이션 생성 중…" : "AI 시뮬레이션"}
-            </span>
+            <span>{generating ? "시뮬레이션 확인 중…" : "AI 시뮬레이션"}</span>
             <small>두 AI가 대화하고 궁합을 분석해요</small>
           </span>
         </button>
