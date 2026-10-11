@@ -206,6 +206,19 @@ export function applyRoomMessageEvent(room, event) {
   };
 }
 
+export function mergeRefreshedChatRoom(room, localRoom) {
+  if (!localRoom || localRoom.activityTimestamp <= room.activityTimestamp)
+    return room;
+  return {
+    ...room,
+    ...localRoom,
+    memberId: room.memberId,
+    name: room.name,
+    image: room.image,
+    syncedActivityTimestamp: room.syncedActivityTimestamp,
+  };
+}
+
 export function sortChatRooms(rooms) {
   return [...rooms].sort(
     (left, right) =>

@@ -2,7 +2,13 @@ import { useEffect, useRef } from "react";
 
 const UNAVAILABLE_MESSAGE = "아직 준비되지 않은 기능이에요.";
 
-export function ChatDetailMenu({ canBlock, blocking, onBlock, toast }) {
+export function ChatDetailMenu({
+  canBlock,
+  canEndWithAi,
+  blocking,
+  onBlock,
+  toast,
+}) {
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -53,8 +59,9 @@ export function ChatDetailMenu({ canBlock, blocking, onBlock, toast }) {
         </button>
         <button
           type="button"
-          className="chat-detail-menu-item chat-detail-unavailable"
+          className={`chat-detail-menu-item chat-detail-unavailable${!canEndWithAi ? " chat-detail-menu-disabled" : ""}`}
           aria-disabled="true"
+          disabled={!canEndWithAi}
           onClick={() => select(unavailable)}
         >
           <span>AI로 대화 종료</span>

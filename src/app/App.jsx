@@ -96,10 +96,11 @@ function AppRouter() {
     setSearch(destination.search);
     window.scrollTo(0, 0);
   }, []);
-  const { startSimulation, simulationStartingFor } = useSimulationLaunch({
-    navigate: (to) => navigate(to),
-    toast: (message) => toast(message),
-  });
+  const { startSimulation, cancelSimulation, simulationStartingFor } =
+    useSimulationLaunch({
+      navigate: (to) => navigate(to),
+      toast: (message) => toast(message),
+    });
   const loginWithLocalTestAccount = useLocalTestLogin({
     navigate: (to) => navigate(to),
   });
@@ -403,6 +404,7 @@ function AppRouter() {
         navigate={navigate}
         toast={toast}
         onStartSimulation={startSimulation}
+        onCancelSimulation={cancelSimulation}
         simulationStartingFor={simulationStartingFor}
       />
     );
