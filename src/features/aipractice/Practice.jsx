@@ -1,8 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { BrandHeader, ScreenHeader } from "../../shared/ui/components.jsx";
 import { MessageBubble } from "../chat/Chat.jsx";
 import { ChatModeMenu } from "../chat/ChatModeMenu.jsx";
+import {
+  isPracticeAccessUnavailable,
+  PRACTICE_UNAVAILABLE_MESSAGE,
+} from "./access.js";
 import * as aiPracticeApi from "./api.js";
 import { connectAiPracticeSocket } from "./socket.js";
 
@@ -70,7 +74,9 @@ export function Practice({
   const [sendError, setSendError] = useState("");
   const [showEndDialog, setShowEndDialog] = useState(false);
   const [ending, setEnding] = useState(false);
+  const [accessUnavailable, setAccessUnavailable] = useState(false);
   const id = Number(targetMemberId);
+  const backPath = chatRoomId ? `/chats/${chatRoomId}` : "/home";
   const count = (usage?.used || 0) + (usage?.reserved || 0);
   const dailyLimit = usage?.dailyLimit || 30;
   const sessionLoadKey = `${id}:${loadAttempt}`;
@@ -81,10 +87,27 @@ export function Practice({
   const chatsRef = useRef(chats);
   const refreshRef = useRef(() => Promise.resolve());
   const requestRef = useRef(null);
+  const accessUnavailableRef = useRef(false);
   const messagesEndRef = useRef(null);
   const composerInputRef = useRef(null);
   const focusAfterSendRef = useRef(false);
   chatsRef.current = chats;
+
+  const markAccessUnavailable = useCallback(() => {
+    accessUnavailableRef.current = true;
+    requestRef.current = null;
+    focusAfterSendRef.current = false;
+    setSession(null);
+    setChats([]);
+    setInput("");
+    setLoadError(PRACTICE_UNAVAILABLE_MESSAGE);
+    setSendError("");
+    setShowEndDialog(false);
+    setSending(false);
+    setRetryingChatId(null);
+    setEnding(false);
+    setAccessUnavailable(true);
+  }, []);
 
   useEffect(() => {
     const [memberIdValue] = sessionLoadKey.split(":");
@@ -94,6 +117,8 @@ export function Practice({
     setLoadError("");
     setInput("");
     setSendError("");
+    setAccessUnavailable(false);
+    accessUnavailableRef.current = false;
     focusAfterSendRef.current = false;
     requestRef.current = null;
     setSession(null);
@@ -118,7 +143,9 @@ export function Practice({
       setUsage(todayUsage);
     })()
       .catch((error) => {
-        if (active) setLoadError(practiceErrorMessage(error));
+        if (!active) return;
+        if (isPracticeAccessUnavailable(error)) markAccessUnavailable();
+        else setLoadError(practiceErrorMessage(error));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -126,12 +153,13 @@ export function Practice({
     return () => {
       active = false;
     };
-  }, [sessionLoadKey]);
+  }, [markAccessUnavailable, sessionLoadKey]);
 
   useEffect(() => {
     if (!session?.id) return undefined;
     let active = true;
     async function refresh() {
+      if (accessUnavailableRef.current) return;
       try {
         const currentChats = chatsRef.current;
         const pendingChat = currentChats.find(
@@ -147,18 +175,21 @@ export function Practice({
           cursor,
           size: 100,
         });
-        if (!active) return;
+        if (!active || accessUnavailableRef.current) return;
         setChats((current) => mergePracticeChats(current, page?.chats || []));
         const todayUsage = await aiPracticeApi.aiPracticeUsage();
-        if (active) setUsage(todayUsage);
-      } catch {
+        if (active && !accessUnavailableRef.current) setUsage(todayUsage);
+      } catch (error) {
+        if (active && isPracticeAccessUnavailable(error))
+          markAccessUnavailable();
         // REST history remains the recovery path if a live update was missed.
       }
     }
     refreshRef.current = refresh;
     const disconnect = connectAiPracticeSocket({
       onMessage(event) {
-        if (event.sessionId !== session.id) return;
+        if (accessUnavailableRef.current || event.sessionId !== session.id)
+          return;
         setChats((current) =>
           current.map((chat) =>
             chat.id === event.chatId
@@ -183,7 +214,7 @@ export function Practice({
       disconnect();
       refreshRef.current = () => Promise.resolve();
     };
-  }, [session?.id]);
+  }, [markAccessUnavailable, session?.id]);
 
   useEffect(() => {
     if (!session?.id || !hasGenerating) return undefined;
@@ -204,6 +235,7 @@ export function Practice({
     const text = input.trim();
     if (!text) return;
     if (
+      accessUnavailable ||
       sending ||
       hasGenerating ||
       !session ||
@@ -222,6 +254,7 @@ export function Practice({
     setSendError("");
     try {
       const accepted = await aiPracticeApi.aiPracticeSend(session.id, request);
+      if (accessUnavailableRef.current) return;
       focusAfterSendRef.current = true;
       requestRef.current = null;
       setChats((current) =>
@@ -245,6 +278,10 @@ export function Practice({
         .catch(() => null);
       if (todayUsage) setUsage(todayUsage);
     } catch (error) {
+      if (isPracticeAccessUnavailable(error)) {
+        markAccessUnavailable();
+        return;
+      }
       setSendError(practiceErrorMessage(error));
       void refreshRef.current();
       if (error?.code === "DAILY_LIMIT_EXCEEDED") {
@@ -259,11 +296,12 @@ export function Practice({
   }
 
   async function retry(chat) {
-    if (!session || retryingChatId != null) return;
+    if (accessUnavailable || !session || retryingChatId != null) return;
     setRetryingChatId(chat.id);
     setSendError("");
     try {
       const accepted = await aiPracticeApi.aiPracticeRetry(session.id, chat.id);
+      if (accessUnavailableRef.current) return;
       setChats((current) =>
         current.map((item) =>
           item.id === chat.id
@@ -279,6 +317,10 @@ export function Practice({
       );
       setUsage(await aiPracticeApi.aiPracticeUsage());
     } catch (error) {
+      if (isPracticeAccessUnavailable(error)) {
+        markAccessUnavailable();
+        return;
+      }
       setSendError(practiceErrorMessage(error));
       void refreshRef.current();
     } finally {
@@ -287,13 +329,19 @@ export function Practice({
   }
 
   async function endSession() {
-    if (!session || ending) return;
+    if (accessUnavailable || !session || ending) return;
     setEnding(true);
     setSendError("");
     try {
-      setSession(await aiPracticeApi.aiPracticeEnd(session.id));
+      const endedSession = await aiPracticeApi.aiPracticeEnd(session.id);
+      if (accessUnavailableRef.current) return;
+      setSession(endedSession);
       setShowEndDialog(false);
     } catch (error) {
+      if (isPracticeAccessUnavailable(error)) {
+        markAccessUnavailable();
+        return;
+      }
       setSendError(practiceErrorMessage(error));
     } finally {
       setEnding(false);
@@ -301,6 +349,7 @@ export function Practice({
   }
 
   const inputDisabled =
+    accessUnavailable ||
     loading ||
     !session ||
     session.status !== "ACTIVE" ||
@@ -314,9 +363,9 @@ export function Practice({
     composerInputRef.current?.focus({ preventScroll: true });
   }, [inputDisabled]);
   const partnerTitle = "AI 연습대화";
-  const backPath = chatRoomId ? `/chats/${chatRoomId}` : "/home";
-  const inputPlaceholder =
-    count >= dailyLimit
+  const inputPlaceholder = accessUnavailable
+    ? "이용할 수 없는 대화예요"
+    : count >= dailyLimit
       ? "오늘의 연습을 마쳤어요"
       : session?.status === "ENDED"
         ? "종료된 대화예요"
@@ -332,6 +381,7 @@ export function Practice({
           currentMode="practice"
           targetMemberId={Number.isSafeInteger(id) && id > 0 ? id : null}
           simulationStartingFor={simulationStartingFor}
+          disabled={accessUnavailable}
           onSimulation={() => onStartSimulation(id, chatRoomId)}
         />
       </BrandHeader>
@@ -341,7 +391,7 @@ export function Practice({
         onBack={() => navigate(backPath)}
         right={
           <div className="chat-header-actions">
-            {session?.status === "ACTIVE" && (
+            {session?.status === "ACTIVE" && !accessUnavailable && (
               <button
                 type="button"
                 className="more-button"
@@ -371,9 +421,17 @@ export function Practice({
             <button
               type="button"
               className="practice-inline-button"
-              onClick={() => setLoadAttempt((value) => value + 1)}
+              onClick={() =>
+                accessUnavailable
+                  ? navigate(backPath)
+                  : setLoadAttempt((value) => value + 1)
+              }
             >
-              다시 불러오기
+              {accessUnavailable
+                ? chatRoomId
+                  ? "채팅방으로 돌아가기"
+                  : "홈으로 가기"
+                : "다시 불러오기"}
             </button>
           </div>
         ) : chats.length === 0 ? (

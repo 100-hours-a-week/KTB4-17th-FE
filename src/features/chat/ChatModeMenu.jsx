@@ -8,6 +8,7 @@ export function ChatModeMenu({
   simulationStartingFor,
   onSimulation,
   onPractice,
+  disabled = false,
 }) {
   const menuRef = useRef(null);
   useEffect(() => {
@@ -29,6 +30,9 @@ export function ChatModeMenu({
       document.removeEventListener("keydown", dismissWithEscape);
     };
   }, []);
+  useEffect(() => {
+    if (disabled && menuRef.current) menuRef.current.open = false;
+  }, [disabled]);
   function selectMode(action) {
     if (menuRef.current) menuRef.current.open = false;
     void action?.();
@@ -36,8 +40,18 @@ export function ChatModeMenu({
   const generating =
     simulationStartingFor != null && simulationStartingFor === targetMemberId;
   return (
-    <details ref={menuRef} className="chat-assistance">
-      <summary aria-label="발신자 제한 모드: 시뮬레이션과 연습대화">
+    <details
+      ref={menuRef}
+      className="chat-assistance"
+      onToggle={(event) => {
+        if (disabled && event.currentTarget.open)
+          event.currentTarget.open = false;
+      }}
+    >
+      <summary
+        aria-label="발신자 제한 모드: 시뮬레이션과 연습대화"
+        aria-disabled={disabled || undefined}
+      >
         <PixelIcon name="spark" className="chat-assistance-spark" />
         <span className="chat-assistance-title">발신자 제한 모드</span>
         <PixelIcon name="chev" className="chat-assistance-caret" />
@@ -48,6 +62,7 @@ export function ChatModeMenu({
           aria-current={currentMode === "simulation" ? "page" : undefined}
           aria-busy={generating}
           disabled={
+            disabled ||
             currentMode === "simulation" ||
             !targetMemberId ||
             simulationStartingFor != null ||
@@ -66,7 +81,7 @@ export function ChatModeMenu({
         <button
           type="button"
           aria-current={currentMode === "practice" ? "page" : undefined}
-          disabled={currentMode === "practice" || !onPractice}
+          disabled={disabled || currentMode === "practice" || !onPractice}
           onClick={() => selectMode(onPractice)}
         >
           <Icon name="action-practice.svg" />

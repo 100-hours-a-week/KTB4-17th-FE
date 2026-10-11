@@ -24,8 +24,7 @@ export function applyMessagePage(entry, pages) {
           ...mapChatRoom(info),
           unread: state.room?.unread ?? 0,
           status: state.room?.status === "ENDED" ? "ENDED" : info.status,
-          image:
-            info.otherParticipant?.profileImageUrl || state.room?.image || "",
+          blockedByMe: Boolean(state.room?.blockedByMe),
         }
       : state.room;
     const otherReadCursor = Math.max(

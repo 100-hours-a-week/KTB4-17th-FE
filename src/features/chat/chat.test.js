@@ -4,6 +4,7 @@ import { createMessageId } from "../../shared/messageId.js";
 import {
   mapChatMessage,
   mergeChatMessages,
+  mergeRefreshedChatRoom,
   messagesAreGrouped,
   messageTimesAreGrouped,
 } from "./model.js";
@@ -19,6 +20,7 @@ const { setAccessToken, clearAccessToken } = await import(
   "../../shared/api/authToken.js"
 );
 const {
+  canUseAiForRoom,
   clearChatSessions,
   endRoomAfterBlock,
   getRoomSession,
@@ -71,7 +73,13 @@ function activeEntry() {
   const entry = getRoomSession(7);
   updateRoomSession(entry, {
     loaded: true,
-    room: { id: 7, status: "ACTIVE", name: "테스트" },
+    room: {
+      id: 7,
+      status: "ACTIVE",
+      memberId: 2,
+      name: "테스트",
+      image: "https://example.com/profile.jpg",
+    },
   });
   return entry;
 }
@@ -118,12 +126,74 @@ test("successful block ends the room without removing message history", () => {
   endRoomAfterBlock(entry);
 
   assert.equal(entry.snapshot.room.status, "ENDED");
+  assert.equal(entry.snapshot.room.blockedByMe, true);
+  assert.equal(entry.snapshot.room.memberId, 2);
+  assert.equal(entry.snapshot.room.name, "테스트");
+  assert.equal(entry.snapshot.room.image, "https://example.com/profile.jpg");
+  assert.equal(canUseAiForRoom(entry.snapshot.room), false);
   assert.equal(entry.snapshot.attachment, null);
   assert.equal(entry.snapshot.draft, "작성 중인 메시지");
   assert.deepEqual(
     entry.snapshot.messages.map((item) => item.id),
     [1, 2],
   );
+});
+
+test("masked room metadata clears cached profile identity and image", () => {
+  const entry = activeEntry();
+  const maskedPage = page(81, 100);
+  maskedPage.chatRoom = {
+    ...maskedPage.chatRoom,
+    status: "ENDED",
+    otherParticipant: {
+      memberId: null,
+      nickname: "알 수 없음",
+      profileImageUrl: null,
+    },
+  };
+
+  applyMessagePage(entry, [maskedPage]);
+
+  assert.equal(entry.snapshot.room.memberId, null);
+  assert.equal(entry.snapshot.room.name, "알 수 없음");
+  assert.equal(entry.snapshot.room.image, "");
+  assert.equal(canUseAiForRoom(entry.snapshot.room), false);
+});
+
+test("AI modes are available only for active unblocked room members", () => {
+  const room = { memberId: 2, status: "ACTIVE", blockedByMe: false };
+  assert.equal(canUseAiForRoom(room), true);
+  assert.equal(canUseAiForRoom(room, true), false);
+  assert.equal(canUseAiForRoom({ ...room, status: "ENDED" }), false);
+  assert.equal(canUseAiForRoom({ ...room, blockedByMe: true }), false);
+  assert.equal(canUseAiForRoom({ ...room, memberId: null }), false);
+});
+
+test("server participant masking wins over a newer local room preview", () => {
+  const refreshed = {
+    id: 7,
+    memberId: null,
+    name: "알 수 없음",
+    image: "",
+    activityTimestamp: 100,
+    syncedActivityTimestamp: 100,
+  };
+  const local = {
+    ...refreshed,
+    memberId: 2,
+    name: "이전 이름",
+    image: "https://example.com/old.jpg",
+    last: "새 메시지",
+    activityTimestamp: 200,
+  };
+
+  assert.deepEqual(mergeRefreshedChatRoom(refreshed, local), {
+    ...local,
+    memberId: null,
+    name: "알 수 없음",
+    image: "",
+    syncedActivityTimestamp: 100,
+  });
 });
 
 function apiFixture() {
@@ -789,9 +859,8 @@ test("message metadata permits entry without a room-list lookup", () => {
 
 test("a late active-room response cannot reopen an ended conversation", () => {
   const entry = activeEntry();
-  updateRoomSession(entry, {
-    room: { ...entry.snapshot.room, status: "ENDED" },
-  });
+  endRoomAfterBlock(entry);
   applyMessagePage(entry, [page(81, 100)]);
   assert.equal(entry.snapshot.room.status, "ENDED");
+  assert.equal(entry.snapshot.room.blockedByMe, true);
 });

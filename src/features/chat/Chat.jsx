@@ -6,6 +6,7 @@ import {
   applyRoomMessageEvent,
   chatListErrorMessage,
   mapChatRoom,
+  mergeRefreshedChatRoom,
   parseChatDate,
   sortChatRooms,
 } from "./model.js";
@@ -80,17 +81,7 @@ export function ChatList({ navigate }) {
         );
         const merged = refreshedRooms.map((room) => {
           const localRoom = currentById.get(String(room.id));
-          if (
-            localRoom &&
-            localRoom.activityTimestamp > room.activityTimestamp
-          ) {
-            return {
-              ...room,
-              ...localRoom,
-              syncedActivityTimestamp: room.syncedActivityTimestamp,
-            };
-          }
-          return room;
+          return mergeRefreshedChatRoom(room, localRoom);
         });
         if (silent) {
           const refreshedIds = new Set(

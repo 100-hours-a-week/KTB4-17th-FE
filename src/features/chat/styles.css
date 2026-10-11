@@ -1014,6 +1014,11 @@
   outline: 2px solid var(--purple);
 }
 
+.chat-assistance summary[aria-disabled="true"] {
+  cursor: default;
+  opacity: 0.55;
+}
+
 .chat-assistance-menu {
   position: absolute;
   z-index: 10;

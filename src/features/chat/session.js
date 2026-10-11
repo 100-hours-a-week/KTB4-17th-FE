@@ -106,6 +106,19 @@ export function endRoomAfterBlock(entry) {
   updateRoomSession(entry, (current) => ({
     ...current,
     attachment: null,
-    room: current.room ? { ...current.room, status: "ENDED" } : null,
+    room: current.room
+      ? { ...current.room, status: "ENDED", blockedByMe: true }
+      : null,
   }));
+}
+
+export function canUseAiForRoom(room, pending = false) {
+  const memberId = Number(room?.memberId);
+  return (
+    !pending &&
+    room?.status === "ACTIVE" &&
+    !room?.blockedByMe &&
+    Number.isSafeInteger(memberId) &&
+    memberId > 0
+  );
 }

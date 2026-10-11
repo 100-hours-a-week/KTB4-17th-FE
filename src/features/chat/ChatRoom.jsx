@@ -29,6 +29,7 @@ import {
 } from "./model.js";
 import { enqueueMessages, retryMessage } from "./outbox.js";
 import {
+  canUseAiForRoom,
   endRoomAfterBlock,
   isSessionActive,
   releasePreview,
@@ -223,6 +224,7 @@ function ChatRoomContent({
   navigate,
   toast,
   onStartSimulation,
+  onCancelSimulation,
   simulationStartingFor,
 }) {
   const room = useChatRoom(roomId);
@@ -254,7 +256,10 @@ function ChatRoomContent({
   const targetMemberId = state.room?.memberId;
   const parsedTargetMemberId = Number(targetMemberId);
   const canBlockMember =
-    Number.isSafeInteger(parsedTargetMemberId) && parsedTargetMemberId > 0;
+    !state.room?.blockedByMe &&
+    Number.isSafeInteger(parsedTargetMemberId) &&
+    parsedTargetMemberId > 0;
+  const aiDisabled = !canUseAiForRoom(state.room, blocking);
   const closeViewer = useCallback(() => setViewingImage(null), []);
   const openViewer = useCallback((message, opener) => {
     viewerOpenerRef.current = opener;
@@ -358,6 +363,7 @@ function ChatRoomContent({
       imageSelectionVersion.current += 1;
       imagePreparationPending.current = false;
       setPreparingImage(false);
+      onCancelSimulation?.(parsedTargetMemberId);
       endRoomAfterBlock(entry);
       setBlockDialogOpen(false);
       toast("회원을 차단했어요.");
@@ -405,6 +411,7 @@ function ChatRoomContent({
           <ChatModeMenu
             targetMemberId={targetMemberId}
             simulationStartingFor={simulationStartingFor}
+            disabled={aiDisabled}
             onSimulation={() => onStartSimulation?.(targetMemberId, roomId)}
             onPractice={
               targetMemberId
@@ -450,6 +457,7 @@ function ChatRoomContent({
             <div className="chat-header-actions">
               <ChatDetailMenu
                 canBlock={canBlockMember}
+                canEndWithAi={state.room?.status === "ACTIVE"}
                 blocking={blocking}
                 onBlock={() => setBlockDialogOpen(true)}
                 toast={toast}
