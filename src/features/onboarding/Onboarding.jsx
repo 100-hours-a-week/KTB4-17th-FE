@@ -31,6 +31,7 @@ import { profilePayload } from "../profile/serialize.js";
 import * as userApi from "../user/api.js";
 import { isValidBirthDate, normalizeBirthDate } from "../user/birthDate.js";
 import { getRegistrationAgeRestriction } from "../user/registrationAge.js";
+import { KakaoConversationStep } from "./KakaoConversationStep.jsx";
 
 const ONBOARDING_STEPS = [
   "identity",
@@ -39,6 +40,7 @@ const ONBOARDING_STEPS = [
   "lifestyle",
   "questions",
   "persona-summary",
+  "kakao",
   "photo-intro",
   "photo",
 ];
@@ -49,6 +51,7 @@ const STEP_LABELS = {
   lifestyle: "라이프스타일",
   questions: "가치관 문답",
   "persona-summary": "가치관 요약",
+  kakao: "카카오톡 대화",
   "photo-intro": "사진 준비",
   photo: "사진",
 };
@@ -64,6 +67,7 @@ const chatTime = () =>
 const PERSONA_FLOW_STEPS = new Set([
   "questions",
   "persona-summary",
+  "kakao",
   "photo-intro",
   "photo",
 ]);
@@ -872,7 +876,7 @@ export function Onboarding({ navigate, toast }) {
     setError("");
     try {
       await personaApi.personaConfirm(personaId);
-      advance("photo-intro");
+      advance("kakao");
     } catch (requestError) {
       setError(
         apiErrorMessage(
@@ -1107,7 +1111,16 @@ export function Onboarding({ navigate, toast }) {
       <p className="onboarding-eyebrow">
         ✦ STEP {pad2(stepIndex + 1)} <em>· {STEP_LABELS[step]}</em>
       </p>
-      <div className="onboarding-body" key={step}>
+      <div
+        className={`onboarding-body${step === "kakao" ? " kakao-step-container" : ""}`}
+        key={step}
+      >
+        {step === "kakao" && (
+          <KakaoConversationStep
+            onContinue={() => advance("photo-intro")}
+            toast={toast}
+          />
+        )}
         {step === "terms" && (
           <>
             <h1>이용약관에 동의해주세요</h1>
@@ -1700,7 +1713,7 @@ export function Onboarding({ navigate, toast }) {
           </p>
         )}
       </div>
-      <div className="onboarding-action">
+      <div className="onboarding-action" hidden={step === "kakao"}>
         {step === "identity" && (
           <PixelButton
             onClick={identityAuthExpired ? beginKakaoLogin : submitIdentity}
