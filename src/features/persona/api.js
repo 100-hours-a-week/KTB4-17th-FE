@@ -24,3 +24,23 @@ export const personaBuild = (sessionId) =>
 
 export const personaConfirm = (personaId) =>
   apiRequest(`/api/v1/persona/${personaId}/confirm`, { method: "POST" });
+
+export const kakaoInspect = (file, { signal } = {}) => {
+  const body = new FormData();
+  body.append("file", file);
+  return apiRequest("/api/v1/persona/kakao/inspect", {
+    method: "POST",
+    body,
+    signal,
+  });
+};
+
+export const kakaoExtract = (file, speakerName) => {
+  const body = new FormData();
+  body.append("file", file);
+  body.append("speakerName", speakerName);
+  return apiRequest("/api/v1/persona/kakao/extract", {
+    method: "POST",
+    body,
+  });
+};
