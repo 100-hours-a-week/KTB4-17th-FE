@@ -41,6 +41,24 @@ export const API_ERROR_MESSAGES = Object.freeze({
   AI_SERVER_RESPONSE_INVALID:
     "AI 응답을 정상적으로 받지 못했어요. 잠시 후 다시 시도해주세요.",
 
+  KAKAO_FILE_TOO_LARGE: "대화 파일은 최대 5MB까지 올릴 수 있어요.",
+  KAKAO_FILE_TYPE_NOT_ALLOWED:
+    "카카오톡에서 내보낸 TXT 또는 CSV 파일을 선택해주세요.",
+  INVALID_KAKAO_EXPORT:
+    "카카오톡 대화 형식을 확인하지 못했어요. 내보낸 원본 파일을 다시 선택해주세요.",
+  SPEAKER_SELECTION_REQUIRED: "대화에 표시된 본인의 이름을 선택해주세요.",
+  SPEAKER_NOT_FOUND:
+    "선택한 이름을 파일에서 찾지 못했어요. 파일을 제거하고 다시 선택해주세요.",
+  SPEAKER_NAME_NOT_SUPPORTED:
+    "이 이름으로는 분석을 요청할 수 없어요. 다른 대화 파일을 선택하거나 건너뛰어주세요.",
+  PERSONA_CONFIRMATION_REQUIRED: "가치관을 확정한 뒤 대화를 추가해주세요.",
+  AI_EXTRACTION_IN_PROGRESS:
+    "이미 대화를 분석하고 있어요. 다음 단계로 진행해도 돼요.",
+  AI_EXTRACTION_REQUEST_REJECTED:
+    "이 대화로는 분석을 요청할 수 없어요. 다른 파일을 선택하거나 건너뛰어주세요.",
+  AI_SUBMISSION_OUTCOME_UNKNOWN:
+    "전달 결과를 확인하지 못했어요. 이미 접수됐을 수 있으니 다시 보내지 않고 다음 단계로 진행해도 돼요.",
+
   FRONT_PHOTO_REQUIRED: "정면 사진을 등록해주세요.",
   FILE_NOT_AVAILABLE: "사용할 수 없는 사진이에요. 사진을 다시 등록해주세요.",
   FILE_NOT_FOUND: "파일을 찾을 수 없어요. 파일을 다시 선택해주세요.",
