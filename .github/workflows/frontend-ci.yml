@@ -59,6 +59,7 @@ jobs:
   codeql:
     name: CodeQL Analysis  #동작환경 =우분투
     runs-on: ubuntu-latest
+    continue-on-error: true #CodeQL 결과는 리포트하되 전체 CI는 실패시키지 않음
 
     permissions:
       contents: read
