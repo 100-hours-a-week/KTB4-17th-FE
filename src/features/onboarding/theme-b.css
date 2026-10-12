@@ -313,8 +313,10 @@
 
 .onboarding-page .onboarding-action .pixel-button {
   flex: 1;
+  min-width: 0;
   min-height: 54px;
   font-size: 16px;
+  white-space: nowrap;
 }
 
 .onboarding-page .onboarding-action .pixel-button.pink::before {
@@ -326,6 +328,7 @@
 
 .onboarding-page .onboarding-action .pixel-button.onboarding-ghost {
   flex: 0 0 auto;
+  width: auto; /* 공용 버튼의 width: 100%를 풀어 글자 길이만큼만 차지 */
   padding: 0 20px;
   color: var(--ink);
   filter: none;
