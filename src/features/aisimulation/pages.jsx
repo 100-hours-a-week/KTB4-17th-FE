@@ -8,6 +8,7 @@ import {
 import { AiAvatar, PixelIcon } from "../../shared/ui/pixel.jsx";
 import { MessageBubble } from "../chat/Chat.jsx";
 import { ChatModeMenu } from "../chat/ChatModeMenu.jsx";
+import { useSimulationAttempt } from "./useSimulationAttempt.js";
 import { useSimulationResult } from "./useSimulationResult.js";
 
 export function Simulation({ simulationId, chatRoomId, navigate }) {
@@ -19,6 +20,7 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
     simulationId,
     chatRoomId,
   );
+  const attempt = useSimulationAttempt({ simulationId, chatRoomId, navigate });
 
   const partner = simulation?.partner || {};
   const me = simulation?.me || {};
@@ -51,7 +53,12 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
       <section className="ai-conversation-view" aria-label="AI 시뮬레이션">
         {conversationHeader}
         <main className="ai-conversation-state">
-          <SimulationState status={status} error={error} refresh={refresh} />
+          <SimulationState
+            status={status}
+            error={error}
+            refresh={refresh}
+            attempt={attempt}
+          />
         </main>
       </section>
     );
@@ -137,6 +144,7 @@ export function Report({ simulationId, chatRoomId, navigate }) {
     simulationId,
     chatRoomId,
   );
+  const attempt = useSimulationAttempt({ simulationId, chatRoomId, navigate });
   const report = simulation?.report;
   const rawScore = Number(report?.overall?.score);
   const score =
@@ -158,7 +166,12 @@ export function Report({ simulationId, chatRoomId, navigate }) {
           onBack={() => navigate(simulationPath)}
         />
         <main className="main-scroll ai-screen-state-main">
-          <SimulationState status={status} error={error} refresh={refresh} />
+          <SimulationState
+            status={status}
+            error={error}
+            refresh={refresh}
+            attempt={attempt}
+          />
         </main>
       </>
     );
@@ -248,7 +261,7 @@ export function Report({ simulationId, chatRoomId, navigate }) {
   );
 }
 
-function SimulationState({ status, error, refresh }) {
+function SimulationState({ status, error, refresh, attempt }) {
   if (error) {
     const unavailable = [401, 403, 404].includes(error.status);
     return (
@@ -282,8 +295,32 @@ function SimulationState({ status, error, refresh }) {
         }
         description={
           status === "FAILED"
-            ? "이 시뮬레이션의 생성이 실패했어요. 현재 재생성은 지원하지 않아요."
+            ? attempt.submissionRejected
+              ? "요청이 몰려 생성을 시작하지 못했어요. 잠시 후 다시 시도해주세요."
+              : "다시 생성해서 두 사람의 대화를 확인해보세요."
             : "이 시뮬레이션은 완료 결과를 제공할 수 없어요."
+        }
+        action={
+          status === "FAILED" ? (
+            <div className="simulation-retry">
+              {attempt.attemptError && (
+                <p className="simulation-retry-error" role="alert">
+                  {apiErrorMessage(
+                    attempt.attemptError,
+                    "요청 결과를 확인하지 못했어요. 다시 시도해주세요.",
+                  )}
+                </p>
+              )}
+              {![401, 403, 404].includes(attempt.attemptError?.status) && (
+                <PixelButton
+                  onClick={attempt.retry}
+                  disabled={attempt.attempting}
+                >
+                  {attempt.attempting ? "요청 중…" : "다시 생성하기"}
+                </PixelButton>
+              )}
+            </div>
+          ) : undefined
         }
       />
     );

@@ -215,5 +215,6 @@ export function createApiError(response, result) {
   error.code = code;
   error.status = response.status;
   error.fields = result?.errors || [];
+  error.details = result && typeof result === "object" ? result : null;
   return error;
 }

@@ -1,5 +1,11 @@
 import { apiRequest } from "../../shared/api/client.js";
 
+export const attemptAiSimulation = (simulationId, { signal } = {}) =>
+  apiRequest(`/api/v1/ai-simulations/${simulationId}/attempts`, {
+    method: "POST",
+    signal,
+  });
+
 export const createAiSimulation = (targetMemberId, { signal } = {}) =>
   apiRequest("/api/v1/ai-simulations", {
     method: "POST",
