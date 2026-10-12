@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createAiSimulation } from "./api.js";
+import { attemptAiSimulation, createAiSimulation } from "./api.js";
 import { createSimulationLaunchCoordinator } from "./launchCoordinator.js";
+import { requestSimulationAttempt } from "./requestSimulationAttempt.js";
 
 test("simulation creation forwards its abort signal", async () => {
   const originalFetch = globalThis.fetch;
@@ -61,6 +62,113 @@ import {
 } from "./model.js";
 import { createSimulationTracker, MAX_POLLING_MS } from "./polling.js";
 import { requestSimulation } from "./requestSimulation.js";
+
+test("a failed simulation attempt uses the source ID without a target body", async () => {
+  const previous = globalThis.fetch;
+  const controller = new AbortController();
+  let url;
+  let options;
+  globalThis.fetch = async (path, request) => {
+    url = path;
+    options = request;
+    return Response.json(
+      { data: { simulationId: 33, status: "IN_PROGRESS" } },
+      { status: 202 },
+    );
+  };
+  try {
+    const result = await requestSimulationAttempt(32, {
+      attempt: attemptAiSimulation,
+      signal: controller.signal,
+    });
+    assert.deepEqual(result, {
+      handle: { simulationId: 33, status: "IN_PROGRESS" },
+      submissionRejected: false,
+    });
+    assert.match(url, /\/api\/v1\/ai-simulations\/32\/attempts$/);
+    assert.equal(options.method, "POST");
+    assert.equal(options.body, undefined);
+    assert.equal(options.signal, controller.signal);
+  } finally {
+    globalThis.fetch = previous;
+  }
+});
+
+test("repeated attempt responses can resolve to a newer completed or failed session", async () => {
+  for (const status of ["IN_PROGRESS", "COMPLETED", "FAILED"]) {
+    const result = await requestSimulationAttempt(32, {
+      attempt: async () => ({ simulationId: 33, status }),
+    });
+    assert.equal(result.handle.simulationId, 33);
+    assert.equal(result.handle.status, status);
+  }
+});
+
+test("capacity rejection preserves the new failed session ID for the next attempt", async () => {
+  const previous = globalThis.fetch;
+  globalThis.fetch = async () =>
+    Response.json(
+      {
+        errorCode: "SIMULATION_CAPACITY_EXCEEDED",
+        simulationId: 33,
+        status: "FAILED",
+      },
+      { status: 503 },
+    );
+  try {
+    const result = await requestSimulationAttempt(32, {
+      attempt: attemptAiSimulation,
+    });
+    assert.equal(result.handle.simulationId, 33);
+    assert.equal(result.handle.status, "FAILED");
+    assert.equal(result.submissionRejected, true);
+  } finally {
+    globalThis.fetch = previous;
+  }
+});
+
+test("attempts reject invalid IDs and malformed capacity responses", async () => {
+  for (const value of [
+    { simulationId: 31, status: "IN_PROGRESS" },
+    { simulationId: 33, status: "UNKNOWN" },
+    { simulationId: null, status: "FAILED" },
+  ]) {
+    await assert.rejects(
+      requestSimulationAttempt(32, { attempt: async () => value }),
+      { code: "SIMULATION_RESPONSE_INVALID" },
+    );
+  }
+  for (const simulationId of [31, 32, null]) {
+    const error = Object.assign(new Error("capacity"), {
+      code: "SIMULATION_CAPACITY_EXCEEDED",
+      status: 503,
+      details: { simulationId, status: "FAILED" },
+    });
+    await assert.rejects(
+      requestSimulationAttempt(32, {
+        attempt: async () => {
+          throw error;
+        },
+      }),
+      { code: "SIMULATION_RESPONSE_INVALID" },
+    );
+  }
+});
+
+test("an uncertain attempt is not automatically submitted again", async () => {
+  let calls = 0;
+  const error = new TypeError("Failed to fetch");
+  await assert.rejects(
+    requestSimulationAttempt(32, {
+      attempt: async () => {
+        calls += 1;
+        throw error;
+      },
+    }),
+    (actual) => actual === error,
+  );
+  assert.equal(calls, 1);
+});
 
 function deferred() {
   let resolve;

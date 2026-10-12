@@ -52,6 +52,19 @@ test("missing error bodies still translate authentication and HTTP failures", ()
   assert.match(apiErrorMessage("HTTP_429"), /요청이 너무 많아요/);
 });
 
+test("structured submission failures retain the new session without displaying raw details", () => {
+  const details = {
+    errorCode: "SIMULATION_CAPACITY_EXCEEDED",
+    simulationId: 33,
+    status: "FAILED",
+    message: "internal detail",
+  };
+  const error = createApiError({ status: 503 }, details);
+  assert.deepEqual(error.details, details);
+  assert.equal(error.status, 503);
+  assert.equal(error.message.includes("internal detail"), false);
+});
+
 test("unknown codes and untrusted messages never appear in user messages", () => {
   const fallback = "목록을 다시 불러와주세요.";
   for (const code of [
