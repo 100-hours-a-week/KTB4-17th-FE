@@ -5,7 +5,8 @@
 
 .onboarding-page {
   position: relative;
-  height: 100dvh;
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   background: var(--canvas);
@@ -305,18 +306,21 @@
 /* ---------- 하단 버튼 ---------- */
 .onboarding-page .onboarding-action {
   flex: none;
-  display: flex;
-  gap: 10px;
-  padding: 12px 20px max(34px, env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  align-items: start;
+  gap: 8px;
+  padding: 12px 20px max(16px, env(safe-area-inset-bottom));
   background: var(--canvas);
 }
 
 .onboarding-page .onboarding-action .pixel-button {
-  flex: 1;
   min-width: 0;
-  min-height: 54px;
-  font-size: 16px;
-  white-space: nowrap;
+  min-height: 48px;
+  padding: 10px 8px;
+  font-size: 14px;
+  line-height: 22px;
+  overflow-wrap: anywhere;
 }
 
 .onboarding-page .onboarding-action .pixel-button.pink::before {
@@ -327,9 +331,7 @@
 }
 
 .onboarding-page .onboarding-action .pixel-button.onboarding-ghost {
-  flex: 0 0 auto;
-  width: auto; /* 공용 버튼의 width: 100%를 풀어 글자 길이만큼만 차지 */
-  padding: 0 20px;
+  padding: 10px 8px;
   color: var(--ink);
   filter: none;
 }
@@ -535,7 +537,8 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding-bottom: 32px;
+  min-width: 0;
+  padding-bottom: 22px;
 }
 
 .persona-composer textarea {
@@ -580,21 +583,12 @@
   box-shadow: none;
 }
 
-.persona-composer-count,
-.persona-composer-hint {
+.persona-composer-count {
   position: absolute;
   bottom: 10px;
-  color: var(--subtle);
-}
-
-.persona-composer-count {
   left: 18px;
+  color: var(--subtle);
   font-size: 10px;
-}
-
-.persona-composer-hint {
-  right: 4px;
-  font-size: 11px;
 }
 
 /* ---------- 07 정면 사진 안내 ---------- */
