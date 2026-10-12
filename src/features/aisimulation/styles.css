@@ -6,6 +6,20 @@
   padding: 20px;
 }
 
+.simulation-retry {
+  width: 100%;
+  max-width: 230px;
+}
+
+.simulation-retry .pixel-button {
+  min-height: 48px;
+}
+
+.simulation-retry .simulation-retry-error {
+  margin-bottom: 12px;
+  color: var(--danger);
+}
+
 .simulation-body {
   position: absolute;
   inset: 192px 0 122px;

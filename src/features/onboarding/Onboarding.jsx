@@ -443,6 +443,10 @@ export function Onboarding({ navigate, toast }) {
   const [personaBusy, setPersonaBusy] = useState(false);
   const [personaLog, setPersonaLog] = useState([]);
   const personaChatRef = useRef(null);
+  const personaAnswerRef = useRef(null);
+  const personaSendRef = useRef(null);
+  const restorePersonaFocus = useRef(false);
+  const personaAnswerInFlight = useRef(false);
   const [photoItems, setPhotoItems] = useState([]);
   const [photoSaving, setPhotoSaving] = useState(false);
   const draggedPhotoId = useRef(null);
@@ -633,11 +637,26 @@ export function Onboarding({ navigate, toast }) {
     if (chat && personaLog.length) chat.scrollTop = chat.scrollHeight;
   }, [personaLog]);
 
+  useEffect(() => {
+    if (personaBusy) return;
+    if (restorePersonaFocus.current && step === "questions") {
+      const active = document.activeElement;
+      if (
+        active === document.body ||
+        active === personaAnswerRef.current ||
+        active === personaSendRef.current
+      )
+        personaAnswerRef.current?.focus({ preventScroll: true });
+    }
+    restorePersonaFocus.current = false;
+  }, [personaBusy, step]);
+
   function handlePersonaKeyDown(event) {
     if (
       event.key !== "Enter" ||
       event.shiftKey ||
-      event.nativeEvent.isComposing
+      event.nativeEvent.isComposing ||
+      event.nativeEvent.keyCode === 229
     )
       return;
     event.preventDefault();
@@ -813,7 +832,16 @@ export function Onboarding({ navigate, toast }) {
     const trimmedAnswer = answer.trim();
     if (trimmedAnswer.length < 2)
       return setError("답변은 두 글자 이상 입력해주세요.");
-    if (!personaConversation?.sessionId || personaBusy) return;
+    if (
+      !personaConversation?.sessionId ||
+      personaBusy ||
+      personaAnswerInFlight.current
+    )
+      return;
+
+    personaAnswerInFlight.current = true;
+    restorePersonaFocus.current =
+      document.activeElement === personaAnswerRef.current;
 
     const messageId = `me-${personaConversation.turnIndex}-${Date.now()}`;
     setPersonaBusy(true);
@@ -846,6 +874,7 @@ export function Onboarding({ navigate, toast }) {
         ),
       );
     } finally {
+      personaAnswerInFlight.current = false;
       setPersonaBusy(false);
     }
   }
@@ -1759,6 +1788,7 @@ export function Onboarding({ navigate, toast }) {
         {step === "questions" && (
           <div className="persona-composer">
             <textarea
+              ref={personaAnswerRef}
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
               onKeyDown={handlePersonaKeyDown}
@@ -1768,14 +1798,19 @@ export function Onboarding({ navigate, toast }) {
               maxLength={PERSONA_ANSWER_LIMIT}
               rows={1}
               aria-label="나의 답변"
-              disabled={
-                !personaConversation || personaConversation.done || personaBusy
-              }
+              disabled={!personaConversation || personaConversation.done}
+              readOnly={personaBusy}
+              aria-busy={personaBusy}
             />
             <button
+              ref={personaSendRef}
               type="button"
               className="persona-send"
               onClick={submitPersonaAnswer}
+              onPointerDown={(event) => {
+                if (document.activeElement === personaAnswerRef.current)
+                  event.preventDefault();
+              }}
               aria-label="답변 보내기"
               disabled={
                 !personaConversation ||
@@ -1788,9 +1823,6 @@ export function Onboarding({ navigate, toast }) {
             </button>
             <small className="persona-composer-count">
               {answer.length}/{PERSONA_ANSWER_LIMIT}
-            </small>
-            <small className="persona-composer-hint">
-              Enter 보내기 · Shift+Enter 줄바꿈
             </small>
           </div>
         )}
