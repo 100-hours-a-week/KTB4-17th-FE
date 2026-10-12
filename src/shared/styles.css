@@ -188,7 +188,7 @@ button:focus-visible {
 }
 
 .app-shell {
-  min-height: 100dvh;
+  min-height: var(--app-viewport-height, 100dvh);
   display: flex;
   justify-content: center;
 }
@@ -196,8 +196,8 @@ button:focus-visible {
 .app-screen {
   width: 100%;
   max-width: 390px;
-  min-height: 100dvh;
-  height: auto;
+  min-height: 0;
+  height: var(--app-viewport-height, 100dvh);
   position: relative;
   overflow: hidden;
   background: var(--canvas);

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Practice } from "../features/aipractice/Practice.jsx";
 import { CompletionToast } from "../features/aisimulation/CompletionToast.jsx";
 import { SimulationTrackingContext } from "../features/aisimulation/context.jsx";
@@ -52,6 +52,7 @@ import {
   EmptyState,
   PixelButton,
 } from "../shared/ui/components.jsx";
+import { useViewportHeight } from "../shared/useViewportHeight.js";
 import { onboardingStepFromStatus } from "../shared/utils.js";
 
 function profileReturnPath(search) {
@@ -76,6 +77,8 @@ function profileReturnPath(search) {
 }
 
 function AppRouter() {
+  const viewportRef = useRef(null);
+  useViewportHeight(viewportRef);
   const { data, setData } = useAppState();
   const [path, setPath] = useState(window.location.pathname);
   const [search, setSearch] = useState(window.location.search);
@@ -500,8 +503,8 @@ function AppRouter() {
 
   return (
     <SimulationTrackingContext.Provider value={tracking}>
-      <div className="app-shell">
-        <div className="app-screen">
+      <div className="app-shell" ref={viewportRef}>
+        <div className="app-screen" data-has-nav={showNav}>
           {page}
           {showNav && (
             <BottomNav
