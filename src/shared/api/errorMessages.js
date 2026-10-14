@@ -1,6 +1,7 @@
 // Keep backend error codes for control flow; show these messages to users.
 export const API_ERROR_MESSAGES = Object.freeze({
   INVALID_REQUEST: "입력 정보를 다시 확인해주세요.",
+  JOB_CATEGORY_REQUIRED: "직업군을 선택해주세요.",
   AUTH_REQUIRED: "로그인이 만료됐어요. 다시 로그인해주세요.",
   INTERNAL_SERVER_ERROR:
     "서버에서 요청을 처리하지 못했어요. 잠시 후 다시 시도해주세요.",

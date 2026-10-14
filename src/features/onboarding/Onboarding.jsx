@@ -22,6 +22,8 @@ import {
   religions,
   smokings,
 } from "../profile/data.js";
+import { JobCategorySelect } from "../profile/JobCategorySelect.jsx";
+import { isJobCategory } from "../profile/jobCategories.js";
 import {
   createPhotoId,
   prepareProfilePhoto,
@@ -406,10 +408,15 @@ export function profileValidation(profile, includeLifestyle = false) {
       step: "profile",
       message: "키는 130~220cm의 정수로 입력해주세요.",
     };
-  if (!profile.bodyType || !profile.educationLevel || !profile.job.trim())
+  if (!profile.bodyType || !profile.educationLevel)
     return {
       step: "profile",
-      message: "체형, 학력, 직업을 입력해주세요.",
+      message: "체형과 학력을 선택해주세요.",
+    };
+  if (!isJobCategory(profile.job))
+    return {
+      step: "profile",
+      message: "직업군을 선택해주세요.",
     };
   if (
     includeLifestyle &&
@@ -783,7 +790,7 @@ export function Onboarding({ navigate, toast }) {
       height: ["profile", "키는 130~220cm의 정수로 입력해주세요."],
       bodyType: ["profile", "체형을 다시 선택해주세요."],
       educationLevel: ["profile", "학력을 다시 선택해주세요."],
-      job: ["profile", "직업을 다시 입력해주세요."],
+      job: ["profile", "직업군을 다시 선택해주세요."],
       religion: ["lifestyle", "종교를 다시 선택해주세요."],
       drinking: ["lifestyle", "음주 정보를 다시 선택해주세요."],
       smoking: ["lifestyle", "흡연 정보를 다시 선택해주세요."],
@@ -1394,14 +1401,15 @@ export function Onboarding({ navigate, toast }) {
                 onChange={(v) => updateProfile("educationLevel", v)}
               />
             </Field>
-            <Field label="직업">
-              <input
-                value={profile.job}
-                onChange={(e) => updateProfile("job", e.target.value)}
-                placeholder="직업을 입력해주세요"
-                maxLength={50}
-              />
-            </Field>
+            <JobCategorySelect
+              value={profile.job}
+              onChange={(value) => {
+                updateProfile("job", value);
+                setError("");
+              }}
+              disabled={profileSaving}
+              error={error === "직업군을 선택해주세요." ? error : ""}
+            />
           </>
         )}
         {step === "lifestyle" && (
@@ -1735,12 +1743,16 @@ export function Onboarding({ navigate, toast }) {
             </section>
           </>
         )}
-        {error && (
-          <p role="alert" className="field-error screen-error onboarding-error">
-            <PixelIcon name="alert" />
-            {error}
-          </p>
-        )}
+        {error &&
+          !(step === "profile" && error === "직업군을 선택해주세요.") && (
+            <p
+              role="alert"
+              className="field-error screen-error onboarding-error"
+            >
+              <PixelIcon name="alert" />
+              {error}
+            </p>
+          )}
       </div>
       <div className="onboarding-action" hidden={step === "kakao"}>
         {step === "identity" && (

@@ -7,6 +7,10 @@ import {
   PersonAvatar,
   PixelButton,
 } from "../../shared/ui/components.jsx";
+import {
+  jobCategoryLabel,
+  normalizeJobCategory,
+} from "../profile/jobCategories.js";
 import * as matchingApi from "./api.js";
 
 export function mapLikeItem(item, tab) {
@@ -16,7 +20,7 @@ export function mapLikeItem(item, tab) {
     userId: user?.userId,
     nickname: user?.nickname || "닉네임 정보 없음",
     age: user?.age,
-    job: user?.job || "",
+    job: normalizeJobCategory(user?.job),
     region: user?.region || "",
     photo: user?.profileImageUrl || "",
     status: item?.status || "",
@@ -236,7 +240,12 @@ export function Likes({
                       {person.age != null && `, ${person.age}`}
                     </strong>
                     <small>
-                      {[person.job, person.region].filter(Boolean).join(" · ")}
+                      {[
+                        person.job ? jobCategoryLabel(person.job) : "",
+                        person.region,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </small>
                   </span>
                 </div>

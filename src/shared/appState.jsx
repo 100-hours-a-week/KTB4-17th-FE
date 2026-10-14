@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { initialProfile } from "../features/profile/data.js";
+import { normalizeProfileJob } from "../features/profile/jobCategories.js";
 
 const APP_STORAGE_VERSION = "3";
 const APP_STORAGE_PREFIX = "pocket-signal-v3";
@@ -56,7 +57,10 @@ export function loadInitialState() {
     );
     if (stored && typeof stored === "object") {
       if (stored.profile && typeof stored.profile === "object")
-        initial.profile = { ...initial.profile, ...stored.profile };
+        initial.profile = normalizeProfileJob({
+          ...initial.profile,
+          ...stored.profile,
+        });
       if (Array.isArray(stored.notifications))
         initial.notifications = stored.notifications;
       // Only a successful server session check can confirm registration.

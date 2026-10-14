@@ -27,6 +27,8 @@ import {
   religions,
   smokings,
 } from "./data.js";
+import { JobCategorySelect } from "./JobCategorySelect.jsx";
+import { isJobCategory, normalizeJobCategory } from "./jobCategories.js";
 import {
   createPhotoId,
   prepareProfilePhoto,
@@ -298,6 +300,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
   const [existingProfilePhoto, setExistingProfilePhoto] = useState("");
   const [isReplacingPhotos, setIsReplacingPhotos] = useState(false);
   const [photoError, setPhotoError] = useState("");
+  const [jobError, setJobError] = useState("");
   const [photoSaving, setPhotoSaving] = useState(false);
   const draggedPhotoId = useRef(null);
   const localPhotoUrls = useRef(new Set());
@@ -341,7 +344,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
               serverProfile.height == null ? "" : String(serverProfile.height),
             bodyType: serverProfile.bodyType ?? "",
             educationLevel: serverProfile.educationLevel ?? "",
-            job: serverProfile.job ?? "",
+            job: normalizeJobCategory(serverProfile.job),
             religion: serverProfile.religion ?? "",
             drinking: serverProfile.drinking ?? "",
             smoking: serverProfile.smoking ?? "",
@@ -458,6 +461,12 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
   }
 
   async function save() {
+    if (isLoadingProfile || profileLoadFailed || photoSaving) return;
+    if (!isJobCategory(profile.job)) {
+      setJobError("직업군을 선택해주세요.");
+      return;
+    }
+    setJobError("");
     if (!profile.activityRegionId) {
       toast("검색 결과에서 활동 지역을 선택해주세요.");
       return;
@@ -761,13 +770,15 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                 onChange={(v) => set("educationLevel", v)}
               />
             </Field>
-            <Field label="직업">
-              <input
-                value={profile.job}
-                onChange={(e) => set("job", e.target.value)}
-                maxLength={50}
-              />
-            </Field>
+            <JobCategorySelect
+              value={profile.job}
+              onChange={(value) => {
+                set("job", value);
+                setJobError("");
+              }}
+              disabled={photoSaving}
+              error={jobError}
+            />
             <Field label="종교">
               <ChoiceGroup
                 options={religions}
