@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { dateAge } from "../../shared/utils.js";
+import { mapRecommendationItem } from "../recommendation/mapRecommendationItem.js";
 import { isValidBirthDate, normalizeBirthDate } from "../user/birthDate.js";
+import {
+  isJobCategory,
+  jobCategories,
+  jobCategoryLabel,
+  normalizeProfileJob,
+} from "./jobCategories.js";
 import {
   createPhotoId,
   detectPhotoType,
@@ -87,7 +94,7 @@ test("a selected activity region sends its ID along with the whole profile", () 
     height: "170",
     bodyType: "AVERAGE",
     educationLevel: "BACHELOR",
-    job: "개발자",
+    job: "IT_DATA",
     religion: "NONE",
     drinking: "NEVER",
     smoking: "NON_SMOKER",
@@ -96,4 +103,84 @@ test("a selected activity region sends its ID along with the whole profile", () 
   assert.equal(result.activityRegionId, 42);
   assert.equal(result.mbti, "INFJ");
   assert.equal(result.height, 170);
+});
+
+const selectedProfile = {
+  nickname: "테스트",
+  activityRegionId: 42,
+  height: "170",
+  bodyType: "AVERAGE",
+  educationLevel: "BACHELOR",
+  job: "OTHER",
+  religion: "NONE",
+  drinking: "NEVER",
+  smoking: "NON_SMOKER",
+  mbti: "INFJ",
+};
+
+test("all 19 job codes are selectable and serialized without replacing other profile fields", () => {
+  assert.equal(jobCategories.length, 19);
+  assert.equal(new Set(jobCategories.map(([code]) => code)).size, 19);
+  const expected = { ...selectedProfile, height: 170 };
+  for (const [code, label] of jobCategories) {
+    assert.equal(isJobCategory(code), true);
+    assert.equal(jobCategoryLabel(code), label);
+    assert.deepEqual(profilePayload({ ...selectedProfile, job: code }), {
+      ...expected,
+      job: code,
+    });
+  }
+  assert.equal(jobCategoryLabel("OTHER"), "기타 직군");
+  assert.equal(isJobCategory("UNDISCLOSED"), false);
+});
+
+test("missing and legacy job values cannot be silently serialized as OTHER or null", () => {
+  for (const job of [
+    undefined,
+    null,
+    "",
+    " ",
+    "개발자",
+    "UNDISCLOSED",
+    "it_data",
+    " IT_DATA ",
+    0,
+    "0",
+    true,
+    "constructor",
+  ]) {
+    assert.equal(isJobCategory(job), false);
+    assert.throws(() => profilePayload({ ...selectedProfile, job }), {
+      code: "JOB_CATEGORY_REQUIRED",
+    });
+  }
+});
+
+test("restoring legacy job drafts clears only the job and preserves valid OTHER", () => {
+  const legacy = { ...selectedProfile, name: "홍길동", job: "개발자" };
+  assert.deepEqual(normalizeProfileJob(legacy), { ...legacy, job: "" });
+  assert.equal(legacy.job, "개발자");
+  assert.deepEqual(normalizeProfileJob(selectedProfile), selectedProfile);
+  assert.deepEqual(
+    normalizeProfileJob({ ...selectedProfile, job: "IT_DATA" }),
+    { ...selectedProfile, job: "IT_DATA" },
+  );
+});
+
+test("unknown job values never leak raw text into profile labels", () => {
+  for (const job of ["개발자", "FUTURE_CODE", "constructor", undefined, null]) {
+    assert.equal(jobCategoryLabel(job), "직업 정보 확인 필요");
+  }
+});
+
+test("recommendation mapping keeps job codes and rejects old free text", () => {
+  const item = {
+    candidate: { userId: 1, nickname: "추천상대", job: "IT_DATA", images: [] },
+  };
+  assert.equal(mapRecommendationItem(item).job, "IT_DATA");
+  assert.equal(
+    mapRecommendationItem({ candidate: { ...item.candidate, job: "개발자" } })
+      .job,
+    "",
+  );
 });
