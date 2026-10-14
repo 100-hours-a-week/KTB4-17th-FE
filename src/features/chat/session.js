@@ -91,7 +91,7 @@ export function updateRoomSession(entry, updater) {
   for (const listener of entry.listeners) listener();
 }
 
-export function rememberRoom(room) {
+export function reuserRoom(room) {
   const entry = getRoomSession(room.id);
   updateRoomSession(entry, { room });
 }
@@ -113,12 +113,12 @@ export function endRoomAfterBlock(entry) {
 }
 
 export function canUseAiForRoom(room, pending = false) {
-  const memberId = Number(room?.memberId);
+  const userId = Number(room?.userId);
   return (
     !pending &&
     room?.status === "ACTIVE" &&
     !room?.blockedByMe &&
-    Number.isSafeInteger(memberId) &&
-    memberId > 0
+    Number.isSafeInteger(userId) &&
+    userId > 0
   );
 }

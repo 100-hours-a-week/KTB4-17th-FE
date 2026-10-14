@@ -3,7 +3,7 @@ import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { PhotoSegments, ProfilePhoto } from "../../shared/ui/components.jsx";
 import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import { dateAge } from "../../shared/utils.js";
-import { getMemberProfile, getMyProfile } from "./api.js";
+import { getMyProfile, getUserProfile } from "./api.js";
 import {
   bodyTypes,
   drinkings,
@@ -19,7 +19,7 @@ function profileChoiceLabel(options, value) {
   return options.find(([option]) => option === value)?.[1] || value;
 }
 
-export function OtherProfile({ memberId, returnTo, navigate, isOwn = false }) {
+export function OtherProfile({ userId, returnTo, navigate, isOwn = false }) {
   const [profile, setProfile] = useState(null);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -34,14 +34,12 @@ export function OtherProfile({ memberId, returnTo, navigate, isOwn = false }) {
     setError("");
 
     try {
-      const result = await (isOwn
-        ? getMyProfile()
-        : getMemberProfile(memberId));
+      const result = await (isOwn ? getMyProfile() : getUserProfile(userId));
       if (requestVersion !== profileRequestVersion.current) return;
 
       setProfile({
         ...result,
-        id: isOwn ? "me" : Number(result?.memberId || memberId),
+        id: isOwn ? "me" : Number(result?.userId || userId),
         age: isOwn ? dateAge(result?.birthDate) : result?.age,
         region: isOwn ? result?.activityRegionName : result?.region,
         photos: profileImageUrls(result),
@@ -61,7 +59,7 @@ export function OtherProfile({ memberId, returnTo, navigate, isOwn = false }) {
         setLoading(false);
       }
     }
-  }, [memberId, isOwn]);
+  }, [userId, isOwn]);
 
   useEffect(() => {
     void loadProfile();

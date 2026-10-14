@@ -4,7 +4,7 @@ import { PixelIcon } from "../../shared/ui/pixel.jsx";
 
 export function ChatModeMenu({
   currentMode = "chat",
-  targetMemberId,
+  targetUserId,
   simulationStartingFor,
   onSimulation,
   onPractice,
@@ -38,7 +38,7 @@ export function ChatModeMenu({
     void action?.();
   }
   const generating =
-    simulationStartingFor != null && simulationStartingFor === targetMemberId;
+    simulationStartingFor != null && simulationStartingFor === targetUserId;
   return (
     <details
       ref={menuRef}
@@ -64,7 +64,7 @@ export function ChatModeMenu({
           disabled={
             disabled ||
             currentMode === "simulation" ||
-            !targetMemberId ||
+            !targetUserId ||
             simulationStartingFor != null ||
             !onSimulation
           }

@@ -3,7 +3,7 @@ export const PRACTICE_UNAVAILABLE_MESSAGE =
 
 export function isPracticeAccessUnavailable(error) {
   return (
-    ["SESSION_NOT_FOUND", "TARGET_MEMBER_NOT_FOUND"].includes(error?.code) ||
+    ["SESSION_NOT_FOUND", "TARGET_USER_NOT_FOUND"].includes(error?.code) ||
     error?.status === 404
   );
 }

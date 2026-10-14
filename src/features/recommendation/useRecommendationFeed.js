@@ -17,11 +17,11 @@ const emptyPage = () => ({
   hasNext: false,
 });
 
-function mapItems(result, excludedMemberIds) {
+function mapItems(result, excludedUserIds) {
   const receivedAt = Date.now();
   return (Array.isArray(result?.items) ? result.items : [])
     .map((item) => mapRecommendationItem(item, receivedAt))
-    .filter((item) => item && !excludedMemberIds?.has(item.id));
+    .filter((item) => item && !excludedUserIds?.has(item.id));
 }
 
 function pageFromResult(batchId, result) {
@@ -49,7 +49,7 @@ export function useRecommendationFeed({ enabled, isHome }) {
   const feedStateRef = useRef(feedState);
   const enabledRef = useRef(enabled);
   const wasHomeRef = useRef(isHome);
-  const passedMemberIdsRef = useRef(new Set());
+  const passedUserIdsRef = useRef(new Set());
   const sessionRef = useRef(0);
   feedStateRef.current = feedState;
   enabledRef.current = enabled;
@@ -87,7 +87,7 @@ export function useRecommendationFeed({ enabled, isHome }) {
         return;
       }
       const result = await recommendationApi.recommendationItems(batchId);
-      const items = mapItems(result, passedMemberIdsRef.current);
+      const items = mapItems(result, passedUserIdsRef.current);
       if (requestId === requestRef.current) {
         dispatch({ type: "replace", items });
         setPage(pageFromResult(batchId, result));
@@ -127,7 +127,7 @@ export function useRecommendationFeed({ enabled, isHome }) {
         page.nextCursor,
       );
       if (requestId !== requestRef.current || !enabledRef.current) return false;
-      const items = mapItems(result, passedMemberIdsRef.current);
+      const items = mapItems(result, passedUserIdsRef.current);
       dispatch({ type: "append", items });
       setPage(pageFromResult(page.batchId, result));
       return items.length > 0;
@@ -165,7 +165,7 @@ export function useRecommendationFeed({ enabled, isHome }) {
       }
 
       const result = await recommendationApi.recommendationItems(batchId);
-      const items = mapItems(result, passedMemberIdsRef.current);
+      const items = mapItems(result, passedUserIdsRef.current);
       if (requestId === requestRef.current) {
         dispatch({ type: "replace", items });
         setPage(pageFromResult(batchId, result));
@@ -203,7 +203,7 @@ export function useRecommendationFeed({ enabled, isHome }) {
       let result = null;
       while (items.length < targetCount) {
         result = await recommendationApi.recommendationItems(batchId, cursor);
-        items.push(...mapItems(result, passedMemberIdsRef.current));
+        items.push(...mapItems(result, passedUserIdsRef.current));
         const nextCursor = result?.pageInfo?.nextCursor || null;
         if (!result?.pageInfo?.hasNext) break;
         if (!nextCursor || seenCursors.has(nextCursor))
@@ -215,7 +215,7 @@ export function useRecommendationFeed({ enabled, isHome }) {
       if (requestId !== requestRef.current || !enabledRef.current) return false;
       dispatch({
         type: "revalidate",
-        items: items.filter((item) => !passedMemberIdsRef.current.has(item.id)),
+        items: items.filter((item) => !passedUserIdsRef.current.has(item.id)),
       });
       setPage(pageFromResult(batchId, result));
       setError("");
@@ -237,7 +237,7 @@ export function useRecommendationFeed({ enabled, isHome }) {
 
   useEffect(() => {
     if (!enabled) {
-      passedMemberIdsRef.current.clear();
+      passedUserIdsRef.current.clear();
       dispatch({ type: "replace", items: [] });
       setPage(emptyPage());
       setError("");
@@ -309,16 +309,16 @@ export function useRecommendationFeed({ enabled, isHome }) {
     dispatch({ type: "retreat" });
   }, []);
 
-  const dismiss = useCallback((memberId) => {
-    dispatch({ type: "dismiss", memberId });
+  const dismiss = useCallback((userId) => {
+    dispatch({ type: "dismiss", userId });
   }, []);
 
-  const pass = useCallback(async (memberId) => {
+  const pass = useCallback(async (userId) => {
     const session = sessionRef.current;
-    await recommendationApi.saveRecommendationPass(memberId);
+    await recommendationApi.saveRecommendationPass(userId);
     if (!enabledRef.current || session !== sessionRef.current) return false;
-    passedMemberIdsRef.current.add(memberId);
-    dispatch({ type: "dismiss", memberId });
+    passedUserIdsRef.current.add(userId);
+    dispatch({ type: "dismiss", userId });
     return true;
   }, []);
 

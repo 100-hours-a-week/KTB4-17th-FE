@@ -1,6 +1,6 @@
 export function mapRecommendationItem(item, receivedAt = Date.now()) {
   const candidate = item?.candidate;
-  const id = candidate?.memberId;
+  const id = candidate?.userId;
   if (id == null) return null;
   const images = (Array.isArray(candidate.images) ? candidate.images : [])
     .filter((image) => typeof image?.imageUrl === "string" && image.imageUrl)

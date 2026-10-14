@@ -20,10 +20,10 @@ export function recommendationFeedReducer(state, action) {
         exhausted: false,
       };
     case "revalidate": {
-      const currentMemberId =
+      const currentUserId =
         state.recommendations[state.currentIndex]?.id ?? null;
       const matchingIndex = action.items.findIndex(
-        (item) => item.id === currentMemberId,
+        (item) => item.id === currentUserId,
       );
       const currentIndex =
         matchingIndex >= 0
@@ -44,10 +44,10 @@ export function recommendationFeedReducer(state, action) {
       };
     case "dismiss": {
       const dismissedIndex =
-        action.memberId == null
+        action.userId == null
           ? state.currentIndex
           : state.recommendations.findIndex(
-              (item) => item.id === action.memberId,
+              (item) => item.id === action.userId,
             );
       if (dismissedIndex < 0 || dismissedIndex >= state.recommendations.length)
         return state;

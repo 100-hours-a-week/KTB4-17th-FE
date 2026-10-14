@@ -10,7 +10,7 @@ import {
   parseChatDate,
   sortChatRooms,
 } from "./model.js";
-import { rememberRoom } from "./session.js";
+import { reuserRoom } from "./session.js";
 import { connectChatSocket } from "./socket.js";
 
 export { ChatRoom } from "./ChatRoom.jsx";
@@ -197,7 +197,7 @@ export function ChatList({ navigate }) {
   }, [hasNext, loadNextPage, loadingMore, pageError]);
 
   function openRoom(room) {
-    rememberRoom(room);
+    reuserRoom(room);
     navigate(`/chats/${room.id}`);
   }
 

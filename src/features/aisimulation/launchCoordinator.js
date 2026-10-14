@@ -4,17 +4,17 @@ export function createSimulationLaunchCoordinator({
   let current = null;
 
   return {
-    begin(memberId) {
+    begin(userId) {
       if (current) return null;
       current = {
-        memberId,
+        userId,
         owner: getOwner(),
         controller: new AbortController(),
       };
       return current;
     },
-    cancel(memberId) {
-      if (current && (memberId == null || current.memberId === memberId)) {
+    cancel(userId) {
+      if (current && (userId == null || current.userId === userId)) {
         const cancelled = current;
         current = null;
         cancelled.controller.abort();

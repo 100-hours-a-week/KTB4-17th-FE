@@ -6,10 +6,10 @@ export const attemptAiSimulation = (simulationId, { signal } = {}) =>
     signal,
   });
 
-export const createAiSimulation = (targetMemberId, { signal } = {}) =>
+export const createAiSimulation = (targetUserId, { signal } = {}) =>
   apiRequest("/api/v1/ai-simulations", {
     method: "POST",
-    body: { targetMemberId },
+    body: { targetUserId },
     signal,
   });
 

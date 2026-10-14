@@ -1,17 +1,15 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { getAuthSessionSubject } from "../../shared/api/authToken.js";
-import { getMemberProfile, getMyProfile } from "./api.js";
+import { getMyProfile, getUserProfile } from "./api.js";
 import { profileImageUrls } from "./imageUrls.js";
 
 // Only share requests in flight. Signed image URLs must not be cached forever.
 const pendingProfiles = new Map();
 
-function freshPhotos(memberId) {
-  const key = `${getAuthSessionSubject()}:${memberId}`;
+function freshPhotos(userId) {
+  const key = `${getAuthSessionSubject()}:${userId}`;
   if (!pendingProfiles.has(key)) {
-    const request = (
-      memberId === "me" ? getMyProfile() : getMemberProfile(memberId)
-    )
+    const request = (userId === "me" ? getMyProfile() : getUserProfile(userId))
       .then(profileImageUrls)
       .finally(() => {
         if (pendingProfiles.get(key) === request) pendingProfiles.delete(key);
@@ -22,8 +20,8 @@ function freshPhotos(memberId) {
 }
 
 export function useProfileImage(person, initialSource, index = 0) {
-  const memberId = person?.memberId ?? person?.id;
-  const key = `${memberId}:${index}:${initialSource}`;
+  const userId = person?.userId ?? person?.id;
+  const key = `${userId}:${index}:${initialSource}`;
   const currentKey = useRef(key);
   currentKey.current = key;
   const generation = useRef(0);
@@ -48,7 +46,7 @@ export function useProfileImage(person, initialSource, index = 0) {
   const onError = useCallback(async () => {
     if (
       (retry.current.key === key && retry.current.attempted) ||
-      memberId == null
+      userId == null
     ) {
       setResolved({ key, source: "" });
       return;
@@ -57,7 +55,7 @@ export function useProfileImage(person, initialSource, index = 0) {
     const request = ++generation.current;
     setResolved({ key, source: "" });
     try {
-      const photos = await freshPhotos(memberId);
+      const photos = await freshPhotos(userId);
       if (
         !mounted.current ||
         request !== generation.current ||
@@ -68,7 +66,7 @@ export function useProfileImage(person, initialSource, index = 0) {
     } catch {
       // Show the placeholder after one failed refresh; never loop on a bad URL.
     }
-  }, [index, key, memberId]);
+  }, [index, key, userId]);
 
   return { source, onError };
 }

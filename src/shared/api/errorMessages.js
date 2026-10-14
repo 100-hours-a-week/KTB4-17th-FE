@@ -8,7 +8,7 @@ export const API_ERROR_MESSAGES = Object.freeze({
     "카카오 인증에 연결하지 못했어요. 잠시 후 다시 로그인해주세요.",
   USER_AGE_REQUIREMENT_NOT_MET:
     "만 19세 이상, 만 40세 미만만 가입할 수 있어요.",
-  USER_NOT_FOUND: "회원 정보를 찾을 수 없어요. 다시 로그인해주세요.",
+  USER_NOT_FOUND: "회원 정보를 찾을 수 없어요.",
   ONBOARDING_ACCESS_NOT_ALLOWED:
     "현재 가입 상태에서는 이 단계를 진행할 수 없어요. 가입 진행 상태를 다시 확인해주세요.",
   NICKNAME_ALREADY_IN_USE:
@@ -83,7 +83,6 @@ export const API_ERROR_MESSAGES = Object.freeze({
   FILE_INVALID_STATE:
     "파일 상태를 확인하지 못했어요. 파일을 다시 선택해주세요.",
 
-  MEMBER_NOT_FOUND: "상대 회원 정보를 찾을 수 없어요.",
   SENDER_NOT_ACTIVE: "가입을 완료한 뒤 좋아요를 보낼 수 있어요.",
   RECEIVER_NOT_ACTIVE: "현재 이 회원에게 좋아요를 보낼 수 없어요.",
   NOT_LIKE_RECEIVER: "내가 받은 좋아요만 처리할 수 있어요.",
@@ -133,9 +132,9 @@ export const API_ERROR_MESSAGES = Object.freeze({
   TOO_MANY_MESSAGE_REQUESTS:
     "메시지를 너무 빠르게 보내고 있어요. 잠시 후 다시 보내주세요.",
 
-  TARGET_MEMBER_NOT_FOUND: "상대 회원 정보를 찾을 수 없어요.",
-  TARGET_MEMBER_UNAVAILABLE: "현재 이 상대와 AI 연습대화를 시작할 수 없어요.",
-  INVALID_TARGET_MEMBER:
+  TARGET_USER_NOT_FOUND: "상대 회원 정보를 찾을 수 없어요.",
+  TARGET_USER_UNAVAILABLE: "현재 이 상대와 AI 연습대화를 시작할 수 없어요.",
+  INVALID_TARGET_USER:
     "선택한 상대와 AI 대화를 진행할 수 없어요. 상대 정보를 다시 확인해주세요.",
   CHAT_NOT_FOUND:
     "AI 연습대화 메시지를 찾을 수 없어요. 대화 내역을 다시 확인해주세요.",

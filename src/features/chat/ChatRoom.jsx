@@ -38,12 +38,7 @@ import {
 import { useChatRoom } from "./useChatRoom.js";
 import { useChatScroll } from "./useChatScroll.js";
 
-function BlockConfirmationDialog({
-  memberName,
-  blocking,
-  onCancel,
-  onConfirm,
-}) {
+function BlockConfirmationDialog({ userName, blocking, onCancel, onConfirm }) {
   const cancelRef = useRef(null);
 
   useLayoutEffect(() => {
@@ -72,7 +67,7 @@ function BlockConfirmationDialog({
           onCancel();
         }}
       >
-        <h2 id="chat-block-title">{memberName}님을 차단할까요?</h2>
+        <h2 id="chat-block-title">{userName}님을 차단할까요?</h2>
         <p id="chat-block-description">
           차단하면 더 이상 메시지를 주고받을 수 없으며, 차단은 되돌릴 수 없어요.
         </p>
@@ -253,12 +248,12 @@ function ChatRoomContent({
   const viewerOpenerRef = useRef(null);
   const scroll = useChatScroll({ ...room, viewingImage });
   const canSend = Boolean(visit) && state.room?.status === "ACTIVE";
-  const targetMemberId = state.room?.memberId;
-  const parsedTargetMemberId = Number(targetMemberId);
-  const canBlockMember =
+  const targetUserId = state.room?.userId;
+  const parsedTargetUserId = Number(targetUserId);
+  const canBlockUser =
     !state.room?.blockedByMe &&
-    Number.isSafeInteger(parsedTargetMemberId) &&
-    parsedTargetMemberId > 0;
+    Number.isSafeInteger(parsedTargetUserId) &&
+    parsedTargetUserId > 0;
   const aiDisabled = !canUseAiForRoom(state.room, blocking);
   const closeViewer = useCallback(() => setViewingImage(null), []);
   const openViewer = useCallback((message, opener) => {
@@ -341,20 +336,20 @@ function ChatRoomContent({
   }
 
   function navigateToProfile() {
-    if (targetMemberId)
+    if (targetUserId)
       navigate(
-        `/profiles/${targetMemberId}?returnTo=${encodeURIComponent(`/chats/${roomId}`)}`,
+        `/profiles/${targetUserId}?returnTo=${encodeURIComponent(`/chats/${roomId}`)}`,
       );
   }
 
-  async function blockMember() {
-    if (!canBlockMember || blocking) return;
+  async function blockUser() {
+    if (!canBlockUser || blocking) return;
 
     const controller = new AbortController();
     blockRequestRef.current = controller;
     setBlocking(true);
     try {
-      await chatApi.blockUser(parsedTargetMemberId, {
+      await chatApi.blockUser(parsedTargetUserId, {
         signal: controller.signal,
       });
       if (blockRequestRef.current !== controller || !isSessionActive(entry))
@@ -363,7 +358,7 @@ function ChatRoomContent({
       imageSelectionVersion.current += 1;
       imagePreparationPending.current = false;
       setPreparingImage(false);
-      onCancelSimulation?.(parsedTargetMemberId);
+      onCancelSimulation?.(parsedTargetUserId);
       endRoomAfterBlock(entry);
       setBlockDialogOpen(false);
       toast("회원을 차단했어요.");
@@ -409,15 +404,15 @@ function ChatRoomContent({
       >
         <BrandHeader navigate={navigate}>
           <ChatModeMenu
-            targetMemberId={targetMemberId}
+            targetUserId={targetUserId}
             simulationStartingFor={simulationStartingFor}
             disabled={aiDisabled}
-            onSimulation={() => onStartSimulation?.(targetMemberId, roomId)}
+            onSimulation={() => onStartSimulation?.(targetUserId, roomId)}
             onPractice={
-              targetMemberId
+              targetUserId
                 ? () =>
                     navigate(
-                      `/ai/practice/${targetMemberId}?chatRoomId=${roomId}`,
+                      `/ai/practice/${targetUserId}?chatRoomId=${roomId}`,
                     )
                 : undefined
             }
@@ -431,7 +426,7 @@ function ChatRoomContent({
                 type="button"
                 className="chat-room-partner-profile"
                 aria-label={`${state.room?.name || "상대 회원"} 프로필 보기`}
-                disabled={!targetMemberId}
+                disabled={!targetUserId}
                 onClick={navigateToProfile}
               >
                 <img
@@ -456,7 +451,7 @@ function ChatRoomContent({
           right={
             <div className="chat-header-actions">
               <ChatDetailMenu
-                canBlock={canBlockMember}
+                canBlock={canBlockUser}
                 canEndWithAi={state.room?.status === "ACTIVE"}
                 blocking={blocking}
                 onBlock={() => setBlockDialogOpen(true)}
@@ -589,7 +584,7 @@ function ChatRoomContent({
                             onViewImage={openViewer}
                             onImageLoaded={scroll.preservePosition}
                             onViewProfile={
-                              targetMemberId ? navigateToProfile : undefined
+                              targetUserId ? navigateToProfile : undefined
                             }
                             canRetry={canSend}
                             onRetry={(clientMessageId) =>
@@ -754,10 +749,10 @@ function ChatRoomContent({
       </div>
       {blockDialogOpen && (
         <BlockConfirmationDialog
-          memberName={state.room?.name || "상대 회원"}
+          userName={state.room?.name || "상대 회원"}
           blocking={blocking}
           onCancel={() => setBlockDialogOpen(false)}
-          onConfirm={() => void blockMember()}
+          onConfirm={() => void blockUser()}
         />
       )}
       {viewingImage && (

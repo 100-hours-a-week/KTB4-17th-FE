@@ -26,17 +26,17 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
   const me = simulation?.me || {};
   const chatRoomQuery =
     Number.isSafeInteger(roomId) && roomId > 0 ? `?chatRoomId=${roomId}` : "";
-  const partnerMemberId = Number(partner.userId);
+  const partnerUserId = Number(partner.userId);
   const practicePath =
-    Number.isSafeInteger(partnerMemberId) && partnerMemberId > 0
-      ? `/ai/practice/${partnerMemberId}${chatRoomQuery}`
+    Number.isSafeInteger(partnerUserId) && partnerUserId > 0
+      ? `/ai/practice/${partnerUserId}${chatRoomQuery}`
       : null;
   const conversationHeader = (
     <>
       <BrandHeader navigate={navigate}>
         <ChatModeMenu
           currentMode="simulation"
-          targetMemberId={partnerMemberId}
+          targetUserId={partnerUserId}
           onPractice={practicePath ? () => navigate(practicePath) : undefined}
         />
       </BrandHeader>

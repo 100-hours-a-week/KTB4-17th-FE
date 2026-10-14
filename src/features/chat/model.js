@@ -173,7 +173,7 @@ export function mapChatRoom(item) {
   return {
     id: item.chatRoomId,
     status: item.status || "ACTIVE",
-    memberId: item.otherParticipant?.memberId || null,
+    userId: item.otherParticipant?.userId || null,
     name: item.otherParticipant?.nickname || "상대 회원",
     image: item.otherParticipant?.profileImageUrl || "",
     last: previewText,
@@ -212,7 +212,7 @@ export function mergeRefreshedChatRoom(room, localRoom) {
   return {
     ...room,
     ...localRoom,
-    memberId: room.memberId,
+    userId: room.userId,
     name: room.name,
     image: room.image,
     syncedActivityTimestamp: room.syncedActivityTimestamp,

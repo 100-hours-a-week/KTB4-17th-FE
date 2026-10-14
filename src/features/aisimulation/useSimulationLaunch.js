@@ -36,40 +36,40 @@ export function useSimulationLaunch({ navigate, toast, path, tracking }) {
     setSimulationStartingFor(null);
   }, [path]);
 
-  function cancelSimulation(targetMemberId) {
-    const memberId = positiveId(targetMemberId);
-    if (!memberId) return false;
-    tracking.removeTarget(memberId);
-    const cancelled = coordinatorRef.current.cancel(memberId);
+  function cancelSimulation(targetUserId) {
+    const userId = positiveId(targetUserId);
+    if (!userId) return false;
+    tracking.removeTarget(userId);
+    const cancelled = coordinatorRef.current.cancel(userId);
     if (!cancelled) return false;
     setSimulationStartingFor((current) =>
-      current === cancelled.memberId ? null : current,
+      current === cancelled.userId ? null : current,
     );
     return true;
   }
 
-  async function startSimulation(targetMemberId, chatRoomId) {
-    const memberId = positiveId(targetMemberId);
-    if (!memberId) {
+  async function startSimulation(targetUserId, chatRoomId) {
+    const userId = positiveId(targetUserId);
+    if (!userId) {
       toast("시뮬레이션할 상대 정보를 찾을 수 없어요.");
       return false;
     }
-    const request = coordinatorRef.current.begin(memberId);
+    const request = coordinatorRef.current.begin(userId);
     if (!request) return false;
     const sourcePath = pathRef.current;
     const isCurrent = () =>
       coordinatorRef.current.isCurrent(request) &&
       pathRef.current === sourcePath;
-    setSimulationStartingFor(memberId);
+    setSimulationStartingFor(userId);
     try {
-      const simulation = await requestSimulation(memberId, {
+      const simulation = await requestSimulation(userId, {
         getPair: aiSimulationPair,
         create: createAiSimulation,
         signal: request.controller.signal,
       });
       if (!isCurrent()) return false;
       tracking.track(simulation, {
-        targetUserId: memberId,
+        targetUserId: userId,
         chatRoomId: positiveId(chatRoomId),
       });
       navigate(simulationPath(simulation.simulationId, chatRoomId));

@@ -1,9 +1,9 @@
 import { apiRequest } from "../../shared/api/client.js";
 
-export const aiPracticeStart = (targetMemberId) =>
+export const aiPracticeStart = (targetUserId) =>
   apiRequest("/api/v1/ai-practice/sessions", {
     method: "POST",
-    body: { targetMemberId },
+    body: { targetUserId },
   });
 
 export const aiPracticeHistory = (sessionId, { cursor, size = 100 } = {}) => {
