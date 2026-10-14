@@ -4,8 +4,8 @@ import { uploadFile } from "../../shared/api/files.js";
 export const getMyProfile = () =>
   apiRequest("/api/v1/users/me/profile", { cache: "no-store" });
 
-export const getMemberProfile = (memberId) =>
-  apiRequest(`/api/v1/users/${encodeURIComponent(memberId)}/profile`, {
+export const getUserProfile = (userId) =>
+  apiRequest(`/api/v1/users/${encodeURIComponent(userId)}/profile`, {
     cache: "no-store",
   });
 

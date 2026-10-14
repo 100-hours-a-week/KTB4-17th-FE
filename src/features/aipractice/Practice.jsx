@@ -38,7 +38,7 @@ export async function loadPracticeHistory(sessionId) {
 export function practiceErrorMessage(error) {
   const messages = {
     AUTH_REQUIRED: "로그인이 만료됐어요. 다시 로그인한 뒤 이용해주세요.",
-    TARGET_MEMBER_NOT_FOUND: "상대 회원 정보를 찾을 수 없어요.",
+    TARGET_USER_NOT_FOUND: "상대 회원 정보를 찾을 수 없어요.",
     SESSION_NOT_FOUND: "AI 연습대화 정보를 찾을 수 없어요.",
     SESSION_ENDED: "종료된 AI 연습대화에는 새 메시지를 보낼 수 없어요.",
     GENERATION_IN_PROGRESS: "AI가 이전 메시지에 답변하고 있어요.",
@@ -56,7 +56,7 @@ export function practiceErrorMessage(error) {
 }
 
 export function Practice({
-  targetMemberId,
+  targetUserId,
   chatRoomId,
   navigate,
   onStartSimulation,
@@ -75,7 +75,7 @@ export function Practice({
   const [showEndDialog, setShowEndDialog] = useState(false);
   const [ending, setEnding] = useState(false);
   const [accessUnavailable, setAccessUnavailable] = useState(false);
-  const id = Number(targetMemberId);
+  const id = Number(targetUserId);
   const backPath = chatRoomId ? `/chats/${chatRoomId}` : "/home";
   const count = (usage?.used || 0) + (usage?.reserved || 0);
   const dailyLimit = usage?.dailyLimit || 30;
@@ -110,8 +110,8 @@ export function Practice({
   }, []);
 
   useEffect(() => {
-    const [memberIdValue] = sessionLoadKey.split(":");
-    const memberId = Number(memberIdValue);
+    const [userIdValue] = sessionLoadKey.split(":");
+    const userId = Number(userIdValue);
     let active = true;
     setLoading(true);
     setLoadError("");
@@ -124,7 +124,7 @@ export function Practice({
     setSession(null);
     setChats([]);
     setUsage(null);
-    if (!Number.isSafeInteger(memberId) || memberId <= 0) {
+    if (!Number.isSafeInteger(userId) || userId <= 0) {
       setLoadError("상대 회원 ID가 없어 AI 연습대화를 시작할 수 없어요.");
       setLoading(false);
       return () => {
@@ -132,7 +132,7 @@ export function Practice({
       };
     }
     (async () => {
-      const startedSession = await aiPracticeApi.aiPracticeStart(memberId);
+      const startedSession = await aiPracticeApi.aiPracticeStart(userId);
       const [history, todayUsage] = await Promise.all([
         loadPracticeHistory(startedSession.id),
         aiPracticeApi.aiPracticeUsage(),
@@ -379,7 +379,7 @@ export function Practice({
       <BrandHeader navigate={navigate}>
         <ChatModeMenu
           currentMode="practice"
-          targetMemberId={Number.isSafeInteger(id) && id > 0 ? id : null}
+          targetUserId={Number.isSafeInteger(id) && id > 0 ? id : null}
           simulationStartingFor={simulationStartingFor}
           disabled={accessUnavailable}
           onSimulation={() => onStartSimulation(id, chatRoomId)}

@@ -6,11 +6,11 @@ export function useLocalTestLogin({ navigate }) {
   const { setData } = useAppState();
 
   return async function loginWithLocalTestAccount(
-    memberId,
-    practiceTargetMemberId,
+    userId,
+    practiceTargetUserId,
   ) {
     if (!localTestAuthEnabled) throw new Error("LOCAL_TEST_LOGIN_DISABLED");
-    await localTestLogin(memberId);
+    await localTestLogin(userId);
     const status = await onboarding();
     if (status?.userStatus !== "ACTIVE") {
       const error = new Error("TEST_ACCOUNT_ONBOARDING_INCOMPLETE");
@@ -23,6 +23,6 @@ export function useLocalTestLogin({ navigate }) {
       onboarded: true,
       onboardingStep: "complete",
     }));
-    navigate(`/ai/practice/${practiceTargetMemberId}`);
+    navigate(`/ai/practice/${practiceTargetUserId}`);
   };
 }

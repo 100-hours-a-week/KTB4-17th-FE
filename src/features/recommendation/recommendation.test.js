@@ -16,7 +16,7 @@ import { wheelNavigationIntent } from "./wheelNavigation.js";
 
 const recommendation = (id) => ({ id });
 
-test("dismissing a requested member keeps another current card in place", () => {
+test("dismissing a requested user keeps another current card in place", () => {
   const result = recommendationFeedReducer(
     {
       recommendations: [
@@ -27,7 +27,7 @@ test("dismissing a requested member keeps another current card in place", () => 
       currentIndex: 1,
       exhausted: false,
     },
-    { type: "dismiss", memberId: 11 },
+    { type: "dismiss", userId: 11 },
   );
   assert.deepEqual(
     result.recommendations.map(({ id }) => id),
@@ -36,14 +36,14 @@ test("dismissing a requested member keeps another current card in place", () => 
   assert.equal(result.recommendations[result.currentIndex].id, 12);
 });
 
-test("a repeated dismissal of an absent member cannot remove the next card", () => {
+test("a repeated dismissal of an absent user cannot remove the next card", () => {
   const state = {
     recommendations: [recommendation(12)],
     currentIndex: 0,
     exhausted: false,
   };
   assert.equal(
-    recommendationFeedReducer(state, { type: "dismiss", memberId: 11 }),
+    recommendationFeedReducer(state, { type: "dismiss", userId: 11 }),
     state,
   );
 });
@@ -123,7 +123,7 @@ test("replacing recommendations resets the exhausted state and index", () => {
   assert.equal(result.recommendations[0].id, "A");
 });
 
-test("revalidating recommendations keeps the current member", () => {
+test("revalidating recommendations keeps the current user", () => {
   const result = recommendationFeedReducer(
     {
       recommendations: [
@@ -144,7 +144,7 @@ test("revalidating recommendations keeps the current member", () => {
   assert.equal(result.recommendations[result.currentIndex].id, "C");
 });
 
-test("revalidating without the current member uses the closest valid index", () => {
+test("revalidating without the current user uses the closest valid index", () => {
   const result = recommendationFeedReducer(
     {
       recommendations: [
@@ -170,7 +170,7 @@ test("recommendation images retain their expiry metadata", () => {
   const recommendation = mapRecommendationItem(
     {
       candidate: {
-        memberId: 21,
+        userId: 21,
         images: [
           {
             fileId: 701,
@@ -306,7 +306,7 @@ function feedHarness(api) {
 }
 
 const feedPage = (ids, hasNext = false) => ({
-  items: ids.map((memberId) => ({ candidate: { memberId } })),
+  items: ids.map((userId) => ({ candidate: { userId } })),
   pageInfo: { hasNext, nextCursor: hasNext ? "next-page" : null },
 });
 
@@ -320,14 +320,14 @@ function deferred() {
   return { promise, resolve, reject };
 }
 
-test("a pass keeps the current card until the server succeeds, then shows the next member", async () => {
+test("a pass keeps the current card until the server succeeds, then shows the next user", async () => {
   const pending = deferred();
   const requests = [];
   const harness = feedHarness({
     activeBatch: async () => ({ batchId: 1 }),
     recommendationItems: async () => feedPage([11, 12]),
-    saveRecommendationPass: (memberId) => {
-      requests.push(memberId);
+    saveRecommendationPass: (userId) => {
+      requests.push(userId);
       return pending.promise;
     },
   });
@@ -337,7 +337,7 @@ test("a pass keeps the current card until the server succeeds, then shows the ne
     harness.render().recommendations.map(({ id }) => id),
     [11, 12],
   );
-  pending.resolve({ targetMemberId: 11, permanent: true });
+  pending.resolve({ targetUserId: 11, permanent: true });
   assert.equal(await passing, true);
   const feed = harness.render();
   assert.deepEqual(requests, [11]);
@@ -357,7 +357,7 @@ test("failed passes keep the card and can be retried", async () => {
     saveRecommendationPass: async () => {
       requests++;
       if (requests === 1) throw failure;
-      return { targetMemberId: 11, permanent: true };
+      return { targetUserId: 11, permanent: true };
     },
   });
   await harness.render().load();
@@ -374,7 +374,7 @@ test("failed passes keep the card and can be retried", async () => {
   assert.equal(requests, 2);
 });
 
-test("a pass response removes its requested member after card navigation", async () => {
+test("a pass response removes its requested user after card navigation", async () => {
   const pending = deferred();
   const harness = feedHarness({
     activeBatch: async () => ({ batchId: 1 }),
@@ -384,7 +384,7 @@ test("a pass response removes its requested member after card navigation", async
   await harness.render().load();
   const passing = harness.render().pass(11);
   harness.render().advance();
-  pending.resolve({ targetMemberId: 11, permanent: true });
+  pending.resolve({ targetUserId: 11, permanent: true });
   await passing;
   const feed = harness.render();
   assert.deepEqual(
@@ -394,7 +394,7 @@ test("a pass response removes its requested member after card navigation", async
   assert.equal(feed.recommendations[feed.currentIndex].id, 12);
 });
 
-test("a stale revalidation cannot bring back a successfully passed member", async () => {
+test("a stale revalidation cannot bring back a successfully passed user", async () => {
   let reads = 0;
   const pending = deferred();
   const harness = feedHarness({
@@ -402,7 +402,7 @@ test("a stale revalidation cannot bring back a successfully passed member", asyn
     recommendationItems: () =>
       ++reads === 1 ? feedPage([11, 12]) : pending.promise,
     saveRecommendationPass: async () => ({
-      targetMemberId: 11,
+      targetUserId: 11,
       permanent: true,
     }),
   });
@@ -418,14 +418,14 @@ test("a stale revalidation cannot bring back a successfully passed member", asyn
   );
 });
 
-test("a page requested before passing cannot append that member again", async () => {
+test("a page requested before passing cannot append that user again", async () => {
   const pending = deferred();
   const harness = feedHarness({
     activeBatch: async () => ({ batchId: 1 }),
     recommendationItems: (_, cursor) =>
       cursor ? pending.promise : feedPage([11], true),
     saveRecommendationPass: async () => ({
-      targetMemberId: 11,
+      targetUserId: 11,
       permanent: true,
     }),
   });
@@ -449,7 +449,7 @@ test("passing the final candidate does not create a new recommendation batch", a
       created++;
     },
     saveRecommendationPass: async () => ({
-      targetMemberId: 11,
+      targetUserId: 11,
       permanent: true,
     }),
   });
@@ -565,7 +565,7 @@ test("a revalidation started before saving cannot overwrite the new feed", async
   );
 });
 
-test("an old pagination response neither appends old members nor unlocks new pagination", async () => {
+test("an old pagination response neither appends old users nor unlocks new pagination", async () => {
   let batchId = 1;
   const oldPage = deferred();
   const newPage = deferred();

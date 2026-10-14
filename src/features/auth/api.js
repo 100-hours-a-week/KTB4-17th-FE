@@ -48,25 +48,23 @@ export function completeOAuthCallback() {
 
 export const localTestAccounts = async () => {
   if (!localTestAuthEnabled)
-    return { accounts: [], practiceTargetMemberId: null };
+    return { accounts: [], practiceTargetUserId: null };
   const result = await apiRequest("/api/v1/dev/test-auth/accounts");
   if (Array.isArray(result)) {
     return {
       accounts: result,
-      practiceTargetMemberId: result.some(
-        (account) => account.memberId === 900002,
-      )
+      practiceTargetUserId: result.some((account) => account.userId === 900002)
         ? 900002
         : null,
     };
   }
-  return result || { accounts: [], practiceTargetMemberId: null };
+  return result || { accounts: [], practiceTargetUserId: null };
 };
 
-export async function localTestLogin(memberId) {
+export async function localTestLogin(userId) {
   if (!localTestAuthEnabled) throw new Error("LOCAL_TEST_LOGIN_DISABLED");
 
-  const response = await apiRequest(`/api/v1/dev/test-auth/${memberId}/login`, {
+  const response = await apiRequest(`/api/v1/dev/test-auth/${userId}/login`, {
     method: "POST",
     skipAuth: true,
   });

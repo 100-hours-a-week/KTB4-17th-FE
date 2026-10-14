@@ -399,7 +399,7 @@ function AppRouter() {
   else if (/^\/profiles\/\d+$/.test(path))
     page = (
       <OtherProfile
-        memberId={Number(path.split("/").pop())}
+        userId={Number(path.split("/").pop())}
         returnTo={profileReturnPath(search)}
         navigate={navigate}
       />
@@ -431,7 +431,7 @@ function AppRouter() {
   else if (path.startsWith("/ai/practice/"))
     page = (
       <Practice
-        targetMemberId={personId}
+        targetUserId={personId}
         chatRoomId={chatRoomId}
         navigate={navigate}
         onStartSimulation={startSimulation}

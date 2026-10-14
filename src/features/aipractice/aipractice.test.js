@@ -11,7 +11,7 @@ test("blocked practice sessions become terminal while network errors remain retr
     true,
   );
   assert.equal(
-    isPracticeAccessUnavailable({ code: "TARGET_MEMBER_NOT_FOUND" }),
+    isPracticeAccessUnavailable({ code: "TARGET_USER_NOT_FOUND" }),
     true,
   );
   assert.equal(isPracticeAccessUnavailable({ status: 404 }), true);

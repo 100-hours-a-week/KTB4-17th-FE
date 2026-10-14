@@ -22,7 +22,7 @@ test("pass errors have messages specific to the failed action", () => {
   );
 });
 
-test("member block errors have safe action-specific messages", () => {
+test("user block errors have safe action-specific messages", () => {
   assert.match(apiErrorMessage("BLOCK_ACCESS_DENIED"), /차단할 수 없어요/);
   assert.match(apiErrorMessage("USER_NOT_AVAILABLE"), /회원을 찾을 수 없어요/);
   assert.match(apiErrorMessage("SELF_BLOCK_NOT_ALLOWED"), /자기 자신/);

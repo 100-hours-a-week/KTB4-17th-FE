@@ -10,15 +10,15 @@ import {
 import * as matchingApi from "./api.js";
 
 export function mapLikeItem(item, tab) {
-  const member = tab === "received" ? item?.sender : item?.receiver;
+  const user = tab === "received" ? item?.sender : item?.receiver;
   return {
     id: item?.likeId,
-    memberId: member?.memberId,
-    nickname: member?.nickname || "닉네임 정보 없음",
-    age: member?.age,
-    job: member?.job || "",
-    region: member?.region || "",
-    photo: member?.profileImageUrl || "",
+    userId: user?.userId,
+    nickname: user?.nickname || "닉네임 정보 없음",
+    age: user?.age,
+    job: user?.job || "",
+    region: user?.region || "",
+    photo: user?.profileImageUrl || "",
     status: item?.status || "",
   };
 }
@@ -110,16 +110,12 @@ export function Likes({
     }));
   }, []);
   async function acceptLike(person) {
-    if (
-      !person.memberId ||
-      person.status === "MATCHED" ||
-      actionInFlight.current
-    )
+    if (!person.userId || person.status === "MATCHED" || actionInFlight.current)
       return;
     actionInFlight.current = true;
     setActionLikeId(person.id);
     try {
-      await matchingApi.sendLike(person.memberId);
+      await matchingApi.sendLike(person.userId);
       removeReceivedLike(person.id);
       toast("매칭에 성공했어요");
     } catch (error) {
@@ -130,10 +126,10 @@ export function Likes({
     }
   }
   function openProfile(person) {
-    if (!person.memberId) return;
+    if (!person.userId) return;
     const returnTo = `/likes?tab=${tab}`;
     navigate(
-      `/profiles/${person.memberId}?returnTo=${encodeURIComponent(returnTo)}`,
+      `/profiles/${person.userId}?returnTo=${encodeURIComponent(returnTo)}`,
     );
   }
 
@@ -230,7 +226,7 @@ export function Likes({
                     className="like-avatar-button"
                     aria-label={`${person.nickname} 프로필 보기`}
                     onClick={() => openProfile(person)}
-                    disabled={!person.memberId}
+                    disabled={!person.userId}
                   >
                     <PersonAvatar person={person} />
                   </button>
@@ -258,7 +254,7 @@ export function Likes({
                     </PixelButton>
                     <PixelButton
                       onClick={() => acceptLike(person)}
-                      disabled={actionLikeId != null || !person.memberId}
+                      disabled={actionLikeId != null || !person.userId}
                     >
                       {actionLikeId === person.id ? "처리 중..." : "좋아요"}
                     </PixelButton>

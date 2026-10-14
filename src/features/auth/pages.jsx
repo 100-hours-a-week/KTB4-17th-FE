@@ -82,7 +82,7 @@ export function SplashScreen({ message, action }) {
 
 export function Login({ onLogin, onLocalTestLogin }) {
   const [testAccounts, setTestAccounts] = useState([]);
-  const [testTargetMemberId, setTestTargetMemberId] = useState(null);
+  const [testTargetUserId, setTestTargetUserId] = useState(null);
   const [testAccountsLoading, setTestAccountsLoading] =
     useState(localTestAuthEnabled);
   const [testLoginPending, setTestLoginPending] = useState(false);
@@ -95,7 +95,7 @@ export function Login({ onLogin, onLocalTestLogin }) {
       .then((result) => {
         if (!active) return;
         setTestAccounts(Array.isArray(result?.accounts) ? result.accounts : []);
-        setTestTargetMemberId(result?.practiceTargetMemberId || null);
+        setTestTargetUserId(result?.practiceTargetUserId || null);
       })
       .catch((error) => {
         if (active)
@@ -118,7 +118,7 @@ export function Login({ onLogin, onLocalTestLogin }) {
     setTestLoginPending(true);
     setTestLoginError("");
     try {
-      await onLocalTestLogin(account.memberId, testTargetMemberId);
+      await onLocalTestLogin(account.userId, testTargetUserId);
     } catch (error) {
       setTestLoginError(
         apiErrorMessage(
@@ -170,9 +170,9 @@ export function Login({ onLogin, onLocalTestLogin }) {
             testAccounts.map((account) => (
               <button
                 className="local-test-login-button"
-                key={account.memberId}
+                key={account.userId}
                 type="button"
-                disabled={testLoginPending || !testTargetMemberId}
+                disabled={testLoginPending || !testTargetUserId}
                 onClick={() => startPractice(account)}
               >
                 {testLoginPending ? "로그인 중…" : "테스트 계정으로 연습 시작"}

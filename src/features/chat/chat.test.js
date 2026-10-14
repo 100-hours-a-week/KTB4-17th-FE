@@ -37,7 +37,7 @@ function token(subject, signature = "first") {
 
 beforeEach(() => {
   clearChatSessions();
-  setAccessToken(token("member-1"));
+  setAccessToken(token("user-1"));
 });
 
 function message(id, extras = {}) {
@@ -57,7 +57,7 @@ function page(first, last, hasNext = true) {
     chatRoom: {
       chatRoomId: 7,
       status: "ACTIVE",
-      otherParticipant: { memberId: 2, nickname: "테스트" },
+      otherParticipant: { userId: 2, nickname: "테스트" },
     },
     messages: Array.from({ length: last - first + 1 }, (_, index) => ({
       messageId: first + index,
@@ -76,7 +76,7 @@ function activeEntry() {
     room: {
       id: 7,
       status: "ACTIVE",
-      memberId: 2,
+      userId: 2,
       name: "테스트",
       image: "https://example.com/profile.jpg",
     },
@@ -84,7 +84,7 @@ function activeEntry() {
   return entry;
 }
 
-test("member block sends PUT and accepts created or existing responses", async () => {
+test("user block sends PUT and accepts created or existing responses", async () => {
   const originalFetch = globalThis.fetch;
   const calls = [];
   globalThis.fetch = async (url, options) => {
@@ -127,7 +127,7 @@ test("successful block ends the room without removing message history", () => {
 
   assert.equal(entry.snapshot.room.status, "ENDED");
   assert.equal(entry.snapshot.room.blockedByMe, true);
-  assert.equal(entry.snapshot.room.memberId, 2);
+  assert.equal(entry.snapshot.room.userId, 2);
   assert.equal(entry.snapshot.room.name, "테스트");
   assert.equal(entry.snapshot.room.image, "https://example.com/profile.jpg");
   assert.equal(canUseAiForRoom(entry.snapshot.room), false);
@@ -146,7 +146,7 @@ test("masked room metadata clears cached profile identity and image", () => {
     ...maskedPage.chatRoom,
     status: "ENDED",
     otherParticipant: {
-      memberId: null,
+      userId: null,
       nickname: "알 수 없음",
       profileImageUrl: null,
     },
@@ -154,25 +154,25 @@ test("masked room metadata clears cached profile identity and image", () => {
 
   applyMessagePage(entry, [maskedPage]);
 
-  assert.equal(entry.snapshot.room.memberId, null);
+  assert.equal(entry.snapshot.room.userId, null);
   assert.equal(entry.snapshot.room.name, "알 수 없음");
   assert.equal(entry.snapshot.room.image, "");
   assert.equal(canUseAiForRoom(entry.snapshot.room), false);
 });
 
-test("AI modes are available only for active unblocked room members", () => {
-  const room = { memberId: 2, status: "ACTIVE", blockedByMe: false };
+test("AI modes are available only for active unblocked room users", () => {
+  const room = { userId: 2, status: "ACTIVE", blockedByMe: false };
   assert.equal(canUseAiForRoom(room), true);
   assert.equal(canUseAiForRoom(room, true), false);
   assert.equal(canUseAiForRoom({ ...room, status: "ENDED" }), false);
   assert.equal(canUseAiForRoom({ ...room, blockedByMe: true }), false);
-  assert.equal(canUseAiForRoom({ ...room, memberId: null }), false);
+  assert.equal(canUseAiForRoom({ ...room, userId: null }), false);
 });
 
 test("server participant masking wins over a newer local room preview", () => {
   const refreshed = {
     id: 7,
-    memberId: null,
+    userId: null,
     name: "알 수 없음",
     image: "",
     activityTimestamp: 100,
@@ -180,7 +180,7 @@ test("server participant masking wins over a newer local room preview", () => {
   };
   const local = {
     ...refreshed,
-    memberId: 2,
+    userId: 2,
     name: "이전 이름",
     image: "https://example.com/old.jpg",
     last: "새 메시지",
@@ -189,7 +189,7 @@ test("server participant masking wins over a newer local room preview", () => {
 
   assert.deepEqual(mergeRefreshedChatRoom(refreshed, local), {
     ...local,
-    memberId: null,
+    userId: null,
     name: "알 수 없음",
     image: "",
     syncedActivityTimestamp: 100,
@@ -579,7 +579,7 @@ test("logout clears cache and prevents an upload from sending under another acco
     api,
   );
   clearAccessToken();
-  setAccessToken(token("member-2"));
+  setAccessToken(token("user-2"));
   resolve({ fileId: 25 });
   await settled(entry);
   assert.equal(entry.active, false);
@@ -590,7 +590,7 @@ test("logout clears cache and prevents an upload from sending under another acco
 test("refreshing a token for the same account preserves a draft", () => {
   const entry = activeEntry();
   updateRoomSession(entry, { draft: "보존할 글" });
-  setAccessToken(token("member-1", "refreshed"));
+  setAccessToken(token("user-1", "refreshed"));
   assert.equal(getRoomSession(7).snapshot.draft, "보존할 글");
 });
 
@@ -600,14 +600,14 @@ test("temporarily clearing a token during refresh preserves the session cache", 
   clearAccessToken({ preserveSession: true });
   assert.equal(getRoomSession(7), entry);
   assert.equal(entry.active, true);
-  setAccessToken(token("member-1", "refreshed"));
+  setAccessToken(token("user-1", "refreshed"));
   assert.equal(getRoomSession(7).snapshot.draft, "갱신 중에도 보존");
 });
 
 test("account change clears another account's draft", () => {
   const previous = activeEntry();
   updateRoomSession(previous, { draft: "다른 계정의 글" });
-  setAccessToken(token("member-2"));
+  setAccessToken(token("user-2"));
   assert.equal(previous.active, false);
   assert.equal(getRoomSession(7).snapshot.draft, "");
 });
@@ -854,7 +854,7 @@ test("message metadata permits entry without a room-list lookup", () => {
   applyMessagePage(entry, [page(81, 100)]);
   assert.equal(entry.snapshot.loaded, true);
   assert.equal(entry.snapshot.room.name, "테스트");
-  assert.equal(entry.snapshot.room.memberId, 2);
+  assert.equal(entry.snapshot.room.userId, 2);
 });
 
 test("a late active-room response cannot reopen an ended conversation", () => {

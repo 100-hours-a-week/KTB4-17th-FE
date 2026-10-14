@@ -1,8 +1,8 @@
 import { apiRequest } from "../../shared/api/client.js";
 
-export const saveRecommendationPass = (targetMemberId) =>
+export const saveRecommendationPass = (targetUserId) =>
   apiRequest(
-    `/api/v1/members/me/recommendation-passes/${encodeURIComponent(targetMemberId)}`,
+    `/api/v1/users/me/recommendation-passes/${encodeURIComponent(targetUserId)}`,
     { method: "PUT" },
   );
 
