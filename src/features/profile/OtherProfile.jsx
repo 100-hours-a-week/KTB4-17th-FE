@@ -13,6 +13,7 @@ import {
 } from "./data.js";
 import "./other-profile.css";
 import { profileImageUrls } from "./imageUrls.js";
+import { jobCategoryLabel } from "./jobCategories.js";
 
 function profileChoiceLabel(options, value) {
   if (!value) return "정보 없음";
@@ -239,7 +240,7 @@ export function OtherProfile({ userId, returnTo, navigate, isOwn = false }) {
                 <span aria-hidden="true">
                   <PixelIcon name="briefcase" />
                 </span>
-                {profile.job}
+                {jobCategoryLabel(profile.job)}
               </p>
             )}
             {profile.region && (
