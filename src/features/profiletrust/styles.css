@@ -50,6 +50,46 @@
   word-break: keep-all;
 }
 
+.trust-camera-guidance {
+  display: grid;
+  gap: 8px;
+}
+
+.trust-camera-guidance p {
+  margin: 0;
+  color: var(--purple-deep);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.trust-camera-progress {
+  height: 9px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--soft-lavender);
+}
+
+.trust-camera-progress span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #987bff 0%, #7555f3 72%, #e66db3 100%);
+  transition: width 500ms linear;
+}
+
+.trust-camera-guidance small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trust-camera-progress span {
+    transition: none;
+  }
+}
+
 .trust-photo-intro {
   display: grid;
   justify-items: center;

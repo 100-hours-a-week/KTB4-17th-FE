@@ -16,6 +16,7 @@ export function useFaceVerification() {
   const [issue, setIssue] = useState(null);
   const [active, setActive] = useState(false);
   const [cameraOn, setCameraOn] = useState(false);
+  const [cameraProgress, setCameraProgress] = useState(0);
   const [hint, setHint] = useState("얼굴을 가운데 맞추고 정면을 바라봐주세요.");
   const [result, setResult] = useState(null);
   const videoRef = useRef(null);
@@ -33,6 +34,7 @@ export function useFaceVerification() {
     run.controller.abort();
     run.cameraController.abort();
     clearTimeout(run.timer);
+    clearInterval(run.progressTimer);
     stopCamera(run.stream);
     if (videoRef.current) videoRef.current.srcObject = null;
   }, []);
@@ -60,6 +62,7 @@ export function useFaceVerification() {
     setIssue(null);
     setActive(false);
     setCameraOn(false);
+    setCameraProgress(0);
     setPhase("camera");
     const selected = ++selection.current;
     const controller = new AbortController();
@@ -112,12 +115,14 @@ export function useFaceVerification() {
       cameraController: new AbortController(),
       stream: null,
       timer: null,
+      progressTimer: null,
     };
     runRef.current = run;
     const current = () => mounted.current && runRef.current === run;
     const signal = run.controller.signal;
     setActive(true);
     setIssue(null);
+    setCameraProgress(0);
     setPhase("camera");
     setHint("얼굴을 가운데 맞추고 정면을 바라봐주세요.");
     let removeListeners = () => {};
@@ -134,6 +139,7 @@ export function useFaceVerification() {
         run.cameraController.abort();
         stopCamera(run.stream);
         clearTimeout(run.timer);
+        clearInterval(run.progressTimer);
         if (current()) setCameraOn(false);
         const metadata = await api.completePrimaryPhoto(
           photo.uploadIntentId,
@@ -158,9 +164,20 @@ export function useFaceVerification() {
         stopCamera(run.stream);
         return;
       }
-      const deadline = Date.now() + CAMERA_DURATION_MS;
+      const cameraStartedAt = Date.now();
+      const deadline = cameraStartedAt + CAMERA_DURATION_MS;
+      run.progressTimer = window.setInterval(() => {
+        const progress = Math.min(
+          (Date.now() - cameraStartedAt) / CAMERA_DURATION_MS,
+          1,
+        );
+        if (current()) setCameraProgress(progress);
+        if (progress >= 1) clearInterval(run.progressTimer);
+      }, 500);
       run.timer = setTimeout(() => {
         run.cameraController.abort(trustError("CAMERA_TIME_LIMIT"));
+        clearInterval(run.progressTimer);
+        if (current()) setCameraProgress(1);
         stopCamera(run.stream);
         if (current()) {
           setCameraOn(false);
@@ -238,6 +255,7 @@ export function useFaceVerification() {
     } finally {
       removeListeners();
       clearTimeout(run.timer);
+      clearInterval(run.progressTimer);
       run.cameraController.abort();
       stopCamera(run.stream);
       if (current()) {
@@ -260,6 +278,7 @@ export function useFaceVerification() {
     setPreviewUrl("");
     setActive(false);
     setCameraOn(false);
+    setCameraProgress(0);
     setIssue(null);
     setResult(null);
     setPhase("photo");
@@ -289,6 +308,7 @@ export function useFaceVerification() {
     issue,
     active,
     cameraOn,
+    cameraProgress,
     hint,
     result,
     videoRef,

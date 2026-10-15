@@ -309,9 +309,27 @@ export function ProfilePhotoEditor({
                 <br />
                 <em>정면</em>을 바라봐주세요
               </h1>
-              <p className="trust-subcopy">
-                확인이 끝나면 카메라는 자동으로 꺼져요.
-              </p>
+              <div className="trust-camera-guidance">
+                <p>얼굴을 점선 안에 맞추고 화면을 바라봐주세요.</p>
+                <div
+                  className="trust-camera-progress"
+                  role="progressbar"
+                  aria-label="카메라 촬영 시간"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(trust.cameraProgress * 100)}
+                >
+                  <span
+                    style={{
+                      width: `${Math.round(trust.cameraProgress * 100)}%`,
+                    }}
+                  />
+                </div>
+                <small>
+                  카메라가 켜지면 최대 1분 동안 확인해요. 인증이 완료되면 바로
+                  다음 단계로 이동해요.
+                </small>
+              </div>
               {!trust.active && (
                 <PixelButton
                   onClick={() => void trust.start()}

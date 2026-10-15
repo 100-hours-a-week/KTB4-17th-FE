@@ -103,7 +103,8 @@ test("face mismatch terminates the session without automatic retries", async () 
     }),
   );
   assert.equal(submits, 1);
-  assert.equal(sessionIssue(result).kind, "mismatch");
+  assert.equal(sessionIssue(result).kind, "photo");
+  assert.equal(sessionIssue(result).title, "정면 사진을 바꿔주세요");
 });
 
 test("lost POST response recovers VERIFIED via GET without resubmitting", async () => {
