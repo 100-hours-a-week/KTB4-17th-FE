@@ -59,9 +59,10 @@
   border: 1px solid var(--line);
 }
 
-.trust-photo-intro svg {
+.trust-photo-intro > img {
   width: min(65%, 220px);
   height: auto;
+  image-rendering: auto;
 }
 
 .trust-photo-intro span {
@@ -146,10 +147,11 @@
   padding-top: 8px;
 }
 
-.trust-examples svg {
+.trust-examples img {
   display: block;
   width: 100%;
   height: auto;
+  image-rendering: auto;
 }
 
 .trust-examples figcaption {
@@ -190,6 +192,15 @@
   height: 100%;
   object-fit: cover;
   transform: scaleX(-1);
+}
+
+.trust-photo-camera {
+  height: auto;
+  aspect-ratio: 4 / 3;
+}
+
+.trust-photo-camera video {
+  object-fit: contain;
 }
 
 .trust-camera-placeholder {

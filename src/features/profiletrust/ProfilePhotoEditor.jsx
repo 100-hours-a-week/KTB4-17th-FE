@@ -9,18 +9,13 @@ import {
   profilePhotoErrorMessage,
 } from "../profile/photoUpload.js";
 import { reorderPhotos, replaceFrontalPhoto } from "./model.js";
+import { PhotoCapture } from "./PhotoCapture.jsx";
 import { useFaceVerification } from "./useFaceVerification.js";
 
 const PHOTO_ACCEPT =
   "image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif";
 
-function PhotoPicker({
-  children,
-  onSelect,
-  disabled,
-  capture,
-  className = "",
-}) {
+function PhotoPicker({ children, onSelect, disabled, className = "" }) {
   const input = useRef(null);
   return (
     <>
@@ -36,7 +31,6 @@ function PhotoPicker({
         ref={input}
         type="file"
         accept={PHOTO_ACCEPT}
-        capture={capture}
         hidden
         disabled={disabled}
         onChange={(event) => {
@@ -50,62 +44,18 @@ function PhotoPicker({
 }
 
 function GuidePortrait({ variant = "good" }) {
+  const descriptions = {
+    good: "밝은 곳에서 얼굴 전체가 정면으로 보이는 좋은 촬영 예시",
+    side: "얼굴이 옆을 향한 피해야 할 촬영 예시",
+    covered: "마스크로 얼굴이 가려진 피해야 할 촬영 예시",
+  };
   return (
-    <svg
-      viewBox="0 0 120 108"
-      role="img"
-      aria-label={
-        variant === "good"
-          ? "밝은 곳에서 얼굴 전체가 정면으로 보이는 좋은 촬영 예시"
-          : variant === "side"
-            ? "얼굴이 옆을 향한 피해야 할 촬영 예시"
-            : "마스크로 얼굴이 가려진 피해야 할 촬영 예시"
-      }
-    >
-      <rect
-        width="120"
-        height="108"
-        fill={variant === "good" ? "#ede7ff" : "#f0edf2"}
-      />
-      <path d="M22 108v-12l8-12 18-7h24l18 7 8 12v12" fill="#a18bd2" />
-      <path d="M50 66h20v17l-10 8-10-8" fill="#e9b89f" />
-      <g
-        transform={variant === "side" ? "translate(18 0) skewX(-9)" : undefined}
-      >
-        <path
-          d="M35 35l5-17 13-7h15l14 9 4 17-4 25-10 13H49L38 61z"
-          fill="#f5ceb7"
-        />
-        <path
-          d="M35 45V28l8-13 14-6 19 6 10 15v15l-7-12-5-10-10 7-20 3-5 14z"
-          fill="#44364d"
-        />
-        <path d="M46 46h5v5h-5zm23 0h5v5h-5z" fill="#45394b" />
-        <path d="M55 61h10v3H55z" fill="#b56e78" />
-        {variant === "covered" && (
-          <path
-            d="M39 51l21 4 21-4-5 19-16 5-16-5z"
-            fill="#fff"
-            stroke="#b5a9c9"
-            strokeWidth="2"
-          />
-        )}
-      </g>
-      <path
-        d="M12 24V12h12m72 0h12v12M12 84v12h12m72 0h12V84"
-        fill="none"
-        stroke={variant === "good" ? "#7c5cfa" : "#b3a8bb"}
-        strokeWidth="3"
-      />
-      {variant === "good" && (
-        <path
-          d="M91 86l5 5 10-12"
-          fill="none"
-          stroke="#5b3fd6"
-          strokeWidth="4"
-        />
-      )}
-    </svg>
+    <img
+      src={asset(`profiletrust/guide-${variant}.jpg`)}
+      alt={descriptions[variant]}
+      width={640}
+      height={640}
+    />
   );
 }
 
@@ -150,6 +100,7 @@ export function ProfilePhotoEditor({
     requireVerification || !initialPhotos.some((item) => item.isFrontal),
   );
   const [error, setError] = useState("");
+  const [takingPhoto, setTakingPhoto] = useState(false);
   const itemsRef = useRef(items);
   const ownedUrls = useRef(new Set());
   const removed = useRef(new Set());
@@ -274,6 +225,7 @@ export function ProfilePhotoEditor({
 
   function beginReplacement() {
     if (disabled) return;
+    setTakingPhoto(false);
     trust.reset();
     setVerifying(true);
   }
@@ -289,7 +241,7 @@ export function ProfilePhotoEditor({
     >
       {verifying ? (
         <>
-          {trust.phase === "photo" && (
+          {trust.phase === "photo" && !takingPhoto && (
             <>
               <span className="trust-kicker">
                 <PixelIcon name="lock" /> PROFILE TRUST
@@ -322,19 +274,30 @@ export function ProfilePhotoEditor({
                 >
                   <PixelIcon name="plus" /> 정면 사진 선택하기
                 </PhotoPicker>
-                <PhotoPicker
-                  capture="user"
+                <button
+                  type="button"
+                  className="trust-picker"
                   disabled={disabled}
-                  onSelect={trust.selectPhoto}
+                  onClick={() => setTakingPhoto(true)}
                 >
                   카메라로 사진 촬영
-                </PhotoPicker>
+                </button>
               </div>
               <small className="trust-formats">
                 JPG · PNG · WEBP · HEIC / 최대 30MB
               </small>
               <CaptureGuide />
             </>
+          )}
+          {trust.phase === "photo" && takingPhoto && (
+            <PhotoCapture
+              disabled={disabled}
+              onCancel={() => setTakingPhoto(false)}
+              onCapture={(file) => {
+                setTakingPhoto(false);
+                trust.selectPhoto(file);
+              }}
+            />
           )}
           {trust.phase === "camera" && (
             <>
@@ -425,7 +388,7 @@ export function ProfilePhotoEditor({
                 {trust.issue?.title}
               </h1>
               <div className="trust-result-art">
-                <img src={asset("shield.svg")} alt="" />
+                <PixelIcon name="alert" scale={12} />
               </div>
               <p className="trust-failure-message" role="alert">
                 {trust.issue?.message}
@@ -494,6 +457,7 @@ export function ProfilePhotoEditor({
               type="button"
               className="trust-text-button"
               onClick={() => {
+                setTakingPhoto(false);
                 trust.reset();
                 setVerifying(false);
               }}

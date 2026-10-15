@@ -41,6 +41,8 @@ const MESSAGES = Object.freeze({
     "이번 촬영에서 인증을 마치지 못했어요. 밝은 곳에서 얼굴을 정면으로 맞추고 다시 시도해주세요.",
   CAMERA_START_TIMEOUT:
     "카메라를 열지 못했어요. 권한 안내를 확인하고 다시 시도해주세요.",
+  CAMERA_CAPTURE_FAILED:
+    "사진을 촬영하지 못했어요. 카메라 화면이 보이면 다시 촬영해주세요.",
   VIDEO_EMPTY: "촬영된 영상을 읽지 못했어요. 카메라 인증을 다시 시작해주세요.",
   VIDEO_TYPE_NOT_ALLOWED:
     "이 브라우저의 영상 형식으로 인증하지 못했어요. 최신 Safari 또는 Chrome에서 다시 시도해주세요.",
