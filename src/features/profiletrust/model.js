@@ -157,7 +157,8 @@ export function sessionIssue(session) {
     return {
       kind: "camera",
       title: "인증 결과를 확인하지 못했어요",
-      message: "인증 사유를 확인하지 못했어요. 카메라 인증을 다시 시도해주세요.",
+      message:
+        "인증 사유를 확인하지 못했어요. 카메라 인증을 다시 시도해주세요.",
     };
 
   return {
