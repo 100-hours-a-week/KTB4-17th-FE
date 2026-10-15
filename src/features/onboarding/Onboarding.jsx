@@ -24,12 +24,9 @@ import {
 } from "../profile/data.js";
 import { JobCategorySelect } from "../profile/JobCategorySelect.jsx";
 import { isJobCategory } from "../profile/jobCategories.js";
-import {
-  createPhotoId,
-  prepareProfilePhoto,
-  profilePhotoErrorMessage,
-} from "../profile/photoUpload.js";
 import { profilePayload } from "../profile/serialize.js";
+import { savedPhotoItems } from "../profiletrust/model.js";
+import { ProfilePhotoEditor } from "../profiletrust/ProfilePhotoEditor.jsx";
 import * as userApi from "../user/api.js";
 import { isValidBirthDate, normalizeBirthDate } from "../user/birthDate.js";
 import { getRegistrationAgeRestriction } from "../user/registrationAge.js";
@@ -54,7 +51,7 @@ const STEP_LABELS = {
   questions: "가치관 문답",
   "persona-summary": "가치관 요약",
   kakao: "카카오톡 대화",
-  "photo-intro": "사진 준비",
+  "photo-intro": "사진과 본인 인증",
   photo: "사진",
 };
 const PERSONA_ANSWER_LIMIT = 200;
@@ -454,12 +451,15 @@ export function Onboarding({ navigate, toast }) {
   const personaSendRef = useRef(null);
   const restorePersonaFocus = useRef(false);
   const personaAnswerInFlight = useRef(false);
-  const [photoItems, setPhotoItems] = useState([]);
+  const [photoState, setPhotoState] = useState({
+    images: [],
+    ready: false,
+    busy: false,
+  });
   const [photoSaving, setPhotoSaving] = useState(false);
-  const draggedPhotoId = useRef(null);
-  const localPhotoUrls = useRef(new Set());
-  const removedPhotoIds = useRef(new Set());
-  const mounted = useRef(false);
+  const [savedPhotos, setSavedPhotos] = useState(null);
+  const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
+  const photoSaveInFlight = useRef(false);
   const identitySubmitInFlight = useRef(false);
   const profileSaveInFlight = useRef(false);
   const personaStartInFlight = useRef(false);
@@ -470,19 +470,29 @@ export function Onboarding({ navigate, toast }) {
     : data.onboardingStep === "identity"
       ? "region"
       : data.onboardingStep;
+  const isPhotoStep = step === "photo-intro" || step === "photo";
+  useEffect(() => {
+    if (!isPhotoStep || photoLoadFailed) return undefined;
+    let active = true;
+    setSavedPhotos(null);
+    setPhotoLoadFailed(false);
+    profileApi
+      .getMyProfile()
+      .then((serverProfile) => {
+        if (active) setSavedPhotos(savedPhotoItems(serverProfile));
+      })
+      .catch(() => {
+        if (active) setPhotoLoadFailed(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isPhotoStep, photoLoadFailed]);
   const stepIndex = ONBOARDING_STEPS.indexOf(step);
   const isPersonaFlowStep = PERSONA_FLOW_STEPS.has(step);
   const canGoBack = stepIndex > (hasRegisteredIdentity ? 1 : 0);
   const updateProfile = (key, value) =>
     setData((old) => ({ ...old, profile: { ...old.profile, [key]: value } }));
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-      for (const url of localPhotoUrls.current) URL.revokeObjectURL(url);
-      localPhotoUrls.current.clear();
-    };
-  }, []);
   function handleNameChange(event) {
     const nextName = event.currentTarget.value;
     updateProfile("name", nextName);
@@ -925,113 +935,14 @@ export function Onboarding({ navigate, toast }) {
     }
   }
 
-  function addPhotoItem(file, isFrontal) {
-    if (!file || photoSaving) return;
-    if (photoItems.length >= 6) {
-      setError("사진은 최대 6장까지 등록할 수 있어요.");
-      return;
-    }
-
-    const localId = createPhotoId();
-    const previewUrl = URL.createObjectURL(file);
-    localPhotoUrls.current.add(previewUrl);
-    setPhotoItems((current) => [
-      ...current,
-      { localId, previewUrl, fileId: null, isFrontal, uploading: true },
-    ]);
-    setError("");
-
-    const upload = async () => {
-      let currentPreview = previewUrl;
-      try {
-        const prepared = await prepareProfilePhoto(file);
-        if (!mounted.current || removedPhotoIds.current.has(localId)) return;
-        currentPreview = URL.createObjectURL(prepared);
-        localPhotoUrls.current.add(currentPreview);
-        URL.revokeObjectURL(previewUrl);
-        localPhotoUrls.current.delete(previewUrl);
-        setPhotoItems((current) =>
-          current.map((item) =>
-            item.localId === localId
-              ? { ...item, previewUrl: currentPreview }
-              : item,
-          ),
-        );
-        const metadata = await profileApi.uploadProfileImage(prepared);
-        if (!mounted.current || removedPhotoIds.current.has(localId)) return;
-        setPhotoItems((current) =>
-          current.map((item) =>
-            item.localId === localId
-              ? { ...item, fileId: metadata.fileId, uploading: false }
-              : item,
-          ),
-        );
-      } catch (error) {
-        URL.revokeObjectURL(currentPreview);
-        localPhotoUrls.current.delete(currentPreview);
-        if (!mounted.current || removedPhotoIds.current.has(localId)) return;
-        setPhotoItems((current) =>
-          current.filter((item) => item.localId !== localId),
-        );
-        setError(profilePhotoErrorMessage(error));
-      }
-    };
-    void upload();
-  }
-
-  function reorderPhotos(sourceId, targetId) {
-    if (photoSaving || !sourceId || sourceId === targetId) return;
-    setPhotoItems((current) => {
-      const sourceIndex = current.findIndex(
-        (item) => item.localId === sourceId,
-      );
-      const targetIndex = current.findIndex(
-        (item) => item.localId === targetId,
-      );
-      if (sourceIndex < 0 || targetIndex < 0) return current;
-      const next = [...current];
-      const [moved] = next.splice(sourceIndex, 1);
-      const targetIndexAfterRemoval = next.findIndex(
-        (item) => item.localId === targetId,
-      );
-      const insertIndex =
-        targetIndexAfterRemoval + (sourceIndex < targetIndex ? 1 : 0);
-      next.splice(insertIndex, 0, moved);
-      return next;
-    });
-  }
-
-  function removePhoto(localId) {
-    if (photoSaving) return;
-    removedPhotoIds.current.add(localId);
-    setPhotoItems((current) => {
-      const item = current.find((photo) => photo.localId === localId);
-      if (item?.previewUrl) {
-        URL.revokeObjectURL(item.previewUrl);
-        localPhotoUrls.current.delete(item.previewUrl);
-      }
-      return current.filter((photo) => photo.localId !== localId);
-    });
-  }
-
   async function finishOnboarding() {
-    const hasFrontPhoto = photoItems.some(
-      (item) => item.isFrontal && item.fileId,
-    );
-    if (!hasFrontPhoto) return setError("정면 사진을 먼저 등록해주세요.");
-    if (photoItems.some((item) => item.uploading || !item.fileId))
-      return setError("사진 업로드가 끝난 뒤 저장해주세요.");
-    if (photoSaving) return;
+    if (!photoState.ready || photoSaveInFlight.current) return;
+    photoSaveInFlight.current = true;
 
     setPhotoSaving(true);
     setError("");
     try {
-      await profileApi.profileImages(
-        photoItems.map((item) => ({
-          fileId: item.fileId,
-          isFrontal: item.isFrontal,
-        })),
-      );
+      await profileApi.profileImages(photoState.images);
       const status = await userApi.onboarding();
       if (status?.userStatus !== "ACTIVE") {
         setData((old) => ({
@@ -1056,6 +967,7 @@ export function Onboarding({ navigate, toast }) {
         ),
       );
     } finally {
+      photoSaveInFlight.current = false;
       setPhotoSaving(false);
     }
   }
@@ -1589,160 +1501,27 @@ export function Onboarding({ navigate, toast }) {
             </div>
           </>
         )}
-        {step === "photo-intro" && (
-          <>
-            <h1>정면 사진을 먼저 등록해주세요</h1>
-            <p className="subcopy">
-              얼굴이 잘 보이는 사진은 신뢰할 수 있는 만남을 만드는 데 도움이
-              돼요.
-            </p>
-            <div className="photo-viewfinder" aria-hidden="true">
-              <i className="corner tl" />
-              <i className="corner tr" />
-              <i className="corner bl" />
-              <i className="corner br" />
-              <span>FRONT VIEW</span>
-              <PixelIcon name="bust" scale={11} />
-            </div>
-            <section className="onboarding-note">
-              <strong className="onboarding-note-label">
-                <PixelIcon name="target" />
-                PHOTO GUIDE
-              </strong>
-              <ul>
-                <li>얼굴이 선명하게 보여야 해요.</li>
-                <li>다른 사람과 함께 찍은 사진은 피해요.</li>
-                <li>필터가 강한 사진은 피해주세요.</li>
-              </ul>
-            </section>
-          </>
-        )}
-        {step === "photo" && (
-          <>
-            <h1>사진으로 나를 소개해주세요</h1>
-            <p className="subcopy">사진은 최대 6장까지 등록할 수 있어요.</p>
-            {!photoItems.some((item) => item.isFrontal) && (
-              <label className="photo-front-upload">
-                <span className="photo-front-plus" aria-hidden="true">
-                  <PixelIcon name="plus" scale={3} />
-                </span>
-                <strong>정면 사진 등록</strong>
-                <span>얼굴이 잘 보이는 정면 사진을 선택해주세요.</span>
-                <small className="photo-formats">
-                  <span>JPG</span>
-                  <span>PNG</span>
-                  <span>WEBP</span>
-                  <span>HEIC</span>
-                </small>
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif"
-                  disabled={photoSaving}
-                  onChange={(event) => {
-                    addPhotoItem(event.target.files?.[0], true);
-                    event.target.value = "";
-                  }}
-                />
-              </label>
-            )}
-            <section className="onboarding-photo-grid" aria-label="등록한 사진">
-              {photoItems.map((item) => (
-                <article
-                  className="onboarding-photo-tile"
-                  data-photo-id={item.localId}
-                  draggable={!item.uploading && !photoSaving}
-                  key={item.localId}
-                  onDragStart={(event) => {
-                    draggedPhotoId.current = item.localId;
-                    event.dataTransfer.effectAllowed = "move";
-                    event.dataTransfer.setData("text/plain", item.localId);
-                  }}
-                  onDragEnd={() => {
-                    draggedPhotoId.current = null;
-                  }}
-                  onDragOver={(event) => event.preventDefault()}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    const sourceId =
-                      draggedPhotoId.current ||
-                      event.dataTransfer.getData("text/plain");
-                    reorderPhotos(sourceId, item.localId);
-                    draggedPhotoId.current = null;
-                  }}
-                  onPointerDown={(event) => {
-                    if (
-                      event.pointerType === "mouse" ||
-                      photoSaving ||
-                      item.uploading ||
-                      event.target.closest("button")
-                    )
-                      return;
-                    draggedPhotoId.current = item.localId;
-                    event.currentTarget.setPointerCapture(event.pointerId);
-                  }}
-                  onPointerUp={(event) => {
-                    if (event.pointerType === "mouse") return;
-                    const target = document
-                      .elementFromPoint(event.clientX, event.clientY)
-                      ?.closest("[data-photo-id]");
-                    reorderPhotos(
-                      draggedPhotoId.current,
-                      target?.dataset.photoId,
-                    );
-                    draggedPhotoId.current = null;
-                    if (event.currentTarget.hasPointerCapture(event.pointerId))
-                      event.currentTarget.releasePointerCapture(
-                        event.pointerId,
-                      );
-                  }}
-                  onPointerCancel={() => {
-                    draggedPhotoId.current = null;
-                  }}
-                >
-                  <img src={item.previewUrl} alt="등록한 프로필 사진" />
-                  {item.isFrontal && <b>정면 사진</b>}
-                  {item.uploading && (
-                    <span className="photo-uploading">업로드 중</span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => removePhoto(item.localId)}
-                    aria-label="사진 삭제"
-                    disabled={photoSaving}
-                  >
-                    <PixelIcon name="x" />
-                  </button>
-                </article>
-              ))}
-              {photoItems.length < 6 &&
-                photoItems.some((item) => item.isFrontal) && (
-                  <label className="onboarding-photo-add">
-                    <PixelIcon name="plus" />
-                    <small>추가 사진</small>
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif"
-                      disabled={photoSaving}
-                      onChange={(event) => {
-                        addPhotoItem(event.target.files?.[0], false);
-                        event.target.value = "";
-                      }}
-                    />
-                  </label>
-                )}
-            </section>
-            <section className="onboarding-note tint">
-              <strong className="onboarding-note-label">
-                <PixelIcon name="spark" />
-                TIP
-              </strong>
+        {isPhotoStep &&
+          (photoLoadFailed ? (
+            <section className="profile-load-error" role="alert">
               <p>
-                사진을 드래그하면 순서를 바꿀 수 있어요. 정면 사진은 위치가
-                바뀌어도 유지돼요.
+                저장된 사진을 불러오지 못했어요. 연결을 확인한 뒤 다시
+                시도해주세요.
               </p>
+              <PixelButton onClick={() => setPhotoLoadFailed(false)}>
+                다시 불러오기
+              </PixelButton>
             </section>
-          </>
-        )}
+          ) : savedPhotos === null ? (
+            <p role="status">저장된 사진을 불러오고 있어요.</p>
+          ) : (
+            <ProfilePhotoEditor
+              initialPhotos={savedPhotos}
+              requireVerification
+              disabled={photoSaving}
+              onChange={setPhotoState}
+            />
+          ))}
         {error &&
           !(step === "profile" && error === "직업군을 선택해주세요.") && (
             <p
@@ -1754,7 +1533,13 @@ export function Onboarding({ navigate, toast }) {
             </p>
           )}
       </div>
-      <div className="onboarding-action" hidden={step === "kakao"}>
+      <div
+        className="onboarding-action"
+        hidden={
+          step === "kakao" ||
+          ((step === "photo-intro" || step === "photo") && !photoState.ready)
+        }
+      >
         {step === "identity" && (
           <PixelButton
             onClick={identityAuthExpired ? beginKakaoLogin : submitIdentity}
@@ -1853,14 +1638,12 @@ export function Onboarding({ navigate, toast }) {
             </PixelButton>
           </>
         )}
-        {step === "photo-intro" && (
-          <PixelButton className="pink" onClick={() => advance("photo")}>
-            사진 등록하기
-          </PixelButton>
-        )}
-        {step === "photo" && (
-          <PixelButton onClick={finishOnboarding} disabled={photoSaving}>
-            {photoSaving ? "저장 중..." : "시작하기"}
+        {(step === "photo-intro" || step === "photo") && (
+          <PixelButton
+            onClick={finishOnboarding}
+            disabled={photoSaving || !photoState.ready}
+          >
+            {photoSaving ? "저장 중..." : "사진 저장하고 시작하기"}
           </PixelButton>
         )}
       </div>

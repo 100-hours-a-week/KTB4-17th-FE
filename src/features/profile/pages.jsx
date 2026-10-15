@@ -14,11 +14,12 @@ import {
 import { AiAvatar } from "../../shared/ui/pixel.jsx";
 import { dateAge } from "../../shared/utils.js";
 import { ActivityRegionPicker } from "../activity-region/ActivityRegionPicker.jsx";
+import { savedPhotoItems } from "../profiletrust/model.js";
+import { ProfilePhotoEditor } from "../profiletrust/ProfilePhotoEditor.jsx";
 import {
   getMyProfile,
   profile as saveProfile,
   profileImages as saveProfileImages,
-  uploadProfileImage,
 } from "./api.js";
 import {
   bodyTypes,
@@ -29,34 +30,7 @@ import {
 } from "./data.js";
 import { JobCategorySelect } from "./JobCategorySelect.jsx";
 import { isJobCategory, normalizeJobCategory } from "./jobCategories.js";
-import {
-  createPhotoId,
-  prepareProfilePhoto,
-  profilePhotoErrorMessage,
-} from "./photoUpload.js";
 import { profilePayload } from "./serialize.js";
-
-function profilePhotoItems(serverProfile) {
-  return (Array.isArray(serverProfile?.images) ? serverProfile.images : [])
-    .slice()
-    .sort(
-      (first, second) =>
-        Number(first?.displayOrder || 0) - Number(second?.displayOrder || 0),
-    )
-    .filter(
-      (image) =>
-        image?.fileId != null &&
-        typeof image?.imageUrl === "string" &&
-        image.imageUrl,
-    )
-    .map((image) => ({
-      localId: `saved-${image.fileId}`,
-      previewUrl: image.imageUrl,
-      fileId: image.fileId,
-      isFrontal: image.isFrontal === true,
-      uploading: false,
-    }));
-}
 
 export function MyPage({ navigate, toast }) {
   const { data } = useAppState();
@@ -296,25 +270,17 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
   const profile = data.profile;
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [profileLoadFailed, setProfileLoadFailed] = useState(false);
-  const [photoItems, setPhotoItems] = useState([]);
-  const [existingProfilePhoto, setExistingProfilePhoto] = useState("");
-  const [isReplacingPhotos, setIsReplacingPhotos] = useState(false);
-  const [photoError, setPhotoError] = useState("");
+  const [initialPhotos, setInitialPhotos] = useState([]);
+  const [legacyPhoto, setLegacyPhoto] = useState("");
+  const [replacingLegacyPhoto, setReplacingLegacyPhoto] = useState(false);
+  const [photoState, setPhotoState] = useState({
+    images: [],
+    ready: false,
+    busy: false,
+  });
   const [jobError, setJobError] = useState("");
   const [photoSaving, setPhotoSaving] = useState(false);
-  const draggedPhotoId = useRef(null);
-  const localPhotoUrls = useRef(new Set());
-  const removedPhotoIds = useRef(new Set());
-  const mounted = useRef(false);
-
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-      for (const url of localPhotoUrls.current) URL.revokeObjectURL(url);
-      localPhotoUrls.current.clear();
-    };
-  }, []);
+  const saveInFlight = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -324,13 +290,10 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
     getMyProfile()
       .then((serverProfile) => {
         if (!active) return;
-        const savedPhotos = profilePhotoItems(serverProfile);
-        setPhotoItems(savedPhotos);
-        setExistingProfilePhoto(
+        const savedPhotos = savedPhotoItems(serverProfile);
+        setInitialPhotos(savedPhotos);
+        setLegacyPhoto(
           savedPhotos.length ? "" : serverProfile.profileImageUrl || "",
-        );
-        setIsReplacingPhotos(
-          savedPhotos.length > 0 || !serverProfile.profileImageUrl,
         );
         setData((old) => ({
           ...old,
@@ -368,100 +331,17 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
   const set = (key, value) =>
     setData((old) => ({ ...old, profile: { ...old.profile, [key]: value } }));
 
-  function addPhotoItem(file, isFrontal) {
-    if (!file || photoSaving) return;
-    if (photoItems.length >= 6) {
-      setPhotoError("사진은 최대 6장까지 등록할 수 있어요.");
-      return;
-    }
-
-    const localId = createPhotoId();
-    const previewUrl = URL.createObjectURL(file);
-    localPhotoUrls.current.add(previewUrl);
-    setPhotoItems((current) => [
-      ...current,
-      { localId, previewUrl, fileId: null, isFrontal, uploading: true },
-    ]);
-    setPhotoError("");
-
-    const upload = async () => {
-      let currentPreview = previewUrl;
-      try {
-        const prepared = await prepareProfilePhoto(file);
-        if (!mounted.current || removedPhotoIds.current.has(localId)) return;
-        const convertedPreview = URL.createObjectURL(prepared);
-        currentPreview = convertedPreview;
-        localPhotoUrls.current.add(convertedPreview);
-        URL.revokeObjectURL(previewUrl);
-        localPhotoUrls.current.delete(previewUrl);
-        setPhotoItems((current) =>
-          current.map((item) =>
-            item.localId === localId
-              ? { ...item, previewUrl: convertedPreview }
-              : item,
-          ),
-        );
-        const metadata = await uploadProfileImage(prepared);
-        if (!mounted.current || removedPhotoIds.current.has(localId)) return;
-        setPhotoItems((current) =>
-          current.map((item) =>
-            item.localId === localId
-              ? { ...item, fileId: metadata.fileId, uploading: false }
-              : item,
-          ),
-        );
-      } catch (error) {
-        URL.revokeObjectURL(currentPreview);
-        localPhotoUrls.current.delete(currentPreview);
-        if (!mounted.current || removedPhotoIds.current.has(localId)) return;
-        setPhotoItems((current) =>
-          current.filter((item) => item.localId !== localId),
-        );
-        setPhotoError(profilePhotoErrorMessage(error));
-      }
-    };
-    void upload();
-  }
-
-  function reorderPhotos(sourceId, targetId) {
-    if (photoSaving || !sourceId || sourceId === targetId) return;
-    setPhotoItems((current) => {
-      const sourceIndex = current.findIndex(
-        (item) => item.localId === sourceId,
-      );
-      const targetIndex = current.findIndex(
-        (item) => item.localId === targetId,
-      );
-      if (sourceIndex < 0 || targetIndex < 0) return current;
-
-      const next = [...current];
-      const [moved] = next.splice(sourceIndex, 1);
-      const targetIndexAfterRemoval = next.findIndex(
-        (item) => item.localId === targetId,
-      );
-      const insertIndex =
-        targetIndexAfterRemoval + (sourceIndex < targetIndex ? 1 : 0);
-      next.splice(insertIndex, 0, moved);
-      return next;
-    });
-  }
-
-  function removePhoto(localId) {
-    if (photoSaving) return;
-    removedPhotoIds.current.add(localId);
-    setPhotoItems((current) => {
-      const item = current.find((photo) => photo.localId === localId);
-      if (item?.previewUrl && localPhotoUrls.current.has(item.previewUrl)) {
-        URL.revokeObjectURL(item.previewUrl);
-        localPhotoUrls.current.delete(item.previewUrl);
-      }
-      return current.filter((photo) => photo.localId !== localId);
-    });
-    setPhotoError("");
-  }
+  const keepLegacyPhoto = Boolean(legacyPhoto) && !replacingLegacyPhoto;
+  const photosReady = keepLegacyPhoto || photoState.ready;
 
   async function save() {
-    if (isLoadingProfile || profileLoadFailed || photoSaving) return;
+    if (
+      isLoadingProfile ||
+      profileLoadFailed ||
+      saveInFlight.current ||
+      !photosReady
+    )
+      return;
     if (!isJobCategory(profile.job)) {
       setJobError("직업군을 선택해주세요.");
       return;
@@ -471,40 +351,14 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
       toast("검색 결과에서 활동 지역을 선택해주세요.");
       return;
     }
-    if (isReplacingPhotos && !photoItems.length) {
-      setPhotoError("프로필 사진을 한 장 이상 등록해주세요.");
-      return;
-    }
-    if (
-      isReplacingPhotos &&
-      !photoItems.some((item) => item.isFrontal && item.fileId)
-    ) {
-      setPhotoError("정면 사진을 등록해주세요.");
-      return;
-    }
-    if (
-      isReplacingPhotos &&
-      photoItems.some((item) => item.uploading || !item.fileId)
-    ) {
-      setPhotoError("사진 업로드가 끝난 뒤 저장해주세요.");
-      return;
-    }
-    if (photoSaving) return;
-
+    saveInFlight.current = true;
     setPhotoSaving(true);
-    setPhotoError("");
     try {
       await saveProfile(profilePayload(profile));
-      if (isReplacingPhotos) {
-        await saveProfileImages(
-          photoItems.map((item) => ({
-            fileId: item.fileId,
-            isFrontal: item.isFrontal,
-          })),
-        );
-      }
+      if (!keepLegacyPhoto) await saveProfileImages(photoState.images);
     } catch (e) {
       toast(apiErrorMessage(e, "프로필을 저장하지 못했어요."));
+      saveInFlight.current = false;
       setPhotoSaving(false);
       return;
     }
@@ -544,193 +398,41 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
           </div>
         ) : (
           <>
-            <section
-              className="edit-photo-section"
-              aria-labelledby="edit-photo-title"
-            >
-              <div className="edit-photo-heading">
-                <strong className="edit-photo-title" id="edit-photo-title">
-                  프로필 사진
-                </strong>
-                <span>
-                  {isReplacingPhotos ? `${photoItems.length}/6` : "기존 사진"}
-                </span>
-              </div>
-              {!isReplacingPhotos && existingProfilePhoto ? (
+            <section className="edit-photo-section">
+              {keepLegacyPhoto ? (
                 <>
-                  <p>
-                    저장된 대표 사진이에요. 다른 프로필 정보를 저장해도 기존
-                    사진은 유지돼요.
-                  </p>
-                  <div className="onboarding-photo-grid edit-photo-grid">
-                    <article className="onboarding-photo-tile edit-photo-current">
-                      <img src={existingProfilePhoto} alt="저장된 대표 사진" />
-                      <b>기존 사진</b>
+                  <h2>프로필 사진</h2>
+                  <div className="trust-photo-grid">
+                    <article className="trust-photo-tile">
+                      <img src={legacyPhoto} alt="저장된 대표사진" />
+                      <span className="trust-photo-badge">기존 대표사진</span>
                     </article>
-                  </div>
-                  <div className="info-panel edit-photo-help">
-                    사진을 바꾸면 기존 사진 전체가 새 사진으로 교체돼요.
                   </div>
                   <button
                     type="button"
-                    className="edit-photo-replace-button"
-                    onClick={() => {
-                      setIsReplacingPhotos(true);
-                      setPhotoError("");
-                    }}
+                    className="trust-replace"
+                    disabled={photoSaving}
+                    onClick={() => setReplacingLegacyPhoto(true)}
                   >
-                    사진 전체 교체
+                    사진 편집 · 정면 사진 인증하기
                   </button>
                 </>
               ) : (
-                <>
-                  <p>정면 사진이 대표 사진으로 표시돼요.</p>
-                  {existingProfilePhoto && (
-                    <button
-                      type="button"
-                      className="edit-photo-replace-button"
-                      onClick={() => {
-                        for (const item of photoItems) {
-                          removedPhotoIds.current.add(item.localId);
-                          if (localPhotoUrls.current.has(item.previewUrl)) {
-                            URL.revokeObjectURL(item.previewUrl);
-                            localPhotoUrls.current.delete(item.previewUrl);
-                          }
-                        }
-                        setPhotoItems([]);
-                        setIsReplacingPhotos(false);
-                        setPhotoError("");
-                      }}
-                    >
-                      사진 교체 취소
-                    </button>
-                  )}
-                  {!photoItems.some((item) => item.isFrontal) && (
-                    <label className="photo-front-upload edit-photo-front-upload">
-                      <strong>정면 사진 등록</strong>
-                      <span>얼굴이 잘 보이는 정면 사진을 선택해주세요.</span>
-                      <small>JPG · PNG · WEBP · HEIC</small>
-                      <input
-                        type="file"
-                        disabled={photoSaving}
-                        accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif"
-                        onChange={(event) => {
-                          addPhotoItem(event.target.files?.[0], true);
-                          event.target.value = "";
-                        }}
-                      />
-                    </label>
-                  )}
-                  <section
-                    className="onboarding-photo-grid edit-photo-grid"
-                    aria-label="등록한 사진"
-                  >
-                    {photoItems.map((item) => (
-                      <article
-                        className="onboarding-photo-tile"
-                        data-photo-id={item.localId}
-                        draggable={!item.uploading && !photoSaving}
-                        key={item.localId}
-                        onDragStart={(event) => {
-                          draggedPhotoId.current = item.localId;
-                          event.dataTransfer.effectAllowed = "move";
-                          event.dataTransfer.setData(
-                            "text/plain",
-                            item.localId,
-                          );
-                        }}
-                        onDragEnd={() => {
-                          draggedPhotoId.current = null;
-                        }}
-                        onDragOver={(event) => event.preventDefault()}
-                        onDrop={(event) => {
-                          event.preventDefault();
-                          const sourceId =
-                            draggedPhotoId.current ||
-                            event.dataTransfer.getData("text/plain");
-                          reorderPhotos(sourceId, item.localId);
-                          draggedPhotoId.current = null;
-                        }}
-                        onPointerDown={(event) => {
-                          if (
-                            event.pointerType === "mouse" ||
-                            photoSaving ||
-                            item.uploading ||
-                            event.target.closest("button")
-                          )
-                            return;
-                          draggedPhotoId.current = item.localId;
-                          event.currentTarget.setPointerCapture(
-                            event.pointerId,
-                          );
-                        }}
-                        onPointerUp={(event) => {
-                          if (event.pointerType === "mouse") return;
-                          const target = document
-                            .elementFromPoint(event.clientX, event.clientY)
-                            ?.closest("[data-photo-id]");
-                          reorderPhotos(
-                            draggedPhotoId.current,
-                            target?.dataset.photoId,
-                          );
-                          draggedPhotoId.current = null;
-                          if (
-                            event.currentTarget.hasPointerCapture(
-                              event.pointerId,
-                            )
-                          )
-                            event.currentTarget.releasePointerCapture(
-                              event.pointerId,
-                            );
-                        }}
-                        onPointerCancel={() => {
-                          draggedPhotoId.current = null;
-                        }}
-                      >
-                        <img src={item.previewUrl} alt="등록한 프로필 사진" />
-                        <div className="profile-photo-labels">
-                          {item.isFrontal && <b>대표 · 정면 사진</b>}
-                        </div>
-                        {item.uploading && (
-                          <span className="photo-uploading">업로드 중</span>
-                        )}
-                        <button
-                          type="button"
-                          disabled={photoSaving}
-                          onClick={() => removePhoto(item.localId)}
-                          aria-label="사진 삭제"
-                        >
-                          ×
-                        </button>
-                      </article>
-                    ))}
-                    {photoItems.length < 6 &&
-                      photoItems.some((item) => item.isFrontal) && (
-                        <label className="onboarding-photo-add">
-                          <span>＋</span>
-                          <small>추가 사진</small>
-                          <input
-                            type="file"
-                            disabled={photoSaving}
-                            accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif"
-                            onChange={(event) => {
-                              addPhotoItem(event.target.files?.[0], false);
-                              event.target.value = "";
-                            }}
-                          />
-                        </label>
-                      )}
-                  </section>
-                  <div className="info-panel edit-photo-help">
-                    사진을 드래그하면 순서를 바꿀 수 있어요. 정면 사진 라벨은
-                    순서를 바꿔도 해당 사진에 유지돼요.
-                  </div>
-                </>
+                <ProfilePhotoEditor
+                  initialPhotos={initialPhotos}
+                  disabled={photoSaving}
+                  onChange={setPhotoState}
+                />
               )}
-              {photoError && (
-                <p className="field-error edit-photo-error" role="alert">
-                  {photoError}
-                </p>
+              {legacyPhoto && replacingLegacyPhoto && (
+                <button
+                  type="button"
+                  className="trust-text-button"
+                  disabled={photoSaving}
+                  onClick={() => setReplacingLegacyPhoto(false)}
+                >
+                  기존 대표사진 유지
+                </button>
               )}
             </section>
             <Field label="닉네임">
@@ -801,7 +503,10 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
               />
             </Field>
             <div className="edit-actions">
-              <PixelButton onClick={save} disabled={photoSaving}>
+              <PixelButton
+                onClick={save}
+                disabled={photoSaving || !photosReady}
+              >
                 {photoSaving ? "저장 중…" : "저장하기"}
               </PixelButton>
             </div>
