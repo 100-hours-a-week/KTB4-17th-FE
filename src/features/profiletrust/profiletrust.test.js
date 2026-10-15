@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { onboardingStepFromStatus } from "../../shared/utils.js";
-import { recordClip, recorderOptions, stopCamera } from "./camera.js";
+import {
+  openCamera,
+  recordClip,
+  recorderOptions,
+  stopCamera,
+} from "./camera.js";
 import {
   cameraError,
   reorderPhotos,
@@ -266,6 +271,53 @@ test("aborting a clip stops its recorder and camera cleanup stops all tracks", a
     getTracks: () => [{ stop: () => stopped++ }, { stop: () => stopped++ }],
   });
   assert.equal(stopped, 2);
+});
+
+test("still photo camera needs no video recorder and closes streams arriving after cancellation", async () => {
+  const keys = ["navigator", "isSecureContext", "MediaRecorder"];
+  const originals = keys.map((key) =>
+    Object.getOwnPropertyDescriptor(globalThis, key),
+  );
+  let release;
+  let stopped = 0;
+  const stream = { getTracks: () => [{ stop: () => stopped++ }] };
+  try {
+    Object.defineProperty(globalThis, "isSecureContext", {
+      configurable: true,
+      value: true,
+    });
+    Object.defineProperty(globalThis, "MediaRecorder", {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(globalThis, "navigator", {
+      configurable: true,
+      value: {
+        mediaDevices: {
+          getUserMedia: () =>
+            new Promise((resolve) => {
+              release = resolve;
+            }),
+        },
+      },
+    });
+    const abort = controller();
+    const camera = openCamera(abort.signal, { recordVideo: false });
+    abort.abort(trustError("CAMERA_INTERRUPTED"));
+    await assert.rejects(camera, { code: "CAMERA_INTERRUPTED" });
+    release(stream);
+    await Promise.resolve();
+    assert.equal(stopped, 1);
+    assert.throws(() => openCamera(controller().signal), {
+      code: "CAMERA_NOT_SUPPORTED",
+    });
+  } finally {
+    keys.forEach((key, index) => {
+      if (originals[index])
+        Object.defineProperty(globalThis, key, originals[index]);
+      else delete globalThis[key];
+    });
+  }
 });
 
 test("photo order selects the feed photo while frontal identity follows its file", () => {

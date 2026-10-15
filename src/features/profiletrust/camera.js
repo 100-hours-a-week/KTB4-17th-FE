@@ -26,12 +26,12 @@ export function stopCamera(stream) {
 
 // Permission prompts cannot be cancelled by getUserMedia. If the user leaves
 // while a prompt is open, dispose of any stream that arrives afterwards.
-export function openCamera(signal) {
+export function openCamera(signal, { recordVideo = true } = {}) {
   if (!globalThis.isSecureContext)
     return Promise.reject(trustError("CAMERA_HTTPS_REQUIRED"));
   if (!globalThis.navigator?.mediaDevices?.getUserMedia)
     return Promise.reject(trustError("CAMERA_NOT_SUPPORTED"));
-  recorderOptions();
+  if (recordVideo) recorderOptions();
   return new Promise((resolve, reject) => {
     let settled = false;
     const finish = (error, stream) => {
@@ -70,6 +70,39 @@ export function openCamera(signal) {
         (stream) => finish(null, stream),
         (error) => finish(cameraError(error)),
       );
+  });
+}
+
+export function capturePhoto(video) {
+  return new Promise((resolve, reject) => {
+    if (
+      !video ||
+      video.readyState < 2 ||
+      !video.videoWidth ||
+      !video.videoHeight
+    ) {
+      reject(trustError("CAMERA_CAPTURE_FAILED"));
+      return;
+    }
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext("2d");
+      if (!context) throw trustError("CAMERA_CAPTURE_FAILED");
+      context.drawImage(video, 0, 0);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob?.size) reject(trustError("CAMERA_CAPTURE_FAILED"));
+          else
+            resolve(new File([blob], "frontal-photo.jpg", { type: blob.type }));
+        },
+        "image/jpeg",
+        0.92,
+      );
+    } catch {
+      reject(trustError("CAMERA_CAPTURE_FAILED"));
+    }
   });
 }
 
