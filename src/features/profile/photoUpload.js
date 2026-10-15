@@ -123,3 +123,9 @@ export function profilePhotoErrorMessage(error) {
     )
   );
 }
+
+// The face verification API accepts JPEG/PNG, unlike ordinary profile uploads.
+export async function preparePrimaryPhoto(file) {
+  const prepared = await prepareProfilePhoto(file);
+  return prepared.type === "image/webp" ? compressPhoto(prepared) : prepared;
+}
