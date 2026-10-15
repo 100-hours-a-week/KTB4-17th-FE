@@ -116,15 +116,50 @@ export function verificationIssue(error) {
 }
 
 export function sessionIssue(session) {
-  if (session?.status === "NOT_VERIFIED")
-    return {
-      kind: "mismatch",
-      title: "사진과 얼굴을 확인해주세요",
-      message:
-        "정면 사진과 카메라 속 얼굴이 일치하는지 확인하지 못했어요. 본인의 사진인지 확인하고 다시 인증해주세요.",
-    };
+  const reasonCodes = new Set(session?.attempt?.reasonCodes ?? []);
+
   if (session?.status === "EXPIRED")
     return verificationIssue(trustError("VERIFICATION_SESSION_EXPIRED"));
+
+  if (reasonCodes.has("FACE_MISMATCH"))
+    return {
+      kind: "photo",
+      title: "정면 사진을 바꿔주세요",
+      message:
+        "카메라 속 얼굴과 선택한 정면 사진이 달라요. 본인의 사진인지 확인하고 정면 사진을 다시 선택해주세요.",
+    };
+
+  if (reasonCodes.has("NO_FACE"))
+    return {
+      kind: "camera",
+      title: "얼굴을 찾지 못했어요",
+      message:
+        "영상에서 얼굴을 확인하지 못했어요. 얼굴을 화면 가운데에 맞추고 다시 인증해주세요.",
+    };
+
+  if (reasonCodes.has("LIVENESS_FAILED"))
+    return {
+      kind: "camera",
+      title: "카메라 인증을 마치지 못했어요",
+      message:
+        "촬영 영상에서 본인 확인을 완료하지 못했어요. 화면을 바라보고 정면을 유지하며 다시 인증해주세요.",
+    };
+
+  if (reasonCodes.has("FACE_COMPARISON_FAILED"))
+    return {
+      kind: "camera",
+      title: "얼굴을 비교하지 못했어요",
+      message:
+        "카메라 속 얼굴을 사진과 비교하지 못했어요. 얼굴이 잘 보이도록 맞추고 다시 인증해주세요.",
+    };
+
+  if (session?.status === "NOT_VERIFIED")
+    return {
+      kind: "camera",
+      title: "인증 결과를 확인하지 못했어요",
+      message: "인증 사유를 확인하지 못했어요. 카메라 인증을 다시 시도해주세요.",
+    };
+
   return {
     kind: "camera",
     title: "카메라 인증을 다시 해주세요",
