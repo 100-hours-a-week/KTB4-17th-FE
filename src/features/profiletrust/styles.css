@@ -349,6 +349,25 @@
   font-size: 11px;
 }
 
+.trust-photo-badges {
+  position: absolute;
+  top: 6px;
+  right: 44px;
+  left: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.trust-photo-badges .trust-photo-badge {
+  position: static;
+  width: auto;
+  min-height: 28px;
+  padding: 4px 6px;
+  font-size: 10px;
+}
+
 .trust-uploading {
   inset: 0;
   background: rgb(27 20 48 / 60%);

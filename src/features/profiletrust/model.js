@@ -134,11 +134,19 @@ export function sessionIssue(session) {
 export function reorderPhotos(items, sourceId, targetId) {
   const from = items.findIndex((item) => item.localId === sourceId);
   const to = items.findIndex((item) => item.localId === targetId);
-  if (from < 1 || to < 1 || from === to) return items;
+  if (from < 0 || to < 0 || from === to) return items;
   const next = [...items];
   const [item] = next.splice(from, 1);
   next.splice(to, 0, item);
   return next;
+}
+
+export function replaceFrontalPhoto(items, verifiedPhoto) {
+  const index = items.findIndex((item) => item.isFrontal);
+  if (index < 0) return [...items, verifiedPhoto];
+  return items.map((item, position) =>
+    position === index ? verifiedPhoto : item,
+  );
 }
 
 export function savedPhotoItems(profile) {
@@ -149,11 +157,7 @@ export function savedPhotoItems(profile) {
         typeof image.imageUrl === "string" &&
         image.imageUrl,
     )
-    .sort(
-      (a, b) =>
-        Number(b.isFrontal) - Number(a.isFrontal) ||
-        Number(a.displayOrder) - Number(b.displayOrder),
-    )
+    .sort((a, b) => Number(a.displayOrder) - Number(b.displayOrder))
     .map((image) => ({
       localId: `saved-${image.fileId}`,
       fileId: image.fileId,

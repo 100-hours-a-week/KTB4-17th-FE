@@ -8,7 +8,7 @@ import {
   prepareProfilePhoto,
   profilePhotoErrorMessage,
 } from "../profile/photoUpload.js";
-import { reorderPhotos } from "./model.js";
+import { reorderPhotos, replaceFrontalPhoto } from "./model.js";
 import { useFaceVerification } from "./useFaceVerification.js";
 
 const PHOTO_ACCEPT =
@@ -259,16 +259,15 @@ export function ProfilePhotoEditor({
         ownedUrls.current.delete(item.previewUrl);
       }
     }
-    updateItems((photos) => [
-      {
+    updateItems((photos) =>
+      replaceFrontalPhoto(photos, {
         localId: createPhotoId(),
         fileId: trust.result.fileId,
         previewUrl,
         isFrontal: true,
         uploading: false,
-      },
-      ...photos.filter((item) => !item.isFrontal).slice(0, 5),
-    ]);
+      }),
+    );
     setError("");
     setVerifying(false);
   }
@@ -310,9 +309,9 @@ export function ProfilePhotoEditor({
               <div className="trust-note">
                 <strong>프로필 사진은 나중에 더할 수 있어요</strong>
                 <p>
-                  이 사진은 본인 확인에 사용하고, 인증 후 대표사진으로 등록돼요.
-                  다른 사진은 자유롭게 추가할 수 있고, 대표사진을 바꿀 때는 다시
-                  인증해요.
+                  이 사진은 본인 확인에 사용해요. 인증 후 사진을 추가하고 순서를
+                  바꿔 대표사진을 정할 수 있어요. 정면 사진 자체를 교체할 때는
+                  다시 인증해요.
                 </p>
               </div>
               <div className="trust-actions">
@@ -481,8 +480,8 @@ export function ProfilePhotoEditor({
               <div className="trust-note">
                 <strong>나를 보여줄 사진을 더해보세요</strong>
                 <p>
-                  인증한 사진은 대표사진으로 등록돼요. 추가 사진은 자유롭게
-                  바꾸고 순서를 정할 수 있어요.
+                  인증한 사진에는 정면 사진 표시가 붙어요. 사진 순서를 바꿔 추천
+                  피드에 보여줄 대표사진을 정할 수 있어요.
                 </p>
               </div>
               <PixelButton onClick={acceptVerifiedPhoto} disabled={disabled}>
@@ -500,7 +499,7 @@ export function ProfilePhotoEditor({
               }}
               disabled={disabled}
             >
-              대표사진 변경 취소
+              정면 사진 변경 취소
             </button>
           )}
         </>
@@ -516,7 +515,7 @@ export function ProfilePhotoEditor({
               <article
                 className="trust-photo-tile"
                 key={item.localId}
-                draggable={index > 0 && !disabled && !item.uploading}
+                draggable={!disabled && !item.uploading}
                 onDragStart={(event) => {
                   dragged.current = item.localId;
                   event.dataTransfer.setData("text/plain", item.localId);
@@ -537,56 +536,59 @@ export function ProfilePhotoEditor({
               >
                 <img
                   src={item.previewUrl}
-                  alt={
-                    item.isFrontal ? "인증한 대표사진" : `추가 사진 ${index}`
-                  }
+                  alt={`${index === 0 ? "대표사진" : `프로필 사진 ${index + 1}`}${item.isFrontal ? " · 인증한 정면 사진" : ""}`}
                   draggable={false}
                 />
-                {item.isFrontal && (
-                  <span className="trust-photo-badge">
-                    <PixelIcon name="lock" /> 대표 · 정면
-                  </span>
-                )}
+                <div className="trust-photo-badges">
+                  {index === 0 && (
+                    <span className="trust-photo-badge">대표사진</span>
+                  )}
+                  {item.isFrontal && (
+                    <span className="trust-photo-badge">
+                      <PixelIcon name="lock" /> 정면 사진
+                    </span>
+                  )}
+                </div>
                 {item.uploading && (
                   <span className="trust-uploading" role="status">
                     업로드 중
                   </span>
                 )}
                 {!item.isFrontal && (
-                  <>
-                    <button
-                      type="button"
-                      className="trust-photo-remove"
-                      aria-label={`사진 ${index + 1} 삭제`}
-                      disabled={disabled}
-                      onClick={() => removePhoto(item.localId)}
-                    >
-                      ×
-                    </button>
-                    <div className="trust-photo-order">
-                      <button
-                        type="button"
-                        aria-label={`사진 ${index + 1} 앞으로 이동`}
-                        disabled={disabled || index <= 1}
-                        onClick={() =>
-                          movePhoto(item.localId, items[index - 1]?.localId)
-                        }
-                      >
-                        ←
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={`사진 ${index + 1} 뒤로 이동`}
-                        disabled={disabled || index === items.length - 1}
-                        onClick={() =>
-                          movePhoto(item.localId, items[index + 1]?.localId)
-                        }
-                      >
-                        →
-                      </button>
-                    </div>
-                  </>
+                  <button
+                    type="button"
+                    className="trust-photo-remove"
+                    aria-label={`사진 ${index + 1} 삭제`}
+                    disabled={disabled}
+                    onClick={() => removePhoto(item.localId)}
+                  >
+                    ×
+                  </button>
                 )}
+                <div className="trust-photo-order">
+                  <button
+                    type="button"
+                    aria-label={`사진 ${index + 1} 앞으로 이동`}
+                    disabled={disabled || item.uploading || index === 0}
+                    onClick={() =>
+                      movePhoto(item.localId, items[index - 1]?.localId)
+                    }
+                  >
+                    ←
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`사진 ${index + 1} 뒤로 이동`}
+                    disabled={
+                      disabled || item.uploading || index === items.length - 1
+                    }
+                    onClick={() =>
+                      movePhoto(item.localId, items[index + 1]?.localId)
+                    }
+                  >
+                    →
+                  </button>
+                </div>
               </article>
             ))}
             {items.length < 6 && (
@@ -602,10 +604,10 @@ export function ProfilePhotoEditor({
             )}
           </section>
           <div className="trust-note">
-            <strong>대표사진은 첫 번째 자리에 고정돼요</strong>
+            <strong>첫 번째 사진이 추천 피드에 노출돼요</strong>
             <p>
-              추가 사진은 화살표 버튼이나 드래그로 순서를 바꿀 수 있어요. 정면
-              사진 라벨은 인증한 사진에 유지돼요.
+              화살표 버튼이나 드래그로 대표사진과 사진 순서를 정해주세요. 정면
+              사진도 이동할 수 있고, 인증 표시는 그대로 유지돼요.
             </p>
           </div>
           <button
@@ -614,10 +616,11 @@ export function ProfilePhotoEditor({
             onClick={beginReplacement}
             disabled={disabled}
           >
-            대표사진 변경 · 본인 인증 다시 하기
+            정면 사진 변경 · 본인 인증 다시 하기
           </button>
           <p className="trust-subcopy trust-small">
-            새 사진의 인증을 마친 뒤 저장하면 대표사진이 바뀌어요.
+            정면 사진을 교체하려면 사진 확인과 카메라 인증을 다시 진행해요.
+            순서만 바꿀 때는 다시 인증하지 않아요.
           </p>
           {error && (
             <p className="field-error" role="alert">

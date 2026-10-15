@@ -5,6 +5,7 @@ import { recordClip, recorderOptions, stopCamera } from "./camera.js";
 import {
   cameraError,
   reorderPhotos,
+  replaceFrontalPhoto,
   savedPhotoItems,
   sessionIssue,
   trustError,
@@ -267,26 +268,64 @@ test("aborting a clip stops its recorder and camera cleanup stops all tracks", a
   assert.equal(stopped, 2);
 });
 
-test("primary photo is fixed while additional photos can be reordered", () => {
-  const photos = ["primary", "one", "two"].map((localId, index) => ({
+test("photo order selects the feed photo while frontal identity follows its file", () => {
+  const photos = ["primary", "frontal", "extra"].map((localId, index) => ({
     localId,
-    isFrontal: index === 0,
+    isFrontal: index === 1,
   }));
-  assert.deepEqual(reorderPhotos(photos, "primary", "two"), photos);
-  assert.deepEqual(reorderPhotos(photos, "two", "primary"), photos);
+  const reordered = reorderPhotos(photos, "primary", "extra");
   assert.deepEqual(
-    reorderPhotos(photos, "two", "one").map((item) => item.localId),
-    ["primary", "two", "one"],
+    reordered.map((item) => item.localId),
+    ["frontal", "extra", "primary"],
   );
-  assert.equal(
-    savedPhotoItems({
-      images: [
-        { fileId: 1, imageUrl: "1", displayOrder: 1, isFrontal: false },
-        { fileId: 2, imageUrl: "2", displayOrder: 2, isFrontal: true },
-      ],
-    })[0].fileId,
-    2,
+  const movedFrontal = reorderPhotos(reordered, "frontal", "extra");
+  assert.equal(movedFrontal[0].localId, "extra");
+  assert.equal(movedFrontal[0].isFrontal, false);
+  assert.equal(movedFrontal[1], photos[1]);
+  assert.deepEqual(
+    photos.map((item) => item.localId),
+    ["primary", "frontal", "extra"],
   );
+  assert.equal(reorderPhotos(photos, "missing", "primary"), photos);
+});
+
+test("loading saved photos respects display order without promoting the frontal photo", () => {
+  const saved = savedPhotoItems({
+    images: [
+      { fileId: 2, imageUrl: "2", displayOrder: 2, isFrontal: true },
+      { fileId: 1, imageUrl: "1", displayOrder: 1, isFrontal: false },
+    ],
+  });
+  assert.deepEqual(
+    saved.map(({ fileId, isFrontal }) => ({ fileId, isFrontal })),
+    [
+      { fileId: 1, isFrontal: false },
+      { fileId: 2, isFrontal: true },
+    ],
+  );
+});
+
+test("replacing a verified frontal photo preserves the feed photo and all other photo positions", () => {
+  const photos = Array.from({ length: 6 }, (_, index) => ({
+    localId: `photo-${index}`,
+    fileId: index + 1,
+    isFrontal: index === 2,
+  }));
+  const verified = { localId: "verified", fileId: 7, isFrontal: true };
+  const replaced = replaceFrontalPhoto(photos, verified);
+  assert.deepEqual(
+    replaced.map((photo) => photo.fileId),
+    [1, 2, 7, 4, 5, 6],
+  );
+  assert.equal(replaced[0], photos[0]);
+  assert.equal(replaced[2], verified);
+  assert.equal(replaced.filter((photo) => photo.isFrontal).length, 1);
+  assert.equal(photos[2].fileId, 3);
+  assert.deepEqual(replaceFrontalPhoto([], verified), [verified]);
+  assert.deepEqual(replaceFrontalPhoto([photos[0]], verified), [
+    photos[0],
+    verified,
+  ]);
 });
 
 test("photo failures and service failures show distinct recovery paths", () => {

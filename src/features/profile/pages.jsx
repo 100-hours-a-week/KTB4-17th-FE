@@ -414,7 +414,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                     disabled={photoSaving}
                     onClick={() => setReplacingLegacyPhoto(true)}
                   >
-                    대표사진 변경 · 본인 인증하기
+                    사진 편집 · 정면 사진 인증하기
                   </button>
                 </>
               ) : (
