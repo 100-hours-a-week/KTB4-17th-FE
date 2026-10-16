@@ -63,6 +63,75 @@
   line-height: 1.6;
 }
 
+.trust-attempt-progress {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 5px;
+  height: 12px;
+}
+
+.trust-attempt-progress span {
+  border: 1px solid var(--line);
+  background: var(--soft-lavender);
+}
+
+.trust-attempt-progress [data-state="done"] {
+  background: var(--purple-deep);
+  border-color: var(--purple-deep);
+}
+
+.trust-attempt-progress [data-state="current"] {
+  background: var(--lavender);
+  border-color: var(--purple-deep);
+}
+
+.trust-waiting {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--purple-deep);
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.trust-waiting span {
+  font-size: 24px;
+  letter-spacing: 3px;
+}
+
+.trust-check-photo {
+  width: min(100%, 200px);
+  height: 240px;
+  align-self: center;
+  object-fit: cover;
+  border: 2px solid var(--lavender);
+}
+
+.trust-failure-details {
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: var(--soft-lavender);
+  font-size: 12px;
+  line-height: 1.9;
+  word-break: keep-all;
+}
+
+.trust-failure-details summary {
+  color: var(--purple-deep);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.trust-failure-details ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.trust-failure-details li + li {
+  margin-top: 8px;
+}
+
 .trust-camera-progress {
   height: 9px;
   overflow: hidden;
@@ -75,7 +144,7 @@
   width: 0;
   height: 100%;
   background: linear-gradient(90deg, #987bff 0%, #7555f3 72%, #e66db3 100%);
-  transition: width 500ms linear;
+  transition: width 100ms linear;
 }
 
 .trust-camera-guidance small {
@@ -340,6 +409,10 @@
   justify-content: center;
   min-height: 180px;
   background: radial-gradient(ellipse, var(--soft-lavender), transparent 70%);
+}
+
+.trust-result-art {
+  min-height: 120px;
 }
 
 .trust-result-art img {

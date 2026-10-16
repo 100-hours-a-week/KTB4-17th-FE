@@ -3,12 +3,27 @@ import { preparePrimaryPhoto } from "../profile/photoUpload.js";
 import * as api from "./api.js";
 import { openCamera, previewCamera, recordClip, stopCamera } from "./camera.js";
 import {
-  CAMERA_DURATION_MS,
+  latestAttempt,
+  MAX_ATTEMPTS,
   sessionIssue,
   trustError,
   verificationIssue,
 } from "./model.js";
-import { abortable, verifySequentially } from "./verification.js";
+import {
+  abortable,
+  assertSession,
+  reconcileSession,
+  verifySequentially,
+} from "./verification.js";
+
+const initialProgress = () => ({
+  stage: "ready",
+  attemptNo: 0,
+  attemptsUsed: 0,
+  completedAttempts: 0,
+  maxAttempts: MAX_ATTEMPTS,
+  clipProgress: 0,
+});
 
 export function useFaceVerification() {
   const [phase, setPhase] = useState("photo");
@@ -16,8 +31,8 @@ export function useFaceVerification() {
   const [issue, setIssue] = useState(null);
   const [active, setActive] = useState(false);
   const [cameraOn, setCameraOn] = useState(false);
-  const [cameraProgress, setCameraProgress] = useState(0);
-  const [hint, setHint] = useState("얼굴을 가운데 맞추고 정면을 바라봐주세요.");
+  const [progress, setProgress] = useState(initialProgress);
+  const [hint, setHint] = useState("");
   const [result, setResult] = useState(null);
   const videoRef = useRef(null);
   const photoTask = useRef(null);
@@ -32,11 +47,8 @@ export function useFaceVerification() {
     runRef.current = null;
     if (!run) return;
     run.controller.abort();
-    run.cameraController.abort();
-    clearTimeout(run.timer);
-    clearInterval(run.progressTimer);
-    stopCamera(run.stream);
-    if (videoRef.current) videoRef.current.srcObject = null;
+    run.closeCamera();
+    run.removeListeners();
   }, []);
 
   useEffect(() => {
@@ -52,6 +64,7 @@ export function useFaceVerification() {
 
   function selectPhoto(file) {
     if (!file) return;
+    selection.current++;
     stopRun();
     photoTask.current?.controller.abort();
     if (previewRef.current) URL.revokeObjectURL(previewRef.current);
@@ -60,20 +73,37 @@ export function useFaceVerification() {
     sessionRef.current = null;
     setResult(null);
     setIssue(null);
-    setActive(false);
+    setActive(true);
     setCameraOn(false);
-    setCameraProgress(0);
-    setPhase("camera");
-    const selected = ++selection.current;
+    setProgress(initialProgress());
+    setPhase("checking");
+    const selected = selection.current;
     const controller = new AbortController();
-    const promise = (async () => {
-      const prepared = await preparePrimaryPhoto(file);
+    const task = { controller, file, photo: null, promise: null };
+    const current = () =>
+      mounted.current &&
+      selection.current === selected &&
+      !controller.signal.aborted;
+    photoTask.current = task;
+    task.promise = (async () => {
+      let prepared;
+      try {
+        prepared = await preparePrimaryPhoto(file);
+      } catch (error) {
+        throw typeof error?.code === "string"
+          ? error
+          : trustError("FILE_INVALID_CONTENT");
+      }
       controller.signal.throwIfAborted();
-      if (previewRef.current) URL.revokeObjectURL(previewRef.current);
       previewRef.current = URL.createObjectURL(prepared);
       setPreviewUrl(previewRef.current);
       const intent = await api.stagePrimaryPhoto(prepared, controller.signal);
       controller.signal.throwIfAborted();
+      if (
+        !Number.isSafeInteger(intent?.uploadIntentId) ||
+        intent.uploadIntentId < 1
+      )
+        throw trustError("VERIFICATION_RESPONSE_INVALID");
       const checked = await api.checkPrimaryPhoto(
         intent.uploadIntentId,
         controller.signal,
@@ -82,187 +112,261 @@ export function useFaceVerification() {
       if (
         !checked ||
         typeof checked.passed !== "boolean" ||
-        !Array.isArray(checked.reasonCodes)
+        !Array.isArray(checked.reasonCodes) ||
+        checked.reasonCodes.some((code) => typeof code !== "string" || !code) ||
+        (checked.passed
+          ? checked.reasonCodes.length !== 0
+          : checked.reasonCodes.length === 0)
       )
         throw trustError("VERIFICATION_RESPONSE_INVALID");
       if (!checked.passed)
         throw trustError("PRIMARY_PHOTO_REJECTED", {
           reasonCodes: checked.reasonCodes,
         });
-      return { file: prepared, uploadIntentId: intent.uploadIntentId };
+      task.photo = { file: prepared, uploadIntentId: intent.uploadIntentId };
+      return task.photo;
     })();
-    photoTask.current = { controller, promise, file };
-    // Observe immediately; the user may not have started the camera yet.
-    void promise.catch((error) => {
-      if (
-        !mounted.current ||
-        selection.current !== selected ||
-        controller.signal.aborted
-      )
-        return;
-      stopRun();
-      setActive(false);
-      setCameraOn(false);
-      setIssue(verificationIssue(error));
-      setPhase("failure");
-    });
+    void task.promise.then(
+      () => {
+        if (!current()) return;
+        setActive(false);
+        setPhase("camera");
+        setHint(
+          "사진 확인을 마쳤어요. 카메라를 켜고 본인 인증을 진행해주세요.",
+        );
+      },
+      (error) => {
+        if (!current()) return;
+        setActive(false);
+        setIssue(verificationIssue(error));
+        setPhase("failure");
+      },
+    );
   }
 
-  async function start() {
-    if (runRef.current || !photoTask.current) return;
+  async function start({ checkOnly = false } = {}) {
+    const task = photoTask.current;
+    if (runRef.current || !task?.photo) return;
     const run = {
       controller: new AbortController(),
       cameraController: new AbortController(),
       stream: null,
-      timer: null,
-      progressTimer: null,
+      closeCamera: () => {},
+      removeListeners: () => {},
+      stage: checkOnly ? "recovering" : "preparing",
     };
     runRef.current = run;
     const current = () => mounted.current && runRef.current === run;
     const signal = run.controller.signal;
-    setActive(true);
-    setIssue(null);
-    setCameraProgress(0);
-    setPhase("camera");
-    setHint("얼굴을 가운데 맞추고 정면을 바라봐주세요.");
-    let removeListeners = () => {};
-    try {
-      // If a previous POST succeeded but its response was lost, recover that
-      // result before opening the camera or submitting another video.
-      let session = sessionRef.current;
-      if (session) {
-        session = await api.getVerification(session.sessionId, signal);
-        sessionRef.current = session;
-      }
-      const finish = async (photo) => {
-        setHint("인증 결과를 확인하고 있어요.");
-        run.cameraController.abort();
-        stopCamera(run.stream);
-        clearTimeout(run.timer);
-        clearInterval(run.progressTimer);
-        if (current()) setCameraOn(false);
-        const metadata = await api.completePrimaryPhoto(
-          photo.uploadIntentId,
-          signal,
-        );
-        signal.throwIfAborted();
-        if (!metadata?.fileId)
-          throw trustError("VERIFICATION_RESPONSE_INVALID");
-        if (current()) {
-          setResult({ file: photo.file, fileId: metadata.fileId });
-          setPhase("success");
-        }
-      };
-      if (session?.status === "VERIFIED") {
-        await finish(await abortable(photoTask.current.promise, signal));
-        return;
-      }
-      if (document.visibilityState === "hidden")
-        throw trustError("CAMERA_INTERRUPTED");
-      run.stream = await openCamera(signal);
-      if (!current()) {
-        stopCamera(run.stream);
-        return;
-      }
-      const cameraStartedAt = Date.now();
-      const deadline = cameraStartedAt + CAMERA_DURATION_MS;
-      run.progressTimer = window.setInterval(() => {
-        const progress = Math.min(
-          (Date.now() - cameraStartedAt) / CAMERA_DURATION_MS,
-          1,
-        );
-        if (current()) setCameraProgress(progress);
-        if (progress >= 1) clearInterval(run.progressTimer);
-      }, 500);
-      run.timer = setTimeout(() => {
-        run.cameraController.abort(trustError("CAMERA_TIME_LIMIT"));
-        clearInterval(run.progressTimer);
-        if (current()) setCameraProgress(1);
-        stopCamera(run.stream);
-        if (current()) {
-          setCameraOn(false);
-          setHint("촬영을 마쳤어요. 인증 결과를 확인하고 있어요.");
-        }
-      }, CAMERA_DURATION_MS);
-      const interrupt = () => {
-        if (!run.cameraController.signal.aborted && current()) {
-          run.controller.abort(trustError("CAMERA_INTERRUPTED"));
-          run.cameraController.abort(trustError("CAMERA_INTERRUPTED"));
-          stopCamera(run.stream);
-        }
-      };
-      const visibility = () => {
-        if (document.visibilityState === "hidden") interrupt();
-      };
-      const track = run.stream.getVideoTracks()[0];
-      track?.addEventListener("ended", interrupt);
-      track?.addEventListener("mute", interrupt);
-      window.addEventListener("pagehide", interrupt);
-      document.addEventListener("visibilitychange", visibility);
-      removeListeners = () => {
-        track?.removeEventListener("ended", interrupt);
-        track?.removeEventListener("mute", interrupt);
-        window.removeEventListener("pagehide", interrupt);
-        document.removeEventListener("visibilitychange", visibility);
-      };
-      await previewCamera(videoRef.current, run.stream, signal);
-      if (current()) setCameraOn(true);
-      // The camera preview is already live while the independent photo checks
-      // run. Only session creation / video submission waits for their approval.
-      const photo = await abortable(
-        photoTask.current.promise,
-        run.cameraController.signal,
+    let removeCameraListeners = () => {};
+    run.closeCamera = () => {
+      removeCameraListeners();
+      run.cameraController.abort();
+      const stream = run.stream;
+      stopCamera(stream);
+      run.stream = null;
+      if (stream && videoRef.current?.srcObject === stream)
+        videoRef.current.srcObject = null;
+      if (current()) setCameraOn(false);
+    };
+    const updateStage = (next) => {
+      run.stage = next.stage;
+      if (current()) setProgress((previous) => ({ ...previous, ...next }));
+    };
+    const updateSession = (session) => {
+      if (!current()) return;
+      sessionRef.current = session;
+      setProgress((previous) => ({
+        ...previous,
+        attemptsUsed: session.attemptsUsed,
+        completedAttempts:
+          session.status === "PROCESSING"
+            ? session.attemptsUsed - 1
+            : session.attemptsUsed,
+        maxAttempts: session.maxAttempts,
+      }));
+    };
+    const showFailure = (nextIssue) => {
+      if (!current()) return;
+      setIssue(
+        nextIssue.kind === "system" &&
+          sessionRef.current &&
+          nextIssue.action !== "restart"
+          ? {
+              ...nextIssue,
+              action: "check",
+              actionLabel: "인증 결과 다시 확인",
+            }
+          : nextIssue,
+      );
+      setPhase("failure");
+    };
+    const finish = async (photo) => {
+      run.closeCamera();
+      updateStage({ stage: "finalizing", clipProgress: 0 });
+      const metadata = await api.completePrimaryPhoto(
+        photo.uploadIntentId,
+        signal,
       );
       signal.throwIfAborted();
+      if (!Number.isSafeInteger(metadata?.fileId) || metadata.fileId < 1)
+        throw trustError("VERIFICATION_RESPONSE_INVALID");
+      if (current()) {
+        setProgress((previous) => ({ ...previous, stage: "success" }));
+        setResult({ file: photo.file, fileId: metadata.fileId });
+        setPhase("success");
+      }
+    };
+    setActive(true);
+    setIssue(null);
+    setPhase("camera");
+    updateStage({ stage: run.stage, clipProgress: 0 });
+    try {
+      const photo = await abortable(task.promise, signal);
+      let session = sessionRef.current;
+      if (session) {
+        updateStage({ stage: "recovering" });
+        try {
+          session = await reconcileSession(session, {
+            getStatus: api.getVerification,
+            signal,
+            onSession: updateSession,
+          });
+        } catch (error) {
+          if (
+            checkOnly ||
+            ![
+              "VERIFICATION_SESSION_NOT_FOUND",
+              "VERIFICATION_SESSION_EXPIRED",
+              "VERIFICATION_CHALLENGE_INVALID",
+            ].includes(error?.code)
+          )
+            throw error;
+          sessionRef.current = null;
+          session = null;
+        }
+      }
+      if (session?.status === "VERIFIED") {
+        await finish(photo);
+        return;
+      }
+      if (checkOnly && session) {
+        if (session.status === "READY") {
+          updateStage({ stage: "ready", clipProgress: 0 });
+          setHint("결과를 확인했어요. 카메라를 켜고 남은 인증을 이어가주세요.");
+        } else showFailure(sessionIssue(session));
+        return;
+      }
       if (
         !session ||
         ["EXPIRED", "EXHAUSTED", "NOT_VERIFIED"].includes(session.status)
-      )
-        session = await api.createVerification(photo.uploadIntentId, signal);
-      sessionRef.current = session;
+      ) {
+        session = assertSession(
+          await api.createVerification(photo.uploadIntentId, signal),
+        );
+        updateSession(session);
+      }
       const verified = await verifySequentially(session, {
         signal,
         getStatus: api.getVerification,
         submit: api.submitVideo,
-        canRecord: () =>
-          Date.now() < deadline && !run.cameraController.signal.aborted,
-        record: () =>
-          recordClip(run.stream, { signal: run.cameraController.signal }),
-        onSession: (next) => {
-          sessionRef.current = next;
+        record: async ({ attemptNo, maxAttempts }) => {
+          if (document.visibilityState === "hidden")
+            throw trustError("CAMERA_INTERRUPTED");
+          if (!run.stream) {
+            updateStage({ stage: "preparing", attemptNo, clipProgress: 0 });
+            run.stream = await openCamera(run.cameraController.signal);
+            signal.throwIfAborted();
+            if (document.visibilityState === "hidden")
+              throw trustError("CAMERA_INTERRUPTED");
+            if (!current()) {
+              stopCamera(run.stream);
+              throw trustError("CAMERA_INTERRUPTED");
+            }
+            const interrupt = () => {
+              if (!current()) return;
+              run.controller.abort(trustError("CAMERA_INTERRUPTED"));
+              run.closeCamera();
+            };
+            const visibility = () => {
+              if (run.stream && document.visibilityState === "hidden")
+                interrupt();
+            };
+            const track = run.stream.getVideoTracks()[0];
+            track?.addEventListener("ended", interrupt);
+            track?.addEventListener("mute", interrupt);
+            document.addEventListener("visibilitychange", visibility);
+            window.addEventListener("pagehide", interrupt);
+            removeCameraListeners = () => {
+              track?.removeEventListener("ended", interrupt);
+              track?.removeEventListener("mute", interrupt);
+            };
+            run.removeListeners = () => {
+              removeCameraListeners();
+              document.removeEventListener("visibilitychange", visibility);
+              window.removeEventListener("pagehide", interrupt);
+            };
+            if (!videoRef.current)
+              await abortable(new Promise(requestAnimationFrame), signal);
+            await previewCamera(videoRef.current, run.stream, signal);
+            signal.throwIfAborted();
+            if (current()) setCameraOn(true);
+          }
+          updateStage({
+            stage: "recording",
+            attemptNo,
+            maxAttempts,
+            clipProgress: 0,
+          });
+          return recordClip(run.stream, {
+            signal: run.cameraController.signal,
+            onProgress: (clipProgress) => {
+              if (current())
+                setProgress((previous) => ({ ...previous, clipProgress }));
+            },
+          });
+        },
+        onSession: updateSession,
+        onStage: (next) => {
+          updateStage({ ...next, clipProgress: 0 });
+          if (next.stage === "analyzing" && next.attemptNo === next.maxAttempts)
+            run.closeCamera();
         },
         onHint: (message) => {
           if (current()) setHint(message);
         },
       });
       signal.throwIfAborted();
+      run.closeCamera();
       if (verified.status === "VERIFIED") await finish(photo);
-      else if (current()) {
-        setIssue(sessionIssue(verified));
-        setPhase("failure");
-      }
+      else showFailure(sessionIssue(verified));
     } catch (error) {
       if (current()) {
-        setIssue(
-          verificationIssue(
-            signal.aborted
-              ? signal.reason || trustError("CAMERA_INTERRUPTED")
-              : error,
-          ),
-        );
-        setPhase("failure");
+        const failure = signal.aborted
+          ? signal.reason || trustError("CAMERA_INTERRUPTED")
+          : error;
+        const finalSession = sessionRef.current;
+        const nextIssue =
+          finalSession?.status === "EXHAUSTED" &&
+          typeof failure?.code === "string" &&
+          latestAttempt(finalSession)?.errorCode === failure?.code
+            ? sessionIssue(finalSession)
+            : verificationIssue(failure);
+        if (run.stage === "finalizing" && nextIssue.kind === "system") {
+          nextIssue.title = "인증한 사진을 저장하지 못했어요";
+          nextIssue.message =
+            "얼굴 인증은 완료됐어요. 결과를 다시 확인하면 사진 저장을 이어서 진행할게요.";
+          nextIssue.notice =
+            "얼굴 인증 결과를 다시 확인한 뒤 사진 저장을 이어가요.";
+        }
+        showFailure(nextIssue);
       }
     } finally {
-      removeListeners();
-      clearTimeout(run.timer);
-      clearInterval(run.progressTimer);
-      run.cameraController.abort();
-      stopCamera(run.stream);
+      run.closeCamera();
+      run.removeListeners();
       if (current()) {
         runRef.current = null;
         setActive(false);
-        setCameraOn(false);
-        if (videoRef.current) videoRef.current.srcObject = null;
       }
     }
   }
@@ -278,7 +382,7 @@ export function useFaceVerification() {
     setPreviewUrl("");
     setActive(false);
     setCameraOn(false);
-    setCameraProgress(0);
+    setProgress(initialProgress());
     setIssue(null);
     setResult(null);
     setPhase("photo");
@@ -286,20 +390,15 @@ export function useFaceVerification() {
 
   function retry() {
     const task = photoTask.current;
-    if (!task) {
+    if (!task || issue?.action === "replace") {
       reset();
       return;
     }
-    if (issue?.kind === "photo") {
-      reset();
-      return;
-    }
-    if (!sessionRef.current && issue?.kind === "system") {
-      // Failed photo checks release their server lock for an explicit retry.
+    if (!task.photo) {
       selectPhoto(task.file);
       return;
     }
-    void start();
+    void start({ checkOnly: issue?.action === "check" });
   }
 
   return {
@@ -308,7 +407,7 @@ export function useFaceVerification() {
     issue,
     active,
     cameraOn,
-    cameraProgress,
+    progress,
     hint,
     result,
     videoRef,
