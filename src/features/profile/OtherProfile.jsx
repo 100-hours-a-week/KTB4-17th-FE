@@ -3,6 +3,7 @@ import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { PhotoSegments, ProfilePhoto } from "../../shared/ui/components.jsx";
 import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import { dateAge } from "../../shared/utils.js";
+import { isProfileAccessUnavailable } from "./access.js";
 import { getMyProfile, getUserProfile } from "./api.js";
 import {
   bodyTypes,
@@ -25,6 +26,7 @@ export function OtherProfile({ userId, returnTo, navigate, isOwn = false }) {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [accessUnavailable, setAccessUnavailable] = useState(false);
   const profileRequestVersion = useRef(0);
   const pointerStart = useRef(null);
   const photos = profile?.photos || [];
@@ -33,6 +35,7 @@ export function OtherProfile({ userId, returnTo, navigate, isOwn = false }) {
     const requestVersion = ++profileRequestVersion.current;
     setLoading(true);
     setError("");
+    setAccessUnavailable(false);
 
     try {
       const result = await (isOwn ? getMyProfile() : getUserProfile(userId));
@@ -49,12 +52,17 @@ export function OtherProfile({ userId, returnTo, navigate, isOwn = false }) {
     } catch (requestError) {
       if (requestVersion !== profileRequestVersion.current) return;
       setProfile(null);
-      setError(
-        apiErrorMessage(
-          requestError,
-          "프로필을 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
-        ),
-      );
+      if (!isOwn && isProfileAccessUnavailable(requestError)) {
+        setAccessUnavailable(true);
+        setError("더 이상 확인할 수 없는 프로필이에요.");
+      } else {
+        setError(
+          apiErrorMessage(
+            requestError,
+            "프로필을 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
+          ),
+        );
+      }
     } finally {
       if (requestVersion === profileRequestVersion.current) {
         setLoading(false);
@@ -289,9 +297,18 @@ export function OtherProfile({ userId, returnTo, navigate, isOwn = false }) {
         !loading && (
           <section className="other-profile-error" role="alert">
             <p>{error}</p>
-            <button type="button" onClick={() => void loadProfile()}>
-              다시 시도
-            </button>
+            {accessUnavailable ? (
+              <button
+                type="button"
+                onClick={() => navigate(returnTo, { replace: true })}
+              >
+                이전 화면으로
+              </button>
+            ) : (
+              <button type="button" onClick={() => void loadProfile()}>
+                다시 시도
+              </button>
+            )}
           </section>
         )
       )}

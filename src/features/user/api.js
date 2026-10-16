@@ -6,6 +6,12 @@ export const onboarding = (options = {}) =>
 export const onboardingProfile = () =>
   apiRequest("/api/v1/users/me/onboarding/profile");
 
+export const withdrawUser = () =>
+  apiRequest("/api/v1/users/me", {
+    method: "DELETE",
+    cache: "no-store",
+  });
+
 export const identity = (body) =>
   apiRequest("/api/v1/registration/identity", {
     method: "PUT",
