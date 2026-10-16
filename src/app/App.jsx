@@ -11,6 +11,7 @@ import { Login, RegistrationRestricted } from "../features/auth/pages.jsx";
 import { useLocalTestLogin } from "../features/auth/useLocalTestLogin.js";
 import { ChatList, ChatRoom } from "../features/chat/Chat.jsx";
 import { useUnreadMessageCount } from "../features/chat/useUnreadMessageCount.js";
+import { LandingPage } from "../features/landing/LandingPage.jsx";
 import { Likes } from "../features/matching/Likes.jsx";
 import { Notifications } from "../features/notifications/Notifications.jsx";
 import { Onboarding } from "../features/onboarding/Onboarding.jsx";
@@ -76,6 +77,9 @@ function AppRouter() {
   const [toastText, setToastText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sessionCheckError, setSessionCheckError] = useState(false);
+  const [handlingOAuthCallback, setHandlingOAuthCallback] = useState(() =>
+    new URLSearchParams(window.location.hash.slice(1)).has("auth_code"),
+  );
   const [logoutPending, setLogoutPending] = useState(false);
   const unreadMessageCount = useUnreadMessageCount({
     enabled: !loading && !sessionCheckError && data.session && data.onboarded,
@@ -184,6 +188,7 @@ function AppRouter() {
               ? "complete"
               : onboardingStepFromStatus(status),
         }));
+        setHandlingOAuthCallback(false);
         if (
           registrationPath &&
           window.location.pathname.startsWith("/registration")
@@ -208,6 +213,7 @@ function AppRouter() {
             registrationInfoConfirmed: false,
             ...(registrationPath ? { onboardingStep: "identity" } : {}),
           }));
+          setHandlingOAuthCallback(false);
           if (
             resuming &&
             hadAccessToken &&
@@ -319,9 +325,19 @@ function AppRouter() {
   const simulationId = simulationRoute ? Number(simulationRoute[1]) : null;
   const showNav =
     data.onboarded && ["/", "/home", "/likes", "/chats", "/my"].includes(path);
+  const showLanding = path === "/" && !data.session && !handlingOAuthCallback;
+  const showPublicLogin = path === "/login" && !handlingOAuthCallback;
 
   let page;
-  if (loading)
+  if (showLanding) page = <LandingPage onStart={() => navigate("/login")} />;
+  else if (showPublicLogin)
+    page = (
+      <Login
+        onLocalTestLogin={loginWithLocalTestAccount}
+        onLogin={beginKakaoLogin}
+      />
+    );
+  else if (loading)
     page = (
       <div className="loading-page">
         <img src={asset("logo.png")} alt="" />
@@ -473,8 +489,8 @@ function AppRouter() {
     );
 
   return (
-    <div className="app-shell">
-      <div className="app-screen">
+    <div className={`app-shell${showLanding ? " app-shell-landing" : ""}`}>
+      <div className={`app-screen${showLanding ? " app-screen-landing" : ""}`}>
         {page}
         {showNav && (
           <BottomNav

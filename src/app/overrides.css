@@ -3,6 +3,21 @@
   opacity: 0.38;
 }
 
+/* The public introduction uses the full browser width; app views keep their shell. */
+.app-shell.app-shell-landing {
+  display: block;
+  padding: 0;
+}
+
+.app-screen.app-screen-landing {
+  max-width: none;
+  min-height: 100dvh;
+  height: auto;
+  overflow: visible;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 /* Avoid iOS Safari zooming the viewport when a small text field is focused. */
 @media (hover: none) and (pointer: coarse) {
   input:not([type="checkbox"], [type="radio"], [type="range"]),
