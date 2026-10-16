@@ -36,12 +36,14 @@ import {
 import { isHomePath } from "../features/recommendation/recommendationRefresh.js";
 import { useRecommendationFeed } from "../features/recommendation/useRecommendationFeed.js";
 import * as userApi from "../features/user/api.js";
+import { executeUserWithdrawal } from "../features/user/withdrawal.js";
 import {
   AUTH_EXPIRED_EVENT,
   clearAccessToken,
   getAccessToken,
 } from "../shared/api/authToken.js";
 import { refreshAuthSession } from "../shared/api/client.js";
+import { apiErrorMessage } from "../shared/api/errorMessages.js";
 import {
   AppStateProvider,
   makeInitialState,
@@ -86,6 +88,8 @@ function AppRouter() {
   const [loading, setLoading] = useState(true);
   const [sessionCheckError, setSessionCheckError] = useState(false);
   const [logoutPending, setLogoutPending] = useState(false);
+  const [userWithdrawalPending, setUserWithdrawalPending] = useState(false);
+  const accountActionPendingRef = useRef(false);
   const unreadMessageCount = useUnreadMessageCount({
     enabled: !loading && !sessionCheckError && data.session && data.onboarded,
     path,
@@ -318,7 +322,8 @@ function AppRouter() {
   }
 
   async function handleLogout() {
-    if (logoutPending) return;
+    if (accountActionPendingRef.current) return;
+    accountActionPendingRef.current = true;
     setLogoutPending(true);
     try {
       await logoutAuth();
@@ -328,7 +333,33 @@ function AppRouter() {
     } catch {
       toast("로그아웃을 완료하지 못했어요. 잠시 후 다시 시도해주세요.");
     } finally {
+      accountActionPendingRef.current = false;
       setLogoutPending(false);
+    }
+  }
+
+  async function handleUserWithdrawal() {
+    if (accountActionPendingRef.current) return;
+    accountActionPendingRef.current = true;
+    setUserWithdrawalPending(true);
+    try {
+      await executeUserWithdrawal({
+        withdrawUser: userApi.withdrawUser,
+        clearSession: clearAccessToken,
+        resetAppState: () => setData(makeInitialState()),
+        navigateToLogin: () => navigate("/login", { replace: true }),
+        notifySuccess: () => toast("계정 탈퇴가 완료됐어요."),
+        notifyFailure: (error) =>
+          toast(
+            apiErrorMessage(
+              error,
+              "계정 탈퇴를 완료하지 못했어요. 로그인 상태를 확인한 뒤 다시 시도해주세요.",
+            ),
+          ),
+      });
+    } finally {
+      accountActionPendingRef.current = false;
+      setUserWithdrawalPending(false);
     }
   }
 
@@ -460,7 +491,9 @@ function AppRouter() {
       <Settings
         navigate={navigate}
         onLogout={handleLogout}
+        onWithdrawUser={handleUserWithdrawal}
         isLoggingOut={logoutPending}
+        isWithdrawingUser={userWithdrawalPending}
       />
     );
   else if (path === "/my/profile/view")

@@ -174,8 +174,15 @@ export function MyPage({ navigate, toast }) {
   );
 }
 
-export function Settings({ navigate, onLogout, isLoggingOut = false }) {
-  const [confirmingLogout, setConfirmingLogout] = useState(false);
+export function Settings({
+  navigate,
+  onLogout,
+  onWithdrawUser,
+  isLoggingOut = false,
+  isWithdrawingUser = false,
+}) {
+  const [confirmingAction, setConfirmingAction] = useState(null);
+  const accountActionPending = isLoggingOut || isWithdrawingUser;
 
   return (
     <>
@@ -196,6 +203,7 @@ export function Settings({ navigate, onLogout, isLoggingOut = false }) {
             type="button"
             className="settings-action"
             onClick={() => navigate("/my/profile")}
+            disabled={accountActionPending}
           >
             <span
               className="settings-action-icon profile-action-icon"
@@ -212,11 +220,12 @@ export function Settings({ navigate, onLogout, isLoggingOut = false }) {
             </span>
           </button>
 
-          {!confirmingLogout ? (
+          {confirmingAction !== "logout" ? (
             <button
               type="button"
               className="settings-action settings-logout"
-              onClick={() => setConfirmingLogout(true)}
+              onClick={() => setConfirmingAction("logout")}
+              disabled={accountActionPending}
             >
               <span
                 className="settings-action-icon logout-action-icon"
@@ -243,8 +252,8 @@ export function Settings({ navigate, onLogout, isLoggingOut = false }) {
                 <button
                   type="button"
                   className="settings-confirm-cancel"
-                  onClick={() => setConfirmingLogout(false)}
-                  disabled={isLoggingOut}
+                  onClick={() => setConfirmingAction(null)}
+                  disabled={accountActionPending}
                 >
                   취소
                 </button>
@@ -252,9 +261,61 @@ export function Settings({ navigate, onLogout, isLoggingOut = false }) {
                   type="button"
                   className="settings-confirm-submit"
                   onClick={onLogout}
-                  disabled={isLoggingOut}
+                  disabled={accountActionPending}
                 >
                   {isLoggingOut ? "로그아웃 중…" : "로그아웃"}
+                </button>
+              </div>
+            </fieldset>
+          )}
+
+          {confirmingAction !== "withdrawal" ? (
+            <button
+              type="button"
+              className="settings-action settings-withdrawal"
+              onClick={() => setConfirmingAction("withdrawal")}
+              disabled={accountActionPending}
+            >
+              <span
+                className="settings-action-icon withdrawal-action-icon"
+                aria-hidden="true"
+              >
+                ×
+              </span>
+              <span className="settings-action-copy">
+                <strong>계정 탈퇴</strong>
+                <small>계정과 프로필을 삭제하고 서비스를 떠나요.</small>
+              </span>
+              <span className="settings-action-chevron" aria-hidden="true">
+                ›
+              </span>
+            </button>
+          ) : (
+            <fieldset
+              className="settings-withdrawal-confirm"
+              aria-label="계정 탈퇴 확인"
+            >
+              <legend>정말 계정을 탈퇴할까요?</legend>
+              <p>
+                계정 정보는 비식별화되고 프로필은 삭제 처리돼요. 매칭·채팅·AI
+                대화도 종료되며 되돌릴 수 없어요.
+              </p>
+              <div className="settings-confirm-actions">
+                <button
+                  type="button"
+                  className="settings-confirm-cancel"
+                  onClick={() => setConfirmingAction(null)}
+                  disabled={accountActionPending}
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  className="settings-confirm-submit settings-withdrawal-submit"
+                  onClick={onWithdrawUser}
+                  disabled={accountActionPending}
+                >
+                  {isWithdrawingUser ? "탈퇴 처리 중…" : "탈퇴하기"}
                 </button>
               </div>
             </fieldset>

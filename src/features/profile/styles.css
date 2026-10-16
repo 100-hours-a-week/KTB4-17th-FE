@@ -343,6 +343,11 @@
   text-align: left;
 }
 
+.settings-action:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .settings-action:hover {
     transform: translate(-1px, -1px);
@@ -376,6 +381,11 @@
   color: #9e315f;
 }
 
+.withdrawal-action-icon {
+  background: #ffe1e5;
+  color: #a1223e;
+}
+
 .settings-action-copy {
   display: flex;
   flex: 1;
@@ -401,7 +411,8 @@
   line-height: 1;
 }
 
-.settings-logout {
+.settings-logout,
+.settings-withdrawal {
   border-color: #7f305b;
   background: #fffafd;
 }
@@ -411,11 +422,13 @@
   font-weight: 500;
 }
 
-.settings-logout .settings-action-copy strong {
+.settings-logout .settings-action-copy strong,
+.settings-withdrawal .settings-action-copy strong {
   color: #8d2b56;
 }
 
-.settings-logout-confirm {
+.settings-logout-confirm,
+.settings-withdrawal-confirm {
   min-width: 0;
   margin: 0;
   padding: 16px;
@@ -424,15 +437,18 @@
   box-shadow: 3px 4px 0 #8758cf26;
 }
 
-.settings-logout-confirm legend {
+.settings-logout-confirm legend,
+.settings-withdrawal-confirm legend {
   padding: 0;
   font-size: 14px;
 }
 
-.settings-logout-confirm > p {
+.settings-logout-confirm > p,
+.settings-withdrawal-confirm > p {
   margin: 6px 0 14px;
   color: var(--muted);
   font-size: 12px;
+  line-height: 1.6;
 }
 
 .settings-confirm-actions {
@@ -455,6 +471,11 @@
 
 .settings-confirm-submit {
   background: #f6bde2;
+}
+
+.settings-withdrawal-submit {
+  background: #9e315f;
+  color: #fff;
 }
 
 .settings-confirm-actions button:disabled {

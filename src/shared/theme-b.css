@@ -82,6 +82,11 @@ section.practice-dialog button.practice-dialog-button,
   box-shadow: none;
 }
 
+.settings-confirm-actions .settings-withdrawal-submit {
+  border-image: var(--px-frame-danger) 6 fill / 6px;
+  color: #7f305b;
+}
+
 /* ---------- Tags & badges ---------- */
 .persona-traits span,
 .my-profile-kicker,
@@ -127,9 +132,11 @@ section.practice-dialog button.practice-dialog-button,
   border-bottom: 1px solid var(--line);
 }
 
-/* ---------- Danger card (logout) ---------- */
+/* ---------- Danger cards (logout / withdrawal) ---------- */
 .settings-action.settings-logout,
-.settings-logout-confirm {
+.settings-action.settings-withdrawal,
+.settings-logout-confirm,
+.settings-withdrawal-confirm {
   border: 8px solid transparent;
   border-image: var(--px-frame-danger) 6 fill / 8px;
   border-radius: 0;
