@@ -85,6 +85,81 @@ function CaptureGuide() {
   );
 }
 
+function VerificationProgress({ progress, active }) {
+  const { stage, attemptNo, completedAttempts, maxAttempts, clipProgress } =
+    progress;
+  const waiting = ["analyzing", "recovering", "finalizing"].includes(stage);
+  const message =
+    stage === "recording"
+      ? `${attemptNo}/${maxAttempts}번째 얼굴 확인을 위해 촬영하고 있어요.`
+      : stage === "analyzing"
+        ? `${attemptNo}/${maxAttempts}번째 영상을 확인하고 있어요.`
+        : stage === "recovering"
+          ? "전달한 영상의 인증 결과를 다시 확인하고 있어요."
+          : stage === "finalizing"
+            ? "얼굴 인증을 마쳤어요. 사진을 저장하고 있어요."
+            : stage === "preparing"
+              ? "카메라 인증을 준비하고 있어요."
+              : "얼굴을 점선 안에 맞추고 화면을 바라봐주세요.";
+  return (
+    <div className="trust-camera-guidance">
+      <p role="status">{message}</p>
+      <div
+        className="trust-attempt-progress"
+        role="progressbar"
+        aria-label="얼굴 확인 진행 횟수"
+        aria-valuemin={0}
+        aria-valuemax={maxAttempts}
+        aria-valuenow={completedAttempts}
+        aria-valuetext={`${maxAttempts}회 중 ${completedAttempts}회 진행`}
+      >
+        {Array.from({ length: maxAttempts }, (_, index) => index + 1).map(
+          (number) => (
+            <span
+              key={`attempt-${number}`}
+              data-state={
+                number <= completedAttempts
+                  ? "done"
+                  : active && number === attemptNo
+                    ? "current"
+                    : "pending"
+              }
+            />
+          ),
+        )}
+      </div>
+      <small>
+        {completedAttempts}/{maxAttempts}회 진행
+      </small>
+      {stage === "recording" && (
+        <>
+          <div
+            className="trust-camera-progress"
+            role="progressbar"
+            aria-label="현재 5초 촬영 진행"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(clipProgress * 100)}
+          >
+            <span style={{ width: `${Math.round(clipProgress * 100)}%` }} />
+          </div>
+          <small>이번 촬영은 약 5초 동안 진행돼요. 정면을 유지해주세요.</small>
+        </>
+      )}
+      {waiting && (
+        <div className="trust-waiting">
+          <span aria-hidden="true">···</span> 확인 중이에요. 잠시만
+          기다려주세요.
+        </div>
+      )}
+      <small>
+        최대 {maxAttempts}회 확인하고, 인증에 성공하면 바로 끝나요. 전송과 분석
+        시간은 연결 상태에 따라 달라질 수 있어요.
+      </small>
+    </div>
+  );
+}
+
 const EMPTY_PHOTOS = [];
 
 // Onboarding and profile editing share the complete verification/photo flow.
@@ -299,43 +374,67 @@ export function ProfilePhotoEditor({
               }}
             />
           )}
+          {trust.phase === "checking" && (
+            <>
+              <span className="trust-kicker">
+                <PixelIcon name="lock" /> PHOTO CHECK
+              </span>
+              <h1 ref={heading} tabIndex={-1}>
+                선택한 사진을
+                <br />
+                <em>확인하고 있어요</em>
+              </h1>
+              {trust.previewUrl && (
+                <img
+                  className="trust-check-photo"
+                  src={trust.previewUrl}
+                  alt="확인 중인 정면 사진"
+                />
+              )}
+              <p className="trust-subcopy" role="status">
+                얼굴이 정면인지, 직접 촬영한 사진인지 확인하고 있어요. 확인을
+                마치면 카메라 인증을 시작할 수 있어요.
+              </p>
+              <button
+                type="button"
+                className="trust-text-button"
+                onClick={trust.reset}
+                disabled={disabled}
+              >
+                취소하고 다른 사진 선택
+              </button>
+            </>
+          )}
           {trust.phase === "camera" && (
             <>
               <span className="trust-kicker">
                 <PixelIcon name="lock" /> CAMERA CHECK
               </span>
               <h1 ref={heading} tabIndex={-1}>
-                카메라를 보고
-                <br />
-                <em>정면</em>을 바라봐주세요
+                {["analyzing", "recovering", "finalizing"].includes(
+                  trust.progress.stage,
+                ) ? (
+                  "인증 결과를 확인하고 있어요"
+                ) : (
+                  <>
+                    카메라를 보고
+                    <br />
+                    <em>정면</em>을 바라봐주세요
+                  </>
+                )}
               </h1>
-              <div className="trust-camera-guidance">
-                <p>얼굴을 점선 안에 맞추고 화면을 바라봐주세요.</p>
-                <div
-                  className="trust-camera-progress"
-                  role="progressbar"
-                  aria-label="카메라 촬영 시간"
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={Math.round(trust.cameraProgress * 100)}
-                >
-                  <span
-                    style={{
-                      width: `${Math.round(trust.cameraProgress * 100)}%`,
-                    }}
-                  />
-                </div>
-                <small>
-                  카메라가 켜지면 최대 1분 동안 확인해요. 인증이 완료되면 바로
-                  다음 단계로 이동해요.
-                </small>
-              </div>
+              <VerificationProgress
+                progress={trust.progress}
+                active={trust.active}
+              />
               {!trust.active && (
                 <PixelButton
                   onClick={() => void trust.start()}
                   disabled={disabled}
                 >
-                  카메라 켜고 인증하기
+                  {trust.progress.attemptsUsed > 0
+                    ? "카메라 켜고 이어서 인증하기"
+                    : "카메라 켜고 인증하기"}
                 </PixelButton>
               )}
               <div
@@ -352,16 +451,27 @@ export function ProfilePhotoEditor({
                   <div className="trust-camera-placeholder">
                     <PixelIcon name="bust" scale={8} />
                     <span>
-                      {trust.active
-                        ? "카메라 인증을 준비하고 있어요"
-                        : "카메라를 켜면 내 얼굴이 보여요"}
+                      {trust.progress.stage === "finalizing"
+                        ? "인증한 사진을 저장하고 있어요"
+                        : ["analyzing", "recovering"].includes(
+                              trust.progress.stage,
+                            )
+                          ? "인증 결과를 확인하고 있어요"
+                          : trust.active
+                            ? "카메라 인증을 준비하고 있어요"
+                            : "카메라를 켜면 내 얼굴이 보여요"}
                     </span>
                   </div>
                 )}
-                <div className="trust-face-outline" aria-hidden="true" />
+                {trust.cameraOn && (
+                  <div className="trust-face-outline" aria-hidden="true" />
+                )}
                 {trust.cameraOn && (
                   <span className="trust-live">
-                    <i /> 카메라 인증 중
+                    <i />{" "}
+                    {trust.progress.stage === "recording"
+                      ? "정면 얼굴 촬영 중"
+                      : "촬영 영상 확인 중"}
                   </span>
                 )}
                 {trust.previewUrl && (
@@ -373,7 +483,13 @@ export function ProfilePhotoEditor({
                 )}
               </div>
               <p className="trust-camera-hint" role="status">
-                {trust.hint}
+                {["analyzing", "recovering", "finalizing"].includes(
+                  trust.progress.stage,
+                )
+                  ? trust.cameraOn
+                    ? "촬영한 영상을 확인하고 있어요. 다음 촬영을 위해 정면을 유지해주세요."
+                    : "카메라를 껐어요. 결과 확인이 끝날 때까지 기다려주세요."
+                  : trust.hint}
               </p>
               <p className="trust-privacy">
                 <PixelIcon name="lock" /> 인증을 위해 짧은 영상을 전송해요.
@@ -393,14 +509,21 @@ export function ProfilePhotoEditor({
                 onClick={trust.reset}
                 disabled={disabled}
               >
-                다른 정면 사진 선택
+                {trust.active
+                  ? "인증 중단 · 다른 정면 사진 선택"
+                  : "다른 정면 사진 선택"}
               </button>
             </>
           )}
           {trust.phase === "failure" && (
             <>
               <span className="trust-kicker">
-                <PixelIcon name="alert" /> CHECK AGAIN
+                <PixelIcon name="alert" />{" "}
+                {trust.issue?.kind === "photo"
+                  ? "PHOTO CHECK"
+                  : trust.issue?.kind === "camera"
+                    ? "CAMERA CHECK"
+                    : "CONNECTION CHECK"}
               </span>
               <h1 ref={heading} tabIndex={-1}>
                 {trust.issue?.title}
@@ -413,34 +536,57 @@ export function ProfilePhotoEditor({
               </p>
               {trust.issue?.kind === "system" && (
                 <p className="trust-subcopy">
-                  일시적인 연결 문제일 수 있어요. 얼굴 인증 실패와는 달라요.
+                  {trust.issue.notice ||
+                    "서비스 또는 연결 상태를 확인해야 해요. 이 오류만으로 사진이나 얼굴의 일치 여부를 판단하지 않아요."}
                 </p>
               )}
               <div className="trust-actions">
-                {trust.issue?.kind !== "photo" && (
-                  <PixelButton onClick={trust.retry} disabled={disabled}>
-                    {trust.issue?.kind === "system"
-                      ? "다시 확인하기"
-                      : "카메라 인증 다시 하기"}
-                  </PixelButton>
-                )}
                 <PixelButton
-                  secondary={trust.issue?.kind !== "photo"}
-                  onClick={trust.reset}
+                  onClick={
+                    trust.issue?.action === "replace"
+                      ? trust.reset
+                      : trust.retry
+                  }
                   disabled={disabled}
                 >
-                  정면 사진 다시 선택
+                  {trust.issue?.actionLabel || "다시 시도하기"}
                 </PixelButton>
+                {trust.issue?.action !== "replace" && (
+                  <PixelButton
+                    secondary
+                    onClick={trust.reset}
+                    disabled={disabled}
+                  >
+                    정면 사진 다시 선택
+                  </PixelButton>
+                )}
               </div>
-              <CaptureGuide />
-              <details className="trust-permission-help">
-                <summary>카메라 권한 안내</summary>
-                <p>
-                  브라우저의 사이트 설정에서 카메라를 허용해주세요. 앱 안에서
-                  카메라가 열리지 않으면 Safari 또는 Chrome에서 서비스 주소를
-                  열어주세요.
-                </p>
-              </details>
+              {trust.issue?.details?.length > 0 && (
+                <details className="trust-failure-details">
+                  <summary>
+                    {trust.issue.kind === "system"
+                      ? "이전 촬영에서 확인한 사항"
+                      : "함께 확인할 사항"}{" "}
+                    {trust.issue.details.length}개
+                  </summary>
+                  <ul>
+                    {trust.issue.details.map((message) => (
+                      <li key={message}>{message}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              {trust.issue?.kind !== "system" && <CaptureGuide />}
+              {trust.issue?.kind === "camera" && (
+                <details className="trust-permission-help">
+                  <summary>카메라 권한 안내</summary>
+                  <p>
+                    브라우저의 사이트 설정에서 카메라를 허용해주세요. 앱 안에서
+                    카메라가 열리지 않으면 Safari 또는 Chrome에서 서비스 주소를
+                    열어주세요.
+                  </p>
+                </details>
+              )}
             </>
           )}
           {trust.phase === "success" && (

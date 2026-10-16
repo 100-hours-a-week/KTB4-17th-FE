@@ -56,20 +56,24 @@ export function openCamera(signal, { recordVideo = true } = {}) {
       return;
     }
     signal?.addEventListener("abort", abort, { once: true });
-    navigator.mediaDevices
-      .getUserMedia({
-        audio: false,
-        video: {
-          facingMode: { ideal: "user" },
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          frameRate: { ideal: 24 },
-        },
-      })
-      .then(
+    try {
+      Promise.resolve(
+        navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: { ideal: "user" },
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            frameRate: { ideal: 24 },
+          },
+        }),
+      ).then(
         (stream) => finish(null, stream),
         (error) => finish(cameraError(error)),
       );
+    } catch (error) {
+      finish(cameraError(error));
+    }
   });
 }
 
@@ -138,9 +142,13 @@ export function previewCamera(video, stream, signal) {
       abort();
       return;
     }
-    Promise.resolve(video.play()).then(() => {
-      if (video.readyState >= 2) ready();
-    }, failed);
+    try {
+      Promise.resolve(video.play()).then(() => {
+        if (video.readyState >= 2) ready();
+      }, failed);
+    } catch {
+      failed();
+    }
   });
 }
 
@@ -152,6 +160,7 @@ export function recordClip(
     signal,
     duration = CLIP_DURATION_MS,
     Recorder = globalThis.MediaRecorder,
+    onProgress = () => {},
   } = {},
 ) {
   return new Promise((resolve, reject) => {
@@ -170,12 +179,14 @@ export function recordClip(
     let bytes = 0;
     let stopTimer;
     let watchdog;
+    let progressTimer;
     const chunks = [];
     const finish = (error, file) => {
       if (settled) return;
       settled = true;
       clearTimeout(stopTimer);
       clearTimeout(watchdog);
+      clearInterval(progressTimer);
       signal?.removeEventListener("abort", abort);
       recorder.ondataavailable = null;
       recorder.onerror = null;
@@ -220,10 +231,17 @@ export function recordClip(
         `verification.${baseType === "video/webm" ? "webm" : baseType === "video/quicktime" ? "mov" : "mp4"}`,
         { type: mimeType },
       );
+      onProgress(1);
       finish(null, file);
     };
     try {
       recorder.start(1_000);
+      const startedAt = Date.now();
+      onProgress(0);
+      progressTimer = setInterval(
+        () => onProgress(Math.min((Date.now() - startedAt) / duration, 1)),
+        100,
+      );
       stopTimer = setTimeout(() => {
         try {
           if (recorder.state !== "inactive") recorder.stop();
