@@ -70,4 +70,11 @@ export const blockUser = (targetUserId, { signal } = {}) =>
     signal,
   });
 
+export const leaveChatRoom = (chatRoomId, { signal } = {}) =>
+  apiRequest(`/api/v1/chat-rooms/${chatRoomId}/leave`, {
+    method: "POST",
+    signal,
+    cache: "no-store",
+  });
+
 export const uploadChatImage = uploadFile;

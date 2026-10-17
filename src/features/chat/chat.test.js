@@ -22,11 +22,12 @@ const { setAccessToken, clearAccessToken } = await import(
 const {
   canUseAiForRoom,
   clearChatSessions,
+  discardRoomSession,
   endRoomAfterBlock,
   getRoomSession,
   updateRoomSession,
 } = await import("./session.js");
-const { blockUser } = await import("./api.js");
+const { blockUser, leaveChatRoom } = await import("./api.js");
 const { enqueueMessages, retryMessage } = await import("./outbox.js");
 const { applyMessagePage, fetchMessageGap } = await import("./roomData.js");
 const { loadChatVisit, unreadBoundary } = await import("./unread.js");
@@ -115,6 +116,41 @@ test("user block sends PUT and accepts created or existing responses", async () 
   }
 });
 
+test("chat end sends an empty no-store POST request and forwards its signal", async () => {
+  const originalFetch = globalThis.fetch;
+  const controller = new AbortController();
+  let request;
+  globalThis.fetch = async (url, options) => {
+    request = { url, options };
+    return new Response(
+      JSON.stringify({
+        data: {
+          chatRoomId: 7,
+          roomStatus: "ENDED",
+          participantStatus: "LEFT",
+          endedAt: "2026-10-17T12:30:00",
+        },
+      }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+  };
+
+  try {
+    const result = await leaveChatRoom(7, { signal: controller.signal });
+    assert.equal(result.chatRoomId, 7);
+    assert.equal(result.roomStatus, "ENDED");
+    assert.equal(result.participantStatus, "LEFT");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.equal(request.url, "/api/v1/chat-rooms/7/leave");
+  assert.equal(request.options.method, "POST");
+  assert.equal(request.options.cache, "no-store");
+  assert.equal(request.options.signal, controller.signal);
+  assert.equal(request.options.body, undefined);
+});
+
 test("successful block ends the room without removing message history", () => {
   const entry = activeEntry();
   updateRoomSession(entry, {
@@ -137,6 +173,28 @@ test("successful block ends the room without removing message history", () => {
     entry.snapshot.messages.map((item) => item.id),
     [1, 2],
   );
+});
+
+test("discarding a chat room session releases pending work and creates a fresh session", () => {
+  const entry = activeEntry();
+  const pendingFile = new Blob(["photo"]);
+  const pendingTask = { file: pendingFile };
+  entry.batches.push({ requested: true, tasks: [pendingTask] });
+  updateRoomSession(entry, {
+    draft: "작성 중인 메시지",
+    attachment: { file: pendingFile, previewUrl: "" },
+  });
+
+  discardRoomSession(entry);
+
+  assert.equal(entry.active, false);
+  assert.equal(entry.batches.length, 0);
+  assert.equal(pendingTask.file, null);
+  const fresh = getRoomSession(7);
+  assert.notEqual(fresh, entry);
+  assert.equal(fresh.snapshot.room, null);
+  assert.equal(fresh.snapshot.draft, "");
+  assert.equal(fresh.snapshot.attachment, null);
 });
 
 test("masked room metadata clears cached profile identity and image", () => {
