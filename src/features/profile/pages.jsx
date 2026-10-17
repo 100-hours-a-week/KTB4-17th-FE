@@ -297,8 +297,8 @@ export function Settings({
             >
               <legend>정말 계정을 탈퇴할까요?</legend>
               <p>
-                계정 정보는 비식별화되고 프로필은 삭제 처리돼요. 매칭·채팅·AI
-                대화도 종료되며 되돌릴 수 없어요.
+                탈퇴하면 모든 서비스 이용이 종료되며, 탈퇴 후에는 되돌릴 수
+                없어요.
               </p>
               <div className="settings-confirm-actions">
                 <button

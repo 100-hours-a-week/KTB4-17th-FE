@@ -4,9 +4,12 @@ const UNAVAILABLE_MESSAGE = "아직 준비되지 않은 기능이에요.";
 
 export function ChatDetailMenu({
   canBlock,
+  canEndChat,
   canEndWithAi,
   blocking,
+  endingChat,
   onBlock,
+  onEndChat,
   toast,
 }) {
   const menuRef = useRef(null);
@@ -68,19 +71,19 @@ export function ChatDetailMenu({
         </button>
         <button
           type="button"
-          className={`chat-detail-menu-item chat-detail-danger${!canBlock || blocking ? " chat-detail-menu-disabled" : ""}`}
-          disabled={!canBlock || blocking}
+          className={`chat-detail-menu-item chat-detail-danger${!canBlock || blocking || endingChat ? " chat-detail-menu-disabled" : ""}`}
+          disabled={!canBlock || blocking || endingChat}
           onClick={() => select(onBlock)}
         >
           <span>{blocking ? "차단 중…" : "회원 차단"}</span>
         </button>
         <button
           type="button"
-          className="chat-detail-menu-item chat-detail-unavailable"
-          aria-disabled="true"
-          onClick={() => select(unavailable)}
+          className={`chat-detail-menu-item chat-detail-danger${!canEndChat || blocking || endingChat ? " chat-detail-menu-disabled" : ""}`}
+          disabled={!canEndChat || blocking || endingChat}
+          onClick={() => select(onEndChat)}
         >
-          <span>채팅방 나가기</span>
+          <span>{endingChat ? "종료 중…" : "채팅 종료"}</span>
         </button>
       </fieldset>
     </details>

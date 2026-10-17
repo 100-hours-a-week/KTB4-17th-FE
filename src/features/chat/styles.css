@@ -897,7 +897,7 @@
   }
 }
 
-.chat-block-dialog-backdrop {
+.chat-confirm-dialog-backdrop {
   position: fixed;
   z-index: 18;
   inset: 0;
@@ -907,14 +907,14 @@
   background: #21172f75;
 }
 
-.chat-block-dialog-dismiss {
+.chat-confirm-dialog-dismiss {
   position: absolute;
   inset: 0;
   border: 0;
   background: transparent;
 }
 
-.chat-block-dialog {
+.chat-confirm-dialog {
   position: relative;
   z-index: 1;
   width: min(100%, 330px);
@@ -925,25 +925,25 @@
   text-align: center;
 }
 
-.chat-block-dialog h2 {
+.chat-confirm-dialog h2 {
   margin: 0 0 10px;
   font-size: 16px;
 }
 
-.chat-block-dialog p {
+.chat-confirm-dialog p {
   margin: 0;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.6;
 }
 
-.chat-block-dialog > div {
+.chat-confirm-dialog > div {
   display: flex;
   gap: 8px;
   margin-top: 20px;
 }
 
-.chat-block-dialog-button {
+.chat-confirm-dialog-button {
   flex: 1;
   min-height: 42px;
   border: 1px solid #d8c5e7;
@@ -953,13 +953,13 @@
   font-size: 12px;
 }
 
-.chat-block-dialog-primary {
+.chat-confirm-dialog-primary {
   border-color: #9e2342;
   background: #9e2342;
   color: white;
 }
 
-.chat-block-dialog-button:where(:disabled) {
+.chat-confirm-dialog-button:where(:disabled) {
   cursor: wait;
   opacity: 0.65;
 }

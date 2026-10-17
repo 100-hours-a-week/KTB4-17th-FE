@@ -30,64 +30,76 @@ import {
 import { enqueueMessages, retryMessage } from "./outbox.js";
 import {
   canUseAiForRoom,
+  discardRoomSession,
   endRoomAfterBlock,
   isSessionActive,
   releasePreview,
   updateRoomSession,
 } from "./session.js";
+import { CHAT_READ_UPDATED_EVENT } from "./unreadCount.js";
 import { useChatRoom } from "./useChatRoom.js";
 import { useChatScroll } from "./useChatScroll.js";
 
-function BlockConfirmationDialog({ userName, blocking, onCancel, onConfirm }) {
+function ChatConfirmationDialog({
+  dialogId,
+  dismissLabel,
+  title,
+  description,
+  pending,
+  confirmLabel,
+  pendingLabel,
+  onCancel,
+  onConfirm,
+}) {
   const cancelRef = useRef(null);
+  const titleId = `chat-${dialogId}-title`;
+  const descriptionId = `chat-${dialogId}-description`;
 
   useLayoutEffect(() => {
     cancelRef.current?.focus();
   }, []);
 
   return (
-    <div className="chat-block-dialog-backdrop">
+    <div className="chat-confirm-dialog-backdrop">
       <button
         type="button"
-        className="chat-block-dialog-dismiss"
-        aria-label="회원 차단 취소"
+        className="chat-confirm-dialog-dismiss"
+        aria-label={dismissLabel}
         tabIndex={-1}
         onClick={onCancel}
-        disabled={blocking}
+        disabled={pending}
       />
       <section
-        className="chat-block-dialog"
+        className="chat-confirm-dialog"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="chat-block-title"
-        aria-describedby="chat-block-description"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
         onKeyDown={(event) => {
-          if (event.key !== "Escape" || blocking) return;
+          if (event.key !== "Escape" || pending) return;
           event.preventDefault();
           onCancel();
         }}
       >
-        <h2 id="chat-block-title">{userName}님을 차단할까요?</h2>
-        <p id="chat-block-description">
-          차단하면 더 이상 메시지를 주고받을 수 없으며, 차단은 되돌릴 수 없어요.
-        </p>
+        <h2 id={titleId}>{title}</h2>
+        <p id={descriptionId}>{description}</p>
         <div>
           <button
             ref={cancelRef}
             type="button"
-            className="chat-block-dialog-button"
+            className="chat-confirm-dialog-button"
             onClick={onCancel}
-            disabled={blocking}
+            disabled={pending}
           >
             취소
           </button>
           <button
             type="button"
-            className="chat-block-dialog-button chat-block-dialog-primary"
+            className="chat-confirm-dialog-button chat-confirm-dialog-primary"
             onClick={onConfirm}
-            disabled={blocking}
+            disabled={pending}
           >
-            {blocking ? "차단 중…" : "차단하기"}
+            {pending ? pendingLabel : confirmLabel}
           </button>
         </div>
       </section>
@@ -238,10 +250,13 @@ function ChatRoomContent({
   const [viewingImage, setViewingImage] = useState(null);
   const [preparingImage, setPreparingImage] = useState(false);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  const [endChatDialogOpen, setEndChatDialogOpen] = useState(false);
   const [blocking, setBlocking] = useState(false);
+  const [endingChat, setEndingChat] = useState(false);
   const imageSelectionVersion = useRef(0);
   const imagePreparationPending = useRef(false);
   const blockRequestRef = useRef(null);
+  const endChatRequestRef = useRef(null);
   const rootRef = useRef(null);
   const inputRef = useRef(null);
   const imageInputRef = useRef(null);
@@ -254,7 +269,8 @@ function ChatRoomContent({
     !state.room?.blockedByMe &&
     Number.isSafeInteger(parsedTargetUserId) &&
     parsedTargetUserId > 0;
-  const aiDisabled = !canUseAiForRoom(state.room, blocking);
+  const canEndChat = Boolean(visit && state.room);
+  const aiDisabled = !canUseAiForRoom(state.room, blocking || endingChat);
   const closeViewer = useCallback(() => setViewingImage(null), []);
   const openViewer = useCallback((message, opener) => {
     viewerOpenerRef.current = opener;
@@ -268,6 +284,9 @@ function ChatRoomContent({
       const blockRequest = blockRequestRef.current;
       blockRequestRef.current = null;
       blockRequest?.abort();
+      const endChatRequest = endChatRequestRef.current;
+      endChatRequestRef.current = null;
+      endChatRequest?.abort();
     },
     [],
   );
@@ -343,7 +362,7 @@ function ChatRoomContent({
   }
 
   async function blockUser() {
-    if (!canBlockUser || blocking) return;
+    if (!canBlockUser || blocking || endingChat) return;
 
     const controller = new AbortController();
     blockRequestRef.current = controller;
@@ -381,6 +400,46 @@ function ChatRoomContent({
     }
   }
 
+  async function endChat() {
+    if (!canEndChat || blocking || endingChat) return;
+
+    const controller = new AbortController();
+    endChatRequestRef.current = controller;
+    setEndingChat(true);
+    try {
+      await chatApi.leaveChatRoom(roomId, { signal: controller.signal });
+      if (endChatRequestRef.current !== controller || !isSessionActive(entry))
+        return;
+
+      imageSelectionVersion.current += 1;
+      imagePreparationPending.current = false;
+      setPreparingImage(false);
+      if (Number.isSafeInteger(parsedTargetUserId) && parsedTargetUserId > 0)
+        onCancelSimulation?.(parsedTargetUserId);
+      setEndChatDialogOpen(false);
+      discardRoomSession(entry);
+      window.dispatchEvent(new Event(CHAT_READ_UPDATED_EVENT));
+      toast("채팅을 종료했어요.");
+      navigate("/chats");
+    } catch (requestError) {
+      if (
+        requestError.name !== "AbortError" &&
+        endChatRequestRef.current === controller
+      )
+        toast(
+          apiErrorMessage(
+            requestError,
+            "채팅을 종료하지 못했어요. 잠시 후 다시 시도해주세요.",
+          ),
+        );
+    } finally {
+      if (endChatRequestRef.current === controller) {
+        endChatRequestRef.current = null;
+        setEndingChat(false);
+      }
+    }
+  }
+
   const connectionMessage =
     connection === "offline"
       ? "인터넷 연결이 끊겼어요. 연결 후 다시 시도해주세요."
@@ -400,7 +459,7 @@ function ChatRoomContent({
     <section ref={rootRef} className="chat-room-view" aria-label="채팅방">
       <div
         className="chat-room-content"
-        inert={Boolean(viewingImage || blockDialogOpen)}
+        inert={Boolean(viewingImage || blockDialogOpen || endChatDialogOpen)}
       >
         <BrandHeader navigate={navigate}>
           <ChatModeMenu
@@ -451,10 +510,13 @@ function ChatRoomContent({
           right={
             <div className="chat-header-actions">
               <ChatDetailMenu
-                canBlock={canBlockUser}
+                canBlock={canBlockUser && !endingChat}
+                canEndChat={canEndChat}
                 canEndWithAi={state.room?.status === "ACTIVE"}
                 blocking={blocking}
+                endingChat={endingChat}
                 onBlock={() => setBlockDialogOpen(true)}
+                onEndChat={() => setEndChatDialogOpen(true)}
                 toast={toast}
               />
             </div>
@@ -748,11 +810,36 @@ function ChatRoomContent({
         </form>
       </div>
       {blockDialogOpen && (
-        <BlockConfirmationDialog
-          userName={state.room?.name || "상대 회원"}
-          blocking={blocking}
+        <ChatConfirmationDialog
+          dialogId="block"
+          dismissLabel="회원 차단 취소"
+          title={`${state.room?.name || "상대 회원"}님을 차단할까요?`}
+          description="차단하면 더 이상 메시지를 주고받을 수 없으며, 차단은 되돌릴 수 없어요."
+          pending={blocking}
+          confirmLabel="차단하기"
+          pendingLabel="차단 중…"
           onCancel={() => setBlockDialogOpen(false)}
           onConfirm={() => void blockUser()}
+        />
+      )}
+      {endChatDialogOpen && (
+        <ChatConfirmationDialog
+          dialogId="end"
+          dismissLabel="채팅 종료 취소"
+          title="채팅을 종료할까요?"
+          description={
+            <>
+              채팅을 종료하면 목록에서 사라지고 더 이상 상대방과 메시지를
+              주고받을 수 없어요.
+              <br />
+              종료 후에는 되돌릴 수 없어요.
+            </>
+          }
+          pending={endingChat}
+          confirmLabel="종료하기"
+          pendingLabel="종료 중…"
+          onCancel={() => setEndChatDialogOpen(false)}
+          onConfirm={() => void endChat()}
         />
       )}
       {viewingImage && (
