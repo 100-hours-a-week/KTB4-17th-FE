@@ -43,8 +43,6 @@ export function Home({
   onStartSimulation,
 }) {
   const [photoIndex, setPhotoIndex] = useState(0);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef(null);
   const [actionBusy, setActionBusy] = useState("");
   const actionInFlight = useRef(false);
   const [dragOffset, setDragOffset] = useState(0);
@@ -84,25 +82,6 @@ export function Home({
     },
     [],
   );
-
-  useEffect(() => {
-    if (!menuOpen) return undefined;
-    const close = (event) => {
-      if (event.type === "keydown" && event.key !== "Escape") return;
-      if (
-        event.type === "pointerdown" &&
-        menuRef.current?.contains(event.target)
-      )
-        return;
-      setMenuOpen(false);
-    };
-    document.addEventListener("pointerdown", close);
-    document.addEventListener("keydown", close);
-    return () => {
-      document.removeEventListener("pointerdown", close);
-      document.removeEventListener("keydown", close);
-    };
-  }, [menuOpen]);
 
   useEffect(() => {
     if (personId == null) return;
@@ -398,43 +377,19 @@ export function Home({
   return (
     <>
       <BrandHeader navigate={navigate} className="home-header">
-        <span className="home-header-spacer" />
-        <div className="home-menu" ref={menuRef}>
-          <button
-            className="home-menu-button"
-            type="button"
-            aria-label="메뉴"
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((open) => !open)}
-          >
-            <PixelIcon name="burgerSm" scale={3} />
-          </button>
-          {menuOpen && (
-            <div className="home-menu-list" role="menu">
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setMenuOpen(false);
-                  navigate("/preferences");
-                }}
-              >
-                선호 설정
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setMenuOpen(false);
-                  toast("알림 기능은 준비 중이에요.");
-                }}
-              >
-                알림
-              </button>
-            </div>
-          )}
-        </div>
+        <button
+          className="home-preference-action"
+          type="button"
+          onClick={() => navigate("/preferences")}
+          aria-label="선호 설정"
+          title="선호 설정"
+        >
+          <img
+            src={asset("preferences/preference-heart.svg")}
+            alt=""
+            aria-hidden="true"
+          />
+        </button>
       </BrandHeader>
       <main className="main-scroll home-main">
         {recommendationStatus === "loading" ? (

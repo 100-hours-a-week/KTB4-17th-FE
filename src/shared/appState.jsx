@@ -38,7 +38,6 @@ export function makeInitialState() {
     agreed: false,
     terms: [false, false, false, false],
     profile: { ...initialProfile },
-    notifications: [],
   };
 }
 
@@ -61,8 +60,6 @@ export function loadInitialState() {
           ...initial.profile,
           ...stored.profile,
         });
-      if (Array.isArray(stored.notifications))
-        initial.notifications = stored.notifications;
       // Only a successful server session check can confirm registration.
       initial.registrationInfoConfirmed = false;
       initial.onboardingStep = "identity";
@@ -94,7 +91,6 @@ export function AppStateProvider({ children }) {
         agreed: storedData.agreed,
         terms: storedData.terms,
         profile: storedData.profile,
-        notifications: storedData.notifications,
       };
       localStorage.setItem(
         `${APP_STORAGE_PREFIX}:app`,

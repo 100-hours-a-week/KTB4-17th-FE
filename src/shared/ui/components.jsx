@@ -1,4 +1,5 @@
 import { formatUnreadCount } from "../../features/chat/unreadCount.js";
+import { NotificationButton } from "../../features/notifications/NotificationControls.jsx";
 import { useProfileImage } from "../../features/profile/useProfileImage.js";
 import { asset } from "../assets.js";
 import { profilePhotoUrls } from "../utils.js";
@@ -51,17 +52,8 @@ export function BrandHeader({ children, className = "", navigate }) {
           alt="*23#"
         />
       </button>
-      {children ?? (
-        <>
-          <span className="brand-signal" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-            <i />
-          </span>
-          <span className="brand-battery" aria-hidden="true" />
-        </>
-      )}
+      {children}
+      <NotificationButton />
     </header>
   );
 }
@@ -72,6 +64,7 @@ export function ScreenHeader({
   right,
   className = "",
   brandLogo = false,
+  notificationAction = false,
 }) {
   return (
     <header
@@ -93,7 +86,10 @@ export function ScreenHeader({
         />
       )}
       <strong>{title}</strong>
-      <div className="header-right">{right}</div>
+      <div className="header-right">
+        {right}
+        {notificationAction && <NotificationButton />}
+      </div>
     </header>
   );
 }

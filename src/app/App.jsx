@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Practice } from "../features/aipractice/Practice.jsx";
-import { CompletionToast } from "../features/aisimulation/CompletionToast.jsx";
 import { SimulationTrackingContext } from "../features/aisimulation/context.jsx";
 import { Report, Simulation } from "../features/aisimulation/pages.jsx";
 import { useSimulationLaunch } from "../features/aisimulation/useSimulationLaunch.js";
@@ -19,6 +18,7 @@ import { useLocalTestLogin } from "../features/auth/useLocalTestLogin.js";
 import { ChatList, ChatRoom } from "../features/chat/Chat.jsx";
 import { useUnreadMessageCount } from "../features/chat/useUnreadMessageCount.js";
 import { Likes } from "../features/matching/Likes.jsx";
+import { NotificationProvider } from "../features/notifications/NotificationProvider.jsx";
 import { Notifications } from "../features/notifications/Notifications.jsx";
 import { Onboarding } from "../features/onboarding/Onboarding.jsx";
 import { Preferences } from "../features/preferences/Preferences.jsx";
@@ -64,6 +64,7 @@ function profileReturnPath(search) {
   try {
     const destination = new URL(requested, window.location.origin);
     if (destination.origin !== window.location.origin) return "/home";
+    if (destination.pathname === "/notifications") return "/notifications";
     if (destination.pathname === "/likes") {
       const tab = destination.searchParams.get("tab");
       return tab === "sent" || tab === "received"
@@ -110,14 +111,10 @@ function AppRouter() {
     enabled: !loading && !sessionCheckError && data.session && data.onboarded,
   });
   const completion = tracking.snapshot.completions[0];
-  const viewingCompletion =
-    completion &&
-    (path === `/ai/simulations/${completion.simulationId}` ||
-      path === `/ai/simulations/${completion.simulationId}/report`);
   useEffect(() => {
-    if (viewingCompletion)
-      tracking.manager.acknowledge(completion.simulationId);
-  }, [viewingCompletion, completion, tracking.manager]);
+    // Persistent server notifications now own the global completion banner.
+    if (completion) tracking.manager.acknowledge(completion.simulationId);
+  }, [completion, tracking.manager]);
   const { startSimulation, cancelSimulation, simulationStartingFor } =
     useSimulationLaunch({
       path,
@@ -375,7 +372,8 @@ function AppRouter() {
   const simulationRoute = path.match(/^\/ai\/simulations\/(\d+)(?:\/report)?$/);
   const simulationId = simulationRoute ? Number(simulationRoute[1]) : null;
   const showNav =
-    data.onboarded && ["/", "/home", "/likes", "/chats", "/my"].includes(path);
+    data.onboarded &&
+    ["/", "/home", "/likes", "/chats", "/my", "/notifications"].includes(path);
 
   let page;
   if (loading) page = <SplashScreen message="잠시만 기다려주세요" />;
@@ -538,33 +536,37 @@ function AppRouter() {
     <SimulationTrackingContext.Provider value={tracking}>
       <div className="app-shell" ref={viewportRef}>
         <div className="app-screen" data-has-nav={showNav}>
-          {page}
-          {showNav && (
-            <BottomNav
-              path={path}
-              unreadMessageCount={unreadMessageCount}
-              navigate={navigate}
-            />
-          )}
-          {completion && !viewingCompletion && (
-            <CompletionToast
-              key={`${tracking.subject}:${completion.simulationId}`}
-              completion={completion}
-              navigate={navigate}
-              blocked={Boolean(toastText)}
-              onDismiss={() =>
-                tracking.manager.acknowledge(completion.simulationId)
-              }
-            />
-          )}
-          {toastText && (
-            <div
-              className={`toast${path === "/" || path === "/home" ? " toast-home" : ""}`}
-              role="status"
-            >
-              {toastText}
-            </div>
-          )}
+          <NotificationProvider
+            enabled={
+              !loading &&
+              !sessionCheckError &&
+              data.session &&
+              data.onboarded &&
+              path !== "/login"
+            }
+            path={path}
+            search={search}
+            navigate={navigate}
+            toast={toast}
+            blocked={Boolean(toastText)}
+          >
+            {page}
+            {showNav && (
+              <BottomNav
+                path={path}
+                unreadMessageCount={unreadMessageCount}
+                navigate={navigate}
+              />
+            )}
+            {toastText && (
+              <div
+                className={`toast${path === "/" || path === "/home" ? " toast-home" : ""}`}
+                role="status"
+              >
+                {toastText}
+              </div>
+            )}
+          </NotificationProvider>
         </div>
       </div>
     </SimulationTrackingContext.Provider>
