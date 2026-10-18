@@ -753,9 +753,7 @@ export function ProfilePhotoEditor({
           >
             {frontalPhotoAction}
           </button>
-          <p className="trust-subcopy trust-small">
-            {frontalPhotoHelp}
-          </p>
+          <p className="trust-subcopy trust-small">{frontalPhotoHelp}</p>
           {error && (
             <p className="field-error" role="alert">
               {error}
