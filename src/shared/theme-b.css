@@ -127,6 +127,10 @@ section.practice-dialog button.practice-dialog-button,
 
 /* ---------- Tab strips (likes / notifications / preferences) ---------- */
 .segmented-tabs {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
   border-bottom: 1px solid var(--line);
 }
 

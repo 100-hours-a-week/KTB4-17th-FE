@@ -1,3 +1,4 @@
+import { Children, cloneElement, Fragment, isValidElement, useId } from "react";
 import { formatUnreadCount } from "../../features/chat/unreadCount.js";
 import { NotificationButton } from "../../features/notifications/NotificationControls.jsx";
 import { useProfileImage } from "../../features/profile/useProfileImage.js";
@@ -10,6 +11,8 @@ export function Icon({ name, className = "" }) {
     <img
       className={`icon ${className}`}
       src={asset(name)}
+      width="24"
+      height="24"
       alt=""
       aria-hidden="true"
     />
@@ -49,6 +52,8 @@ export function BrandHeader({ children, className = "", navigate }) {
         <img
           className="brand-header-logo"
           src={asset("logo-header.png?v=d41514e")}
+          width="120"
+          height="45"
           alt="*23#"
         />
       </button>
@@ -82,10 +87,12 @@ export function ScreenHeader({
         <img
           className="screen-header-logo"
           src={asset("logo-header.png?v=d41514e")}
+          width="66"
+          height="30"
           alt="*23#"
         />
       )}
-      <strong>{title}</strong>
+      <h1>{title}</h1>
       <div className="header-right">
         {right}
         {notificationAction && <NotificationButton />}
@@ -107,13 +114,29 @@ export function BottomNav({ path, navigate, unreadMessageCount = null }) {
       {tabItems.map(([label, href, icon]) => {
         const badge =
           href === "/chats" ? formatUnreadCount(unreadMessageCount) : "";
+        const active =
+          href === "/home"
+            ? path === "/" || path === "/home"
+            : path === href || path.startsWith(`${href}/`);
         return (
-          <button
-            type="button"
+          <a
+            href={href}
             key={href}
-            className={path.startsWith(href) ? "active" : ""}
-            onClick={() => navigate(href)}
-            aria-current={path.startsWith(href) ? "page" : undefined}
+            className={active ? "active" : ""}
+            onClick={(event) => {
+              if (
+                event.defaultPrevented ||
+                event.button !== 0 ||
+                event.metaKey ||
+                event.ctrlKey ||
+                event.shiftKey ||
+                event.altKey
+              )
+                return;
+              event.preventDefault();
+              navigate(href);
+            }}
+            aria-current={active ? "page" : undefined}
             aria-label={
               badge ? `${label}, 안 읽은 메시지 ${unreadMessageCount}개` : label
             }
@@ -127,20 +150,75 @@ export function BottomNav({ path, navigate, unreadMessageCount = null }) {
               )}
             </span>
             <span>{label}</span>
-          </button>
+          </a>
         );
       })}
     </nav>
   );
 }
 
+const FIELD_CONTROL_TAGS = new Set(["input", "select", "textarea"]);
+
+function labelFieldControls(children, labelId, describedBy, invalid) {
+  return Children.map(children, (child) => {
+    if (!isValidElement(child)) return child;
+
+    if (typeof child.type === "string" && FIELD_CONTROL_TAGS.has(child.type)) {
+      const hasAccessibleName =
+        child.props["aria-label"] || child.props["aria-labelledby"];
+      const existingDescription = child.props["aria-describedby"];
+      const nextDescription = [existingDescription, describedBy]
+        .filter(Boolean)
+        .join(" ");
+
+      return cloneElement(child, {
+        ...(!hasAccessibleName && { "aria-labelledby": labelId }),
+        ...(nextDescription && { "aria-describedby": nextDescription }),
+        ...(invalid && { "aria-invalid": true }),
+      });
+    }
+
+    if (child.type === Fragment || typeof child.type === "string") {
+      return cloneElement(
+        child,
+        {},
+        labelFieldControls(child.props.children, labelId, describedBy, invalid),
+      );
+    }
+
+    return child;
+  });
+}
+
 export function Field({ label, children, hint, error }) {
+  const fieldId = useId();
+  const labelId = `${fieldId}-label`;
+  const hintId = hint ? `${fieldId}-hint` : undefined;
+  const errorId = error ? `${fieldId}-error` : undefined;
+  const describedBy = [hintId, errorId].filter(Boolean).join(" ");
+  const controls = labelFieldControls(
+    children,
+    labelId,
+    describedBy,
+    Boolean(error),
+  );
+
   return (
     <fieldset className="field">
-      <legend className="field-label">{label}</legend>
-      {children}
-      {hint && <small className="hint">{hint}</small>}
-      {error && <small className="field-error">{error}</small>}
+      <legend id={labelId} className="field-label">
+        {label}
+      </legend>
+      {controls}
+      {hint && (
+        <small id={hintId} className="hint">
+          {hint}
+        </small>
+      )}
+      {error && (
+        <small id={errorId} className="field-error" role="alert">
+          {error}
+        </small>
+      )}
     </fieldset>
   );
 }
@@ -170,11 +248,11 @@ export function ChoiceGroup({
   );
 }
 
-export function EmptyState({ icon = "♡", title, description, action }) {
+export function EmptyState({ icon = "♡", title, description, action, role }) {
   return (
-    <div className="empty-state">
+    <div className="empty-state" role={role}>
       <div className="empty-icon">{icon}</div>
-      <strong>{title}</strong>
+      <h2>{title}</h2>
       {description && <p>{description}</p>}
       {action}
     </div>
@@ -190,6 +268,9 @@ export function PersonAvatar({ person, size = "medium" }) {
     <img
       className={`person-avatar ${size}`}
       src={source}
+      width={size === "large" ? 88 : 56}
+      height={size === "large" ? 88 : 56}
+      loading="lazy"
       alt=""
       onError={onError}
     />
@@ -223,6 +304,8 @@ export function ProfilePhoto({ person, index = 0, className = "" }) {
     <img
       className={className}
       src={source}
+      width="600"
+      height="800"
       alt={`${person?.nickname || "프로필"}님의 프로필 사진`}
       onError={onError}
     />

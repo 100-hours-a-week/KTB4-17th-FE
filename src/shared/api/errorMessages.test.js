@@ -66,7 +66,7 @@ test("structured submission failures retain the new session without displaying r
 });
 
 test("unknown codes and untrusted messages never appear in user messages", () => {
-  const fallback = "목록을 다시 불러와주세요.";
+  const fallback = "목록을 다시 불러와 주세요.";
   for (const code of [
     "NEW_BACKEND_CODE",
     "toString",
