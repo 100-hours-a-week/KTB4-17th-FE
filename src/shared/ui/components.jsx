@@ -145,7 +145,13 @@ export function Field({ label, children, hint, error }) {
   );
 }
 
-export function ChoiceGroup({ options, value, onChange, className = "" }) {
+export function ChoiceGroup({
+  options,
+  value,
+  onChange,
+  className = "",
+  disabled = false,
+}) {
   return (
     <div className={`choice-group ${className}`}>
       {options.map(([key, label]) => (
@@ -153,6 +159,7 @@ export function ChoiceGroup({ options, value, onChange, className = "" }) {
           key={key}
           type="button"
           className={`choice ${value === key ? "selected" : ""}`}
+          disabled={disabled}
           onClick={() => onChange(key)}
           aria-pressed={value === key}
         >
