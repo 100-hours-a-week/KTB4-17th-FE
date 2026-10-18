@@ -419,7 +419,10 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
   };
 
   const keepLegacyPhoto = Boolean(legacyPhoto) && !replacingLegacyPhoto;
-  const photosReady = keepLegacyPhoto || photoState.ready;
+  const photosReady =
+    keepLegacyPhoto ||
+    photoState.ready ||
+    samePhotoItems(initialPhotos, photoState.images);
   const navigateWhenIdle = (path) => {
     if (!saveInFlight.current) navigate(path);
   };
@@ -553,8 +556,12 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                     disabled={isSaving}
                     onClick={() => setReplacingLegacyPhoto(true)}
                   >
-                    사진 편집 · 정면 사진 인증하기
+                    프로필 사진 수정
                   </button>
+                  <p>
+                    최대 6장의 사진을 추가하고 순서를 정할 수 있어요. 정면 사진을
+                    등록하거나 바꿀 때만 얼굴 인증을 진행해요.
+                  </p>
                 </>
               ) : (
                 <ProfilePhotoEditor
@@ -570,7 +577,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                   disabled={isSaving}
                   onClick={() => setReplacingLegacyPhoto(false)}
                 >
-                  기존 대표사진 유지
+                  사진 수정 취소 · 기존 사진 유지
                 </button>
               )}
             </section>
