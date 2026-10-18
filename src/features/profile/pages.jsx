@@ -37,7 +37,8 @@ import { profilePayload } from "./serialize.js";
 
 const NICKNAME_PATTERN = /^[가-힣A-Za-z0-9]{2,10}$/;
 const NICKNAME_FORMAT_ERROR = "닉네임은 한글·영문·숫자 2~10자로 입력해주세요.";
-const PROFILE_SAVE_ERROR = "프로필을 저장하지 못했어요. 잠시 후 다시 시도해주세요.";
+const PROFILE_SAVE_ERROR =
+  "프로필을 저장하지 못했어요. 잠시 후 다시 시도해주세요.";
 const PROFILE_AI_ERROR_CODES = new Set([
   "PROFILE_NOT_FOUND",
   "PROFILE_NICKNAME_REQUIRED",
@@ -495,7 +496,9 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
       saveSucceeded = true;
     } catch (e) {
       if (e?.code === "NICKNAME_ALREADY_IN_USE") {
-        setNicknameError("이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해주세요.");
+        setNicknameError(
+          "이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해주세요.",
+        );
       } else {
         toast(profileSaveErrorMessage(e));
       }
@@ -655,10 +658,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
               />
             </Field>
             <div className="edit-actions">
-              <PixelButton
-                onClick={save}
-                disabled={isSaving || !photosReady}
-              >
+              <PixelButton onClick={save} disabled={isSaving || !photosReady}>
                 {isSaving ? "저장 중…" : "저장하기"}
               </PixelButton>
             </div>
