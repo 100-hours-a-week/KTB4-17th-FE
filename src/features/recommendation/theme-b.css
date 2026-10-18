@@ -100,7 +100,7 @@
 
 .recommendation-info .recommendation-profile-link {
   gap: 2px;
-  min-height: 36px;
+  min-height: 44px;
   margin-top: 4px;
   color: #e3d9ff;
   font-size: 13px;
@@ -132,7 +132,7 @@
   height: auto;
 }
 
-.empty-state > strong {
+.empty-state > h2 {
   margin-top: 10px;
   font-size: 19px;
   line-height: 27px;
@@ -172,7 +172,7 @@
 
 /* 좋아요 탭 — 세그먼트 토글 */
 .segmented-tabs.likes-seg {
-  height: 44px;
+  height: 52px;
   margin: 16px 16px 0;
   padding: 4px;
   border-bottom: 0;
@@ -276,8 +276,8 @@
 }
 
 .likes-main > .empty-state {
-  min-height: calc(100% + 60px);
-  margin-top: -60px;
+  min-height: calc(100% + 68px);
+  margin-top: -68px;
 }
 
 /* 추천 카드 활동 상태 배지 */
@@ -295,7 +295,7 @@
 
 /* 좋아요 목록: 탭 바와 같은 좌우 16px, 탭 바 아래 · 카드 사이 모두 16px */
 .segmented-tabs.likes-seg + .likes-main {
-  top: 116px;
+  top: 124px;
   padding: 16px 16px 24px;
 }
 
@@ -358,15 +358,22 @@
 
 /* 홈 카드 사진 막대: 프로필 상세와 같은 방식, 색은 한 톤 연하게 */
 .recommendation-card .photo-steps button {
+  height: 44px;
+  border-radius: 0;
+  background: transparent;
+}
+
+.recommendation-card .photo-steps button::before {
+  top: 10px;
   height: 4px;
   border-radius: 0;
   background: rgb(255 255 255 / 55%);
 }
 
-.recommendation-card .photo-steps button.seen {
+.recommendation-card .photo-steps button.seen::before {
   background: linear-gradient(90deg, #d4c6ff, #bba6ff);
 }
 
-.recommendation-card .photo-steps button.active {
+.recommendation-card .photo-steps button.active::before {
   background: linear-gradient(90deg, #bba6ff, #f7b3d9);
 }

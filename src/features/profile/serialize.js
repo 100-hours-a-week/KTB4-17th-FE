@@ -2,7 +2,7 @@ import { isJobCategory } from "./jobCategories.js";
 
 export function profilePayload(profile) {
   if (!isJobCategory(profile.job)) {
-    const error = new Error("직업군을 선택해주세요.");
+    const error = new Error("직업군을 선택해 주세요.");
     error.code = "JOB_CATEGORY_REQUIRED";
     throw error;
   }

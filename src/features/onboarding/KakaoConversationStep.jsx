@@ -63,7 +63,7 @@ export function KakaoConversationStep({ onContinue, toast }) {
       return;
     }
     if (selectedFile.size === 0) {
-      setError("빈 파일은 올릴 수 없어요. 다른 대화 파일을 선택해주세요.");
+      setError("빈 파일은 올릴 수 없어요. 다른 대화 파일을 선택해 주세요.");
       return;
     }
     if (selectedFile.size > MAX_FILE_BYTES) {
@@ -111,7 +111,7 @@ export function KakaoConversationStep({ onContinue, toast }) {
       setError(
         apiErrorMessage(
           requestError,
-          "대화에 나온 이름을 확인하지 못했어요. 파일을 제거하고 다시 선택해주세요.",
+          "대화에 나온 이름을 확인하지 못했어요. 파일을 제거하고 다시 선택해 주세요.",
         ),
       );
     } finally {
@@ -157,7 +157,7 @@ export function KakaoConversationStep({ onContinue, toast }) {
       setError(
         apiErrorMessage(
           outcomeUnknown ? "AI_SUBMISSION_OUTCOME_UNKNOWN" : requestError,
-          "대화를 전달하지 못했어요. 다른 파일을 선택하거나 건너뛰어주세요.",
+          "대화를 전달하지 못했어요. 다른 파일을 선택하거나 건너뛰어 주세요.",
         ),
       );
     } finally {
@@ -172,7 +172,7 @@ export function KakaoConversationStep({ onContinue, toast }) {
     >
       <div className="kakao-conversation-content">
         <h1 className="onboarding-title">
-          평소 말투도 알려주세요 <small>선택사항</small>
+          평소 말투도 알려 주세요 <small>선택사항</small>
         </h1>
         <p className="subcopy">
           카카오톡 대화를 참고해 AI가 내 말투와 표현 방식을 이해할 수 있어요.
@@ -193,6 +193,7 @@ export function KakaoConversationStep({ onContinue, toast }) {
         <input
           ref={fileInput}
           type="file"
+          name="kakaoExport"
           accept=".txt,.csv"
           aria-label="카카오톡 내보내기 파일 선택"
           className="kakao-file-input"
@@ -210,7 +211,7 @@ export function KakaoConversationStep({ onContinue, toast }) {
               <PixelIcon name="chat" scale={4} />
             </span>
             <strong>카카오톡 파일 선택</strong>
-            <span>대화 내보내기로 받은 원본 파일을 선택해주세요.</span>
+            <span>대화 내보내기로 받은 원본 파일을 선택해 주세요.</span>
             <small>TXT · CSV / 최대 5MB</small>
           </button>
         ) : (
@@ -234,7 +235,7 @@ export function KakaoConversationStep({ onContinue, toast }) {
 
         {phase === "inspecting" && (
           <p role="status" className="kakao-request-status">
-            파일을 확인하고 있어요.
+            파일을 확인하고 있어요…
           </p>
         )}
         {participants.length > 0 &&
@@ -251,8 +252,8 @@ export function KakaoConversationStep({ onContinue, toast }) {
             </section>
           ) : (
             <fieldset className="kakao-speakers">
-              <legend>대화에서 본인을 선택해주세요</legend>
-              <p>대화에 표시된 본인의 이름을 선택해주세요.</p>
+              <legend>대화에서 본인을 선택해 주세요</legend>
+              <p>대화에 표시된 본인의 이름을 선택해 주세요.</p>
               <div className="kakao-speaker-list">
                 {participants.map(({ name }) => (
                   <label
@@ -275,15 +276,15 @@ export function KakaoConversationStep({ onContinue, toast }) {
                 ))}
               </div>
               <p className="kakao-speaker-help">
-                본인의 이름이 없다면 파일을 제거하고 다른 대화 파일을
-                올려주세요.
+                본인의 이름이 없다면 파일을 제거하고 다른 대화 파일을 올려
+                주세요.
               </p>
             </fieldset>
           ))}
 
         {submitting && (
           <div role="status" className="kakao-request-status">
-            <p>대화를 전달하고 있어요.</p>
+            <p>대화를 전달하고 있어요…</p>
             <small>
               요청을 보낸 뒤에는 화면을 나가도 분석이 진행될 수 있어요.
             </small>
@@ -306,7 +307,7 @@ export function KakaoConversationStep({ onContinue, toast }) {
           {submitting || phase === "blocked" ? "다음 단계로" : "건너뛰기"}
         </PixelButton>
         <PixelButton onClick={submit} disabled={!canSubmit}>
-          {submitting ? "전달 중..." : "대화 추가하기"}
+          {submitting ? "전달 중…" : "대화 추가하기"}
         </PixelButton>
       </div>
     </section>

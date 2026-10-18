@@ -215,6 +215,7 @@ export function BirthDateInput({ value, onChange }) {
           <input
             ref={yearInput}
             type="text"
+            name="birthDateYear"
             inputMode="numeric"
             autoComplete="bday-year"
             aria-label="연도 네 자리"
@@ -229,6 +230,7 @@ export function BirthDateInput({ value, onChange }) {
           <input
             ref={monthInput}
             type="text"
+            name="birthDateMonth"
             inputMode="numeric"
             autoComplete="bday-month"
             aria-label="월 한 자리 또는 두 자리"
@@ -243,6 +245,7 @@ export function BirthDateInput({ value, onChange }) {
           <input
             ref={dayInput}
             type="text"
+            name="birthDateDay"
             inputMode="numeric"
             autoComplete="bday-day"
             aria-label="일 한 자리 또는 두 자리"
@@ -391,29 +394,29 @@ export function profileValidation(profile, includeLifestyle = false) {
   if (!profile.activityRegionId)
     return {
       step: "region",
-      message: "활동 지역을 다시 선택해주세요.",
+      message: "활동 지역을 다시 선택해 주세요.",
     };
   if (!profile.nickname || !/^[가-힣A-Za-z0-9]{2,10}$/.test(profile.nickname))
     return {
       step: "profile",
-      message: "닉네임은 한글·영문·숫자 2~10자로 입력해주세요.",
+      message: "닉네임은 한글·영문·숫자 2~10자로 입력해 주세요.",
     };
 
   const height = Number(profile.height);
   if (!Number.isInteger(height) || height < 130 || height > 220)
     return {
       step: "profile",
-      message: "키는 130~220cm의 정수로 입력해주세요.",
+      message: "키는 130~220cm의 정수로 입력해 주세요.",
     };
   if (!profile.bodyType || !profile.educationLevel)
     return {
       step: "profile",
-      message: "체형과 학력을 선택해주세요.",
+      message: "체형과 학력을 선택해 주세요.",
     };
   if (!isJobCategory(profile.job))
     return {
       step: "profile",
-      message: "직업군을 선택해주세요.",
+      message: "직업군을 선택해 주세요.",
     };
   if (
     includeLifestyle &&
@@ -424,7 +427,7 @@ export function profileValidation(profile, includeLifestyle = false) {
   )
     return {
       step: "lifestyle",
-      message: "라이프스타일과 MBTI를 모두 선택해주세요.",
+      message: "라이프스타일과 MBTI를 모두 선택해 주세요.",
     };
 
   return null;
@@ -501,7 +504,7 @@ export function Onboarding({ navigate, toast }) {
       setNameHelper(
         isValidKoreanName(nextName)
           ? ""
-          : "이름은 한글 2~8자 이내로 입력해주세요",
+          : "이름은 한글 2~8자 이내로 입력해 주세요",
       );
     }
   }
@@ -509,7 +512,7 @@ export function Onboarding({ navigate, toast }) {
   function handleNameBlur() {
     setNameTouched(true);
     if (!isValidKoreanName(profile.name))
-      setNameHelper("이름은 한글 2~8자 이내로 입력해주세요");
+      setNameHelper("이름은 한글 2~8자 이내로 입력해 주세요");
   }
   const advance = useCallback(
     (next) => {
@@ -561,7 +564,7 @@ export function Onboarding({ navigate, toast }) {
         setRegionSearchError(
           apiErrorMessage(
             requestError,
-            "활동 지역을 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
+            "활동 지역을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
           ),
         );
       }
@@ -610,7 +613,7 @@ export function Onboarding({ navigate, toast }) {
         setError(
           apiErrorMessage(
             requestError,
-            "가치관 요약을 불러오지 못했어요. 다시 시도해주세요.",
+            "가치관 요약을 불러오지 못했어요. 다시 시도해 주세요.",
           ),
         );
       }
@@ -631,7 +634,7 @@ export function Onboarding({ navigate, toast }) {
       setError(
         apiErrorMessage(
           requestError,
-          "AI 문답을 시작하지 못했어요. 잠시 후 다시 시도해주세요.",
+          "AI 문답을 시작하지 못했어요. 잠시 후 다시 시도해 주세요.",
         ),
       );
     } finally {
@@ -691,12 +694,12 @@ export function Onboarding({ navigate, toast }) {
     const birthDate = normalizeBirthDate(profile.birthDate);
     if (!birthDate)
       return setError(
-        "실제로 존재하는 생년월일을 입력해주세요. 월과 일은 한 자리로 입력해도 돼요.",
+        "실제로 존재하는 생년월일을 입력해 주세요. 월과 일은 한 자리로 입력해도 돼요.",
       );
     if (!isValidKoreanName(name)) {
       setError("");
       setNameTouched(true);
-      setNameHelper("이름은 한글 2~8자 이내로 입력해주세요");
+      setNameHelper("이름은 한글 2~8자 이내로 입력해 주세요");
       return;
     }
     if (getRegistrationAgeRestriction(birthDate)) {
@@ -704,7 +707,7 @@ export function Onboarding({ navigate, toast }) {
       navigate("/registration/restricted");
       return;
     }
-    if (!profile.gender) return setError("성별을 선택해주세요.");
+    if (!profile.gender) return setError("성별을 선택해 주세요.");
 
     identitySubmitInFlight.current = true;
     setIdentitySaving(true);
@@ -738,14 +741,14 @@ export function Onboarding({ navigate, toast }) {
       if (e.code === "AUTH_REQUIRED" || e.status === 401) {
         setIdentityAuthExpired(true);
         setError(
-          "가입 상태를 확인할 수 없어요. 카카오 인증을 다시 진행해주세요.",
+          "가입 상태를 확인할 수 없어요. 카카오 인증을 다시 진행해 주세요.",
         );
         return;
       }
       setError(
         apiErrorMessage(
           e,
-          "기본 정보를 저장하지 못했어요. 잠시 후 다시 시도해주세요.",
+          "기본 정보를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.",
         ),
       );
     } finally {
@@ -769,7 +772,7 @@ export function Onboarding({ navigate, toast }) {
       return setError(
         apiErrorMessage(
           e,
-          "닉네임 사용 가능 여부를 확인하지 못했어요. 잠시 후 다시 시도해주세요.",
+          "닉네임 사용 가능 여부를 확인하지 못했어요. 잠시 후 다시 시도해 주세요.",
         ),
       );
     }
@@ -779,14 +782,14 @@ export function Onboarding({ navigate, toast }) {
   function showProfileSaveError(requestError) {
     if (requestError.code === "NICKNAME_ALREADY_IN_USE") {
       setData((old) => ({ ...old, onboardingStep: "profile" }));
-      setError("이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해주세요.");
+      setError("이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해 주세요.");
       return;
     }
     if (
       requestError.code === "AUTH_REQUIRED" ||
       requestError.code === "HTTP_401"
     ) {
-      setError("로그인이 만료되었어요. 다시 로그인해주세요.");
+      setError("로그인이 만료되었어요. 다시 로그인해 주세요.");
       return;
     }
 
@@ -794,17 +797,17 @@ export function Onboarding({ navigate, toast }) {
     const fieldErrors = {
       activityRegionId: [
         "region",
-        "활동 지역이 유효하지 않아요. 다시 선택해주세요.",
+        "활동 지역이 유효하지 않아요. 다시 선택해 주세요.",
       ],
-      nickname: ["profile", "닉네임을 다시 확인해주세요."],
-      height: ["profile", "키는 130~220cm의 정수로 입력해주세요."],
-      bodyType: ["profile", "체형을 다시 선택해주세요."],
-      educationLevel: ["profile", "학력을 다시 선택해주세요."],
-      job: ["profile", "직업군을 다시 선택해주세요."],
-      religion: ["lifestyle", "종교를 다시 선택해주세요."],
-      drinking: ["lifestyle", "음주 정보를 다시 선택해주세요."],
-      smoking: ["lifestyle", "흡연 정보를 다시 선택해주세요."],
-      mbti: ["lifestyle", "MBTI를 다시 선택해주세요."],
+      nickname: ["profile", "닉네임을 다시 확인해 주세요."],
+      height: ["profile", "키는 130~220cm의 정수로 입력해 주세요."],
+      bodyType: ["profile", "체형을 다시 선택해 주세요."],
+      educationLevel: ["profile", "학력을 다시 선택해 주세요."],
+      job: ["profile", "직업군을 다시 선택해 주세요."],
+      religion: ["lifestyle", "종교를 다시 선택해 주세요."],
+      drinking: ["lifestyle", "음주 정보를 다시 선택해 주세요."],
+      smoking: ["lifestyle", "흡연 정보를 다시 선택해 주세요."],
+      mbti: ["lifestyle", "MBTI를 다시 선택해 주세요."],
     };
     const fieldError = fieldErrors[field];
     if (requestError.code === "INVALID_REQUEST" && fieldError) {
@@ -816,7 +819,7 @@ export function Onboarding({ navigate, toast }) {
     setError(
       apiErrorMessage(
         requestError,
-        "프로필을 저장하지 못했어요. 잠시 후 다시 시도해주세요.",
+        "프로필을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.",
       ),
     );
   }
@@ -848,7 +851,7 @@ export function Onboarding({ navigate, toast }) {
   async function submitPersonaAnswer() {
     const trimmedAnswer = answer.trim();
     if (trimmedAnswer.length < 2)
-      return setError("답변은 두 글자 이상 입력해주세요.");
+      return setError("답변은 두 글자 이상 입력해 주세요.");
     if (
       !personaConversation?.sessionId ||
       personaBusy ||
@@ -887,7 +890,7 @@ export function Onboarding({ navigate, toast }) {
       setError(
         apiErrorMessage(
           requestError,
-          "답변을 보내지 못했어요. 잠시 후 다시 시도해주세요.",
+          "답변을 보내지 못했어요. 잠시 후 다시 시도해 주세요.",
         ),
       );
     } finally {
@@ -907,7 +910,7 @@ export function Onboarding({ navigate, toast }) {
       setError(
         apiErrorMessage(
           requestError,
-          "AI 문답을 진행하지 못했어요. 잠시 후 다시 시도해주세요.",
+          "AI 문답을 진행하지 못했어요. 잠시 후 다시 시도해 주세요.",
         ),
       );
     } finally {
@@ -927,7 +930,7 @@ export function Onboarding({ navigate, toast }) {
       setError(
         apiErrorMessage(
           requestError,
-          "가치관을 확정하지 못했어요. 잠시 후 다시 시도해주세요.",
+          "가치관을 확정하지 못했어요. 잠시 후 다시 시도해 주세요.",
         ),
       );
     } finally {
@@ -949,7 +952,7 @@ export function Onboarding({ navigate, toast }) {
           ...old,
           onboardingStep: onboardingStepFromStatus(status),
         }));
-        setError("온보딩을 완료하지 못했어요. 입력 정보를 다시 확인해주세요.");
+        setError("온보딩을 완료하지 못했어요. 입력 정보를 다시 확인해 주세요.");
         return;
       }
       setData((old) => ({
@@ -963,7 +966,7 @@ export function Onboarding({ navigate, toast }) {
       setError(
         apiErrorMessage(
           requestError,
-          "프로필 사진을 저장하지 못했어요. 잠시 후 다시 시도해주세요.",
+          "프로필 사진을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.",
         ),
       );
     } finally {
@@ -1000,653 +1003,684 @@ export function Onboarding({ navigate, toast }) {
   }
 
   return (
-    <form
-      className={`onboarding-page onboarding-step-${step}`}
-      onKeyDown={handleIdentityEnter}
-      onSubmit={(event) => event.preventDefault()}
-      aria-label="온보딩"
-    >
-      <header className="brand-header onboarding-brand">
-        <img
-          className="brand-header-logo"
-          src={asset("logo-header.png?v=d41514e")}
-          alt="*23#"
-        />
-        <span className="brand-signal" aria-hidden="true">
-          <i />
-          <i />
-          <i />
-          <i />
-        </span>
-        <span className="brand-battery" aria-hidden="true" />
-      </header>
-      <div className="onboarding-top">
-        <i className="onboarding-dot left" aria-hidden="true" />
-        {isPersonaFlowStep || !canGoBack ? (
-          <span className="onboarding-back-placeholder" aria-hidden="true" />
-        ) : (
-          <button
-            type="button"
-            className="onboarding-back"
-            onClick={back}
-            aria-label="뒤로가기"
-          >
-            <PixelIcon name="back" />
-          </button>
-        )}
-        <div
-          className="onboarding-progress"
-          role="progressbar"
-          aria-label="온보딩 진행도"
-          aria-valuemin={1}
-          aria-valuemax={ONBOARDING_STEPS.length}
-          aria-valuenow={stepIndex + 1}
-        >
-          {ONBOARDING_STEPS.map((item, index) => (
-            <i
-              key={item}
-              className={
-                index < stepIndex ? "on" : index === stepIndex ? "cur" : ""
-              }
-            />
-          ))}
-        </div>
-        <span className="onboarding-count">
-          {pad2(stepIndex + 1)}/{pad2(ONBOARDING_STEPS.length)}
-        </span>
-        <i className="onboarding-dot right" aria-hidden="true" />
-      </div>
-      <p className="onboarding-eyebrow">
-        ✦ STEP {pad2(stepIndex + 1)} <em>· {STEP_LABELS[step]}</em>
-      </p>
-      <div
-        className={`onboarding-body${step === "kakao" ? " kakao-step-container" : ""}`}
-        key={step}
+    <main className="onboarding-screen">
+      <form
+        className={`onboarding-page onboarding-step-${step}`}
+        onKeyDown={handleIdentityEnter}
+        onSubmit={(event) => event.preventDefault()}
+        aria-label="온보딩"
       >
-        {step === "kakao" && (
-          <KakaoConversationStep
-            onContinue={() => advance("photo-intro")}
-            toast={toast}
+        <header className="brand-header onboarding-brand">
+          <img
+            className="brand-header-logo"
+            src={asset("logo-header.png?v=d41514e")}
+            width="120"
+            height="45"
+            alt="*23#"
           />
-        )}
-        {step === "terms" && (
-          <>
-            <h1>이용약관에 동의해주세요</h1>
-            <p className="subcopy">안전하고 편안한 만남을 위해 확인해주세요.</p>
-            <label className="agreement all">
-              <input
-                type="checkbox"
-                checked={(data.terms || []).every(Boolean)}
-                onChange={(e) =>
-                  setData((old) => ({
-                    ...old,
-                    agreed: e.target.checked,
-                    terms: Array(4).fill(e.target.checked),
-                  }))
+          <span className="brand-signal" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+            <i />
+          </span>
+          <span className="brand-battery" aria-hidden="true" />
+        </header>
+        <div className="onboarding-top">
+          <i className="onboarding-dot left" aria-hidden="true" />
+          {isPersonaFlowStep || !canGoBack ? (
+            <span className="onboarding-back-placeholder" aria-hidden="true" />
+          ) : (
+            <button
+              type="button"
+              className="onboarding-back"
+              onClick={back}
+              aria-label="뒤로가기"
+            >
+              <PixelIcon name="back" />
+            </button>
+          )}
+          <div
+            className="onboarding-progress"
+            role="progressbar"
+            aria-label="온보딩 진행도"
+            aria-valuemin={1}
+            aria-valuemax={ONBOARDING_STEPS.length}
+            aria-valuenow={stepIndex + 1}
+          >
+            {ONBOARDING_STEPS.map((item, index) => (
+              <i
+                key={item}
+                className={
+                  index < stepIndex ? "on" : index === stepIndex ? "cur" : ""
                 }
               />
-              전체 동의
-            </label>
-            {[
-              "[필수] 서비스 이용약관",
-              "[필수] 개인정보 처리방침",
-              "[필수] 만 19세 이상, 만 40세 미만 확인",
-              "[선택] 알림 및 이벤트 수신",
-            ].map((item, index) => (
-              <label className="agreement" key={item}>
+            ))}
+          </div>
+          <span className="onboarding-count">
+            {pad2(stepIndex + 1)}/{pad2(ONBOARDING_STEPS.length)}
+          </span>
+          <i className="onboarding-dot right" aria-hidden="true" />
+        </div>
+        <p className="onboarding-eyebrow">
+          ✦ STEP {pad2(stepIndex + 1)} <em>· {STEP_LABELS[step]}</em>
+        </p>
+        <div
+          className={`onboarding-body${step === "kakao" ? " kakao-step-container" : ""}`}
+          id="main-content"
+          tabIndex={-1}
+          key={step}
+        >
+          {step === "kakao" && (
+            <KakaoConversationStep
+              onContinue={() => advance("photo-intro")}
+              toast={toast}
+            />
+          )}
+          {step === "terms" && (
+            <>
+              <h1>이용약관에 동의해 주세요</h1>
+              <p className="subcopy">
+                안전하고 편안한 만남을 위해 확인해 주세요.
+              </p>
+              <label className="agreement all">
                 <input
                   type="checkbox"
-                  checked={Boolean(data.terms?.[index])}
+                  name="acceptAllTerms"
+                  checked={(data.terms || []).every(Boolean)}
                   onChange={(e) =>
-                    setData((old) => {
-                      const terms = [
-                        ...(old.terms || [false, false, false, false]),
-                      ];
-                      terms[index] = e.target.checked;
-                      return {
-                        ...old,
-                        terms,
-                        agreed: terms.slice(0, 3).every(Boolean),
-                      };
-                    })
-                  }
-                />
-                {item}
-                <span>›</span>
-              </label>
-            ))}
-            <p className="hint">필수 약관 동의는 가입을 위해 필요해요.</p>
-          </>
-        )}
-        {step === "identity" && (
-          <>
-            <h1>기본 정보를 알려주세요</h1>
-            <p className="subcopy">본인 확인을 위한 정보예요.</p>
-            <BirthDateInput
-              value={profile.birthDate}
-              onChange={(value) => {
-                updateProfile("birthDate", value);
-                setError("");
-              }}
-            />
-            {ageRestriction && (
-              <p className="identity-age-helper" role="alert">
-                {ageRestriction.helperMessage}
-              </p>
-            )}
-            <div className="registration-info-fields">
-              <Field label="본명">
-                <div className="pixel-field-frame">
-                  <input
-                    type="text"
-                    autoComplete="name"
-                    value={profile.name}
-                    onChange={handleNameChange}
-                    onBlur={handleNameBlur}
-                    aria-invalid={!isValidKoreanName(profile.name)}
-                    aria-describedby={
-                      nameHelper ? "identity-name-helper" : undefined
-                    }
-                    placeholder="본명을 입력해주세요"
-                  />
-                </div>
-                {nameHelper && (
-                  <small
-                    id="identity-name-helper"
-                    className="identity-name-helper"
-                    role="status"
-                  >
-                    {nameHelper}
-                  </small>
-                )}
-              </Field>
-              <Field label="성별">
-                <ChoiceGroup
-                  options={[
-                    ["FEMALE", "여성"],
-                    ["MALE", "남성"],
-                  ]}
-                  value={profile.gender}
-                  onChange={(v) => updateProfile("gender", v)}
-                />
-              </Field>
-            </div>
-            <section className="onboarding-note tint">
-              <strong className="onboarding-note-label">
-                <PixelIcon name="lock" />
-                PRIVATE MODE
-              </strong>
-              <ul>
-                <li>입력한 생년월일은 성인 확인과 프로필 생일에 사용돼요.</li>
-                <li>
-                  가입 후에는 기본 정보를 변경할 수 없어요. 신중하게
-                  입력해주세요.
-                </li>
-              </ul>
-            </section>
-          </>
-        )}
-        {step === "region" && (
-          <>
-            <h1>활동 지역을 알려주세요</h1>
-            <p className="subcopy">
-              가까운 사람들을 추천해드려요. 활동 지역은 시·군·구 단위까지 검색할
-              수 있어요.
-            </p>
-            <Field label="지역 검색">
-              <div className="input-affix">
-                <span className="input-lead" aria-hidden="true">
-                  <PixelIcon name="search" />
-                </span>
-                <input
-                  value={regionQuery}
-                  onChange={(e) => setRegionQuery(e.target.value)}
-                  placeholder="시·군·구 검색 (예: 수원시, 강남구)"
-                />
-              </div>
-            </Field>
-            {regionSearchStatus === "loading" && (
-              <p className="region-search-state" role="status">
-                활동 지역을 검색하고 있어요.
-              </p>
-            )}
-            {regionSearchStatus === "empty" && (
-              <p className="region-search-state" role="status">
-                검색 결과가 없어요.
-              </p>
-            )}
-            {regionSearchStatus === "error" && (
-              <p className="field-error region-search-state" role="alert">
-                {regionSearchError}
-              </p>
-            )}
-            <div
-              className={`region-list${regionResults.length ? " has-items" : ""}${regionResults.some((item) => item.activityRegionId === profile.activityRegionId) ? " has-selection" : ""}`}
-            >
-              {regionResults.map((item) => (
-                <button
-                  type="button"
-                  key={item.activityRegionId}
-                  className={
-                    profile.activityRegionId === item.activityRegionId
-                      ? "selected"
-                      : ""
-                  }
-                  onClick={() => {
-                    setError("");
                     setData((old) => ({
                       ...old,
-                      profile: {
-                        ...old.profile,
-                        activityRegionId: item.activityRegionId,
-                        regionName: item.name,
-                      },
-                    }));
-                  }}
-                >
-                  {item.name}
-                  <PixelIcon
-                    name={
-                      profile.activityRegionId === item.activityRegionId
-                        ? "radioOn"
-                        : "radio"
+                      agreed: e.target.checked,
+                      terms: Array(4).fill(e.target.checked),
+                    }))
+                  }
+                />
+                전체 동의
+              </label>
+              {[
+                "[필수] 서비스 이용약관",
+                "[필수] 개인정보 처리방침",
+                "[필수] 만 19세 이상, 만 40세 미만 확인",
+                "[선택] 알림 및 이벤트 수신",
+              ].map((item, index) => (
+                <label className="agreement" key={item}>
+                  <input
+                    type="checkbox"
+                    name="terms"
+                    value={item}
+                    checked={Boolean(data.terms?.[index])}
+                    onChange={(e) =>
+                      setData((old) => {
+                        const terms = [
+                          ...(old.terms || [false, false, false, false]),
+                        ];
+                        terms[index] = e.target.checked;
+                        return {
+                          ...old,
+                          terms,
+                          agreed: terms.slice(0, 3).every(Boolean),
+                        };
+                      })
                     }
                   />
-                </button>
+                  {item}
+                  <span>›</span>
+                </label>
               ))}
-            </div>
-            {profile.regionName && (
+              <p className="hint">필수 약관 동의는 가입을 위해 필요해요.</p>
+            </>
+          )}
+          {step === "identity" && (
+            <>
+              <h1>기본 정보를 알려 주세요</h1>
+              <p className="subcopy">본인 확인을 위한 정보예요.</p>
+              <BirthDateInput
+                value={profile.birthDate}
+                onChange={(value) => {
+                  updateProfile("birthDate", value);
+                  setError("");
+                }}
+              />
+              {ageRestriction && (
+                <p className="identity-age-helper" role="alert">
+                  {ageRestriction.helperMessage}
+                </p>
+              )}
+              <div className="registration-info-fields">
+                <Field label="본명">
+                  <div className="pixel-field-frame">
+                    <input
+                      type="text"
+                      name="name"
+                      autoComplete="name"
+                      value={profile.name}
+                      onChange={handleNameChange}
+                      onBlur={handleNameBlur}
+                      aria-invalid={!isValidKoreanName(profile.name)}
+                      aria-describedby={
+                        nameHelper ? "identity-name-helper" : undefined
+                      }
+                      placeholder="예: 홍길동…"
+                    />
+                  </div>
+                  {nameHelper && (
+                    <small
+                      id="identity-name-helper"
+                      className="identity-name-helper"
+                      role="status"
+                    >
+                      {nameHelper}
+                    </small>
+                  )}
+                </Field>
+                <Field label="성별">
+                  <ChoiceGroup
+                    options={[
+                      ["FEMALE", "여성"],
+                      ["MALE", "남성"],
+                    ]}
+                    value={profile.gender}
+                    onChange={(v) => updateProfile("gender", v)}
+                  />
+                </Field>
+              </div>
               <section className="onboarding-note tint">
                 <strong className="onboarding-note-label">
-                  <PixelIcon name="pin" />
-                  SELECTED AREA
+                  <PixelIcon name="lock" />
+                  PRIVATE MODE
                 </strong>
-                <p>
-                  선택한 지역 · <b>{profile.regionName}</b>
-                </p>
+                <ul>
+                  <li>입력한 생년월일은 성인 확인과 프로필 생일에 사용돼요.</li>
+                  <li>
+                    가입 후에는 기본 정보를 변경할 수 없어요. 신중하게 입력해
+                    주세요.
+                  </li>
+                </ul>
               </section>
-            )}
-          </>
-        )}
-        {step === "profile" && (
-          <>
-            <h1>프로필을 알려주세요</h1>
-            <p className="subcopy">나를 표현할 수 있는 정보를 입력해주세요.</p>
-            <Field label="닉네임" hint="한글·영문·숫자 2~10자">
-              <input
-                value={profile.nickname}
-                onChange={(e) => updateProfile("nickname", e.target.value)}
-                placeholder="프로필에 소개될 이름이에요"
-                maxLength={10}
-              />
-            </Field>
-            <Field label="키">
-              <div className="input-affix">
+            </>
+          )}
+          {step === "region" && (
+            <>
+              <h1>활동 지역을 알려 주세요</h1>
+              <p className="subcopy">
+                가까운 사람들을 추천해드려요. 활동 지역은 시·군·구 단위까지
+                검색할 수 있어요.
+              </p>
+              <Field label="지역 검색">
+                <div className="input-affix">
+                  <span className="input-lead" aria-hidden="true">
+                    <PixelIcon name="search" />
+                  </span>
+                  <input
+                    type="text"
+                    name="activityRegion"
+                    autoComplete="off"
+                    aria-label="활동 지역 검색"
+                    value={regionQuery}
+                    onChange={(e) => setRegionQuery(e.target.value)}
+                    placeholder="시·군·구 검색 (예: 수원시, 강남구)…"
+                  />
+                </div>
+              </Field>
+              {regionSearchStatus === "loading" && (
+                <p className="region-search-state" role="status">
+                  활동 지역을 검색하고 있어요…
+                </p>
+              )}
+              {regionSearchStatus === "empty" && (
+                <p className="region-search-state" role="status">
+                  검색 결과가 없어요.
+                </p>
+              )}
+              {regionSearchStatus === "error" && (
+                <p className="field-error region-search-state" role="alert">
+                  {regionSearchError}
+                </p>
+              )}
+              <div
+                className={`region-list${regionResults.length ? " has-items" : ""}${regionResults.some((item) => item.activityRegionId === profile.activityRegionId) ? " has-selection" : ""}`}
+              >
+                {regionResults.map((item) => (
+                  <button
+                    type="button"
+                    key={item.activityRegionId}
+                    className={
+                      profile.activityRegionId === item.activityRegionId
+                        ? "selected"
+                        : ""
+                    }
+                    onClick={() => {
+                      setError("");
+                      setData((old) => ({
+                        ...old,
+                        profile: {
+                          ...old.profile,
+                          activityRegionId: item.activityRegionId,
+                          regionName: item.name,
+                        },
+                      }));
+                    }}
+                  >
+                    {item.name}
+                    <PixelIcon
+                      name={
+                        profile.activityRegionId === item.activityRegionId
+                          ? "radioOn"
+                          : "radio"
+                      }
+                    />
+                  </button>
+                ))}
+              </div>
+              {profile.regionName && (
+                <section className="onboarding-note tint">
+                  <strong className="onboarding-note-label">
+                    <PixelIcon name="pin" />
+                    SELECTED AREA
+                  </strong>
+                  <p>
+                    선택한 지역 · <b>{profile.regionName}</b>
+                  </p>
+                </section>
+              )}
+            </>
+          )}
+          {step === "profile" && (
+            <>
+              <h1>프로필을 알려 주세요</h1>
+              <p className="subcopy">
+                나를 표현할 수 있는 정보를 입력해 주세요.
+              </p>
+              <Field label="닉네임" hint="한글·영문·숫자 2~10자">
                 <input
                   type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={3}
-                  value={profile.height}
-                  onChange={(e) =>
-                    updateProfile(
-                      "height",
-                      e.target.value.replace(/\D/g, "").slice(0, 3),
-                    )
-                  }
-                  placeholder="키를 입력해주세요"
+                  name="nickname"
+                  autoComplete="nickname"
+                  value={profile.nickname}
+                  onChange={(e) => updateProfile("nickname", e.target.value)}
+                  placeholder="예: 별이…"
+                  maxLength={10}
                 />
-                <span className="input-suffix">cm</span>
-              </div>
-            </Field>
-            <Field label="체형">
-              <ChoiceGroup
-                options={bodyTypes}
-                value={profile.bodyType}
-                onChange={(v) => updateProfile("bodyType", v)}
+              </Field>
+              <Field label="키">
+                <div className="input-affix">
+                  <input
+                    type="text"
+                    name="height"
+                    autoComplete="off"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={3}
+                    value={profile.height}
+                    onChange={(e) =>
+                      updateProfile(
+                        "height",
+                        e.target.value.replace(/\D/g, "").slice(0, 3),
+                      )
+                    }
+                    placeholder="예: 175…"
+                  />
+                  <span className="input-suffix">cm</span>
+                </div>
+              </Field>
+              <Field label="체형">
+                <ChoiceGroup
+                  options={bodyTypes}
+                  value={profile.bodyType}
+                  onChange={(v) => updateProfile("bodyType", v)}
+                />
+              </Field>
+              <Field label="학력">
+                <ChoiceGroup
+                  options={educationLevels}
+                  value={profile.educationLevel}
+                  onChange={(v) => updateProfile("educationLevel", v)}
+                />
+              </Field>
+              <JobCategorySelect
+                value={profile.job}
+                onChange={(value) => {
+                  updateProfile("job", value);
+                  setError("");
+                }}
+                disabled={profileSaving}
+                error={error === "직업군을 선택해 주세요." ? error : ""}
               />
-            </Field>
-            <Field label="학력">
-              <ChoiceGroup
-                options={educationLevels}
-                value={profile.educationLevel}
-                onChange={(v) => updateProfile("educationLevel", v)}
-              />
-            </Field>
-            <JobCategorySelect
-              value={profile.job}
-              onChange={(value) => {
-                updateProfile("job", value);
-                setError("");
-              }}
-              disabled={profileSaving}
-              error={error === "직업군을 선택해주세요." ? error : ""}
-            />
-          </>
-        )}
-        {step === "lifestyle" && (
-          <>
-            <h1>라이프스타일을 알려주세요</h1>
-            <p className="subcopy">서로의 일상을 이해하는 데 도움이 돼요.</p>
-            <Field label="종교">
-              <ChoiceGroup
-                options={religions}
-                value={profile.religion}
-                onChange={(v) => updateProfile("religion", v)}
-              />
-            </Field>
-            <Field label="음주">
-              <ChoiceGroup
-                options={drinkings}
-                value={profile.drinking}
-                onChange={(v) => updateProfile("drinking", v)}
-              />
-            </Field>
-            <Field label="흡연">
-              <ChoiceGroup
-                options={smokings}
-                value={profile.smoking}
-                onChange={(v) => updateProfile("smoking", v)}
-              />
-            </Field>
-            <Field label="MBTI">
-              <ChoiceGroup
-                options={mbtis.map((v) => [v, v])}
-                value={profile.mbti}
-                onChange={(v) => updateProfile("mbti", v)}
-              />
-            </Field>
-          </>
-        )}
-        {step === "questions" && (
-          <>
-            <h1 className="onboarding-title">
-              하루와의 대화
-              <small>
-                {formatPersonaProgress(personaConversation?.progress) ||
-                  "준비 중"}
-              </small>
-            </h1>
-            <div
-              className="persona-chat"
-              ref={personaChatRef}
-              aria-live="polite"
-            >
-              {personaLog.map((entry, index) =>
-                entry.from === "haru" ? (
-                  <div className="persona-chat-group" key={entry.id}>
-                    <p className="persona-chat-system">
-                      <b>Q.{pad2(entry.turn)}</b>
-                      {index === 0
-                        ? "프로필만으로 알기 어려운 부분을 여쭤볼게요"
-                        : "다음 질문"}
-                    </p>
-                    <div className="persona-chat-who">
-                      <AiAvatar size={34} />
-                      하루
-                      <small>AI MATE</small>
-                    </div>
-                    {entry.lines.map((line) => (
-                      <p
-                        className={`persona-bubble left${line.type === "question" ? " question" : ""}`}
-                        key={`${entry.id}-${line.type}-${line.text}`}
-                      >
-                        {line.text}
-                      </p>
-                    ))}
-                    <small className="persona-chat-meta left">
-                      {entry.time}
-                    </small>
-                  </div>
-                ) : (
-                  <div className="persona-chat-group mine" key={entry.id}>
-                    <p
-                      className={`persona-bubble right${entry.pending ? " sending" : ""}`}
-                    >
-                      {entry.text}
-                    </p>
-                    <small className="persona-chat-meta right">
-                      {entry.pending ? "전송 중" : `읽음 · ${entry.time}`}
-                    </small>
-                  </div>
-                ),
-              )}
-              {personaBusy && (
-                <p
-                  className="persona-bubble left typing"
-                  role="status"
-                  aria-label="하루가 입력하고 있어요"
-                >
-                  <i />
-                  <i />
-                  <i />
-                </p>
-              )}
-              {personaConversation &&
-                !personaConversation.done &&
-                (personaConversation.canSkip ||
-                  personaConversation.canFinish) && (
-                  <div className="persona-actions">
-                    {personaConversation.canSkip && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updatePersonaConversation(personaApi.personaSkip)
-                        }
-                        disabled={personaBusy}
-                      >
-                        이 질문 건너뛰기
-                      </button>
-                    )}
-                    {personaConversation.canFinish && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updatePersonaConversation(personaApi.personaFinish)
-                        }
-                        disabled={personaBusy}
-                      >
-                        여기까지 답할게요
-                      </button>
-                    )}
-                  </div>
-                )}
-              {!personaConversation && !personaBusy && (
-                <button
-                  className="persona-retry"
-                  type="button"
-                  onClick={() => void startPersona()}
-                >
-                  문답 다시 시작
-                </button>
-              )}
-            </div>
-          </>
-        )}
-        {step === "persona-summary" && (
-          <>
-            <h1>이렇게 이해했어요</h1>
-            <p className="subcopy">답변을 바탕으로 정리한 나의 가치관이에요.</p>
-            <div className="persona-summary-list">
-              {personaConversation?.personaDraft?.narrative ? (
-                <section className="persona-summary-card holo">
-                  <small>MY TYPE</small>
-                  <h2>{personaConversation.personaDraft.narrative.headline}</h2>
-                  <p>{personaConversation.personaDraft.narrative.body}</p>
-                  <div className="persona-traits">
-                    {personaConversation.personaDraft.narrative.traits?.map(
-                      (trait) => (
-                        <span key={trait}>{trait}</span>
-                      ),
-                    )}
-                  </div>
-                </section>
-              ) : (
-                <p className="info-panel">
-                  지금까지의 답변을 바탕으로 가치관을 정리했어요.
-                </p>
-              )}
-              {(personaConversation?.personaDraft?.summaries || []).map(
-                (summary) => (
-                  <section
-                    className="persona-summary-card"
-                    key={summary.category}
-                  >
-                    <small>{summary.category}</small>
-                    <h3>{summary.title}</h3>
-                    <p>{summary.content}</p>
-                  </section>
-                ),
-              )}
-            </div>
-          </>
-        )}
-        {isPhotoStep &&
-          (photoLoadFailed ? (
-            <section className="profile-load-error" role="alert">
-              <p>
-                저장된 사진을 불러오지 못했어요. 연결을 확인한 뒤 다시
-                시도해주세요.
-              </p>
-              <PixelButton onClick={() => setPhotoLoadFailed(false)}>
-                다시 불러오기
-              </PixelButton>
-            </section>
-          ) : savedPhotos === null ? (
-            <p role="status">저장된 사진을 불러오고 있어요.</p>
-          ) : (
-            <ProfilePhotoEditor
-              initialPhotos={savedPhotos}
-              requireVerification
-              disabled={photoSaving}
-              onChange={setPhotoState}
-            />
-          ))}
-        {error &&
-          !(step === "profile" && error === "직업군을 선택해주세요.") && (
-            <p
-              role="alert"
-              className="field-error screen-error onboarding-error"
-            >
-              <PixelIcon name="alert" />
-              {error}
-            </p>
+            </>
           )}
-      </div>
-      <div
-        className="onboarding-action"
-        hidden={
-          step === "kakao" ||
-          ((step === "photo-intro" || step === "photo") && !photoState.ready)
-        }
-      >
-        {step === "identity" && (
-          <PixelButton
-            onClick={identityAuthExpired ? beginKakaoLogin : submitIdentity}
-            disabled={identitySaving}
-          >
-            {identitySaving
-              ? "저장 중..."
-              : identityAuthExpired
-                ? "카카오 인증 다시 하기"
-                : "다음"}
-          </PixelButton>
-        )}
-        {step === "terms" && (
-          <PixelButton
-            onClick={() =>
-              data.agreed
-                ? advance("identity")
-                : setError("필수 약관에 동의해주세요.")
-            }
-          >
-            다음
-          </PixelButton>
-        )}
-        {step === "region" && (
-          <PixelButton
-            onClick={() =>
-              profile.activityRegionId
-                ? advance("profile")
-                : setError("활동 지역을 선택해주세요.")
-            }
-          >
-            다음
-          </PixelButton>
-        )}
-        {step === "profile" && (
-          <PixelButton onClick={nextProfile}>다음</PixelButton>
-        )}
-        {step === "lifestyle" && (
-          <PixelButton onClick={nextLifestyle} disabled={profileSaving}>
-            {profileSaving ? "저장 중..." : "다음"}
-          </PixelButton>
-        )}
-        {step === "questions" && (
-          <div className="persona-composer">
-            <textarea
-              ref={personaAnswerRef}
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              onKeyDown={handlePersonaKeyDown}
-              placeholder={
-                personaBusy ? "답변을 보내고 있어요" : "자유롭게 답해보세요"
-              }
-              maxLength={PERSONA_ANSWER_LIMIT}
-              rows={1}
-              aria-label="나의 답변"
-              disabled={!personaConversation || personaConversation.done}
-              readOnly={personaBusy}
-              aria-busy={personaBusy}
-            />
-            <button
-              ref={personaSendRef}
-              type="button"
-              className="persona-send"
-              onClick={submitPersonaAnswer}
-              onPointerDown={(event) => {
-                if (document.activeElement === personaAnswerRef.current)
-                  event.preventDefault();
-              }}
-              aria-label="답변 보내기"
-              disabled={
-                !personaConversation ||
-                personaConversation.done ||
-                personaBusy ||
-                !answer.trim()
-              }
-            >
-              <PixelIcon name="send" />
-            </button>
-            <small className="persona-composer-count">
-              {answer.length}/{PERSONA_ANSWER_LIMIT}
-            </small>
-          </div>
-        )}
-        {step === "persona-summary" && (
-          <>
+          {step === "lifestyle" && (
+            <>
+              <h1>라이프스타일을 알려 주세요</h1>
+              <p className="subcopy">서로의 일상을 이해하는 데 도움이 돼요.</p>
+              <Field label="종교">
+                <ChoiceGroup
+                  options={religions}
+                  value={profile.religion}
+                  onChange={(v) => updateProfile("religion", v)}
+                />
+              </Field>
+              <Field label="음주">
+                <ChoiceGroup
+                  options={drinkings}
+                  value={profile.drinking}
+                  onChange={(v) => updateProfile("drinking", v)}
+                />
+              </Field>
+              <Field label="흡연">
+                <ChoiceGroup
+                  options={smokings}
+                  value={profile.smoking}
+                  onChange={(v) => updateProfile("smoking", v)}
+                />
+              </Field>
+              <Field label="MBTI">
+                <ChoiceGroup
+                  options={mbtis.map((v) => [v, v])}
+                  value={profile.mbti}
+                  onChange={(v) => updateProfile("mbti", v)}
+                />
+              </Field>
+            </>
+          )}
+          {step === "questions" && (
+            <>
+              <h1 className="onboarding-title">
+                하루와의 대화
+                <small>
+                  {formatPersonaProgress(personaConversation?.progress) ||
+                    "준비 중"}
+                </small>
+              </h1>
+              <div
+                className="persona-chat"
+                ref={personaChatRef}
+                aria-live="polite"
+              >
+                {personaLog.map((entry, index) =>
+                  entry.from === "haru" ? (
+                    <div className="persona-chat-group" key={entry.id}>
+                      <p className="persona-chat-system">
+                        <b>Q.{pad2(entry.turn)}</b>
+                        {index === 0
+                          ? "프로필만으로 알기 어려운 부분을 여쭤볼게요"
+                          : "다음 질문"}
+                      </p>
+                      <div className="persona-chat-who">
+                        <AiAvatar size={34} />
+                        하루
+                        <small>AI MATE</small>
+                      </div>
+                      {entry.lines.map((line) => (
+                        <p
+                          className={`persona-bubble left${line.type === "question" ? " question" : ""}`}
+                          key={`${entry.id}-${line.type}-${line.text}`}
+                        >
+                          {line.text}
+                        </p>
+                      ))}
+                      <small className="persona-chat-meta left">
+                        {entry.time}
+                      </small>
+                    </div>
+                  ) : (
+                    <div className="persona-chat-group mine" key={entry.id}>
+                      <p
+                        className={`persona-bubble right${entry.pending ? " sending" : ""}`}
+                      >
+                        {entry.text}
+                      </p>
+                      <small className="persona-chat-meta right">
+                        {entry.pending ? "전송 중" : `읽음 · ${entry.time}`}
+                      </small>
+                    </div>
+                  ),
+                )}
+                {personaBusy && (
+                  <p
+                    className="persona-bubble left typing"
+                    role="status"
+                    aria-label="하루가 입력하고 있어요"
+                  >
+                    <i />
+                    <i />
+                    <i />
+                  </p>
+                )}
+                {personaConversation &&
+                  !personaConversation.done &&
+                  (personaConversation.canSkip ||
+                    personaConversation.canFinish) && (
+                    <div className="persona-actions">
+                      {personaConversation.canSkip && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updatePersonaConversation(personaApi.personaSkip)
+                          }
+                          disabled={personaBusy}
+                        >
+                          이 질문 건너뛰기
+                        </button>
+                      )}
+                      {personaConversation.canFinish && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updatePersonaConversation(personaApi.personaFinish)
+                          }
+                          disabled={personaBusy}
+                        >
+                          여기까지 답할게요
+                        </button>
+                      )}
+                    </div>
+                  )}
+                {!personaConversation && !personaBusy && (
+                  <button
+                    className="persona-retry"
+                    type="button"
+                    onClick={() => void startPersona()}
+                  >
+                    문답 다시 시작
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+          {step === "persona-summary" && (
+            <>
+              <h1>이렇게 이해했어요</h1>
+              <p className="subcopy">
+                답변을 바탕으로 정리한 나의 가치관이에요.
+              </p>
+              <div className="persona-summary-list">
+                {personaConversation?.personaDraft?.narrative ? (
+                  <section className="persona-summary-card holo">
+                    <small>MY TYPE</small>
+                    <h2>
+                      {personaConversation.personaDraft.narrative.headline}
+                    </h2>
+                    <p>{personaConversation.personaDraft.narrative.body}</p>
+                    <div className="persona-traits">
+                      {personaConversation.personaDraft.narrative.traits?.map(
+                        (trait) => (
+                          <span key={trait}>{trait}</span>
+                        ),
+                      )}
+                    </div>
+                  </section>
+                ) : (
+                  <p className="info-panel">
+                    지금까지의 답변을 바탕으로 가치관을 정리했어요.
+                  </p>
+                )}
+                {(personaConversation?.personaDraft?.summaries || []).map(
+                  (summary) => (
+                    <section
+                      className="persona-summary-card"
+                      key={summary.category}
+                    >
+                      <small>{summary.category}</small>
+                      <h3>{summary.title}</h3>
+                      <p>{summary.content}</p>
+                    </section>
+                  ),
+                )}
+              </div>
+            </>
+          )}
+          {isPhotoStep &&
+            (photoLoadFailed ? (
+              <section className="profile-load-error" role="alert">
+                <p>
+                  저장된 사진을 불러오지 못했어요. 연결을 확인한 뒤 다시 시도해
+                  주세요.
+                </p>
+                <PixelButton onClick={() => setPhotoLoadFailed(false)}>
+                  다시 불러오기
+                </PixelButton>
+              </section>
+            ) : savedPhotos === null ? (
+              <p role="status">저장된 사진을 불러오고 있어요…</p>
+            ) : (
+              <ProfilePhotoEditor
+                initialPhotos={savedPhotos}
+                requireVerification
+                disabled={photoSaving}
+                onChange={setPhotoState}
+              />
+            ))}
+          {error &&
+            !(step === "profile" && error === "직업군을 선택해 주세요.") && (
+              <p
+                role="alert"
+                className="field-error screen-error onboarding-error"
+              >
+                <PixelIcon name="alert" />
+                {error}
+              </p>
+            )}
+        </div>
+        <div
+          className="onboarding-action"
+          hidden={
+            step === "kakao" ||
+            ((step === "photo-intro" || step === "photo") && !photoState.ready)
+          }
+        >
+          {step === "identity" && (
             <PixelButton
-              secondary
-              className="onboarding-ghost"
-              onClick={restartPersona}
-              disabled={personaBusy}
+              onClick={identityAuthExpired ? beginKakaoLogin : submitIdentity}
+              disabled={identitySaving}
             >
-              다시 답할래요
+              {identitySaving
+                ? "저장 중…"
+                : identityAuthExpired
+                  ? "카카오 인증 다시 하기"
+                  : "다음"}
             </PixelButton>
-            <PixelButton onClick={confirmPersona} disabled={personaBusy}>
-              {personaBusy ? "확정 중..." : "이 내용으로 확정"}
+          )}
+          {step === "terms" && (
+            <PixelButton
+              onClick={() =>
+                data.agreed
+                  ? advance("identity")
+                  : setError("필수 약관에 동의해 주세요.")
+              }
+            >
+              다음
             </PixelButton>
-          </>
-        )}
-        {(step === "photo-intro" || step === "photo") && (
-          <PixelButton
-            onClick={finishOnboarding}
-            disabled={photoSaving || !photoState.ready}
-          >
-            {photoSaving ? "저장 중..." : "사진 저장하고 시작하기"}
-          </PixelButton>
-        )}
-      </div>
-    </form>
+          )}
+          {step === "region" && (
+            <PixelButton
+              onClick={() =>
+                profile.activityRegionId
+                  ? advance("profile")
+                  : setError("활동 지역을 선택해 주세요.")
+              }
+            >
+              다음
+            </PixelButton>
+          )}
+          {step === "profile" && (
+            <PixelButton onClick={nextProfile}>다음</PixelButton>
+          )}
+          {step === "lifestyle" && (
+            <PixelButton onClick={nextLifestyle} disabled={profileSaving}>
+              {profileSaving ? "저장 중…" : "다음"}
+            </PixelButton>
+          )}
+          {step === "questions" && (
+            <div className="persona-composer">
+              <textarea
+                ref={personaAnswerRef}
+                name="answer"
+                autoComplete="off"
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                onKeyDown={handlePersonaKeyDown}
+                placeholder={
+                  personaBusy
+                    ? "답변을 보내고 있어요…"
+                    : "자유롭게 답해 보세요…"
+                }
+                maxLength={PERSONA_ANSWER_LIMIT}
+                rows={1}
+                aria-label="나의 답변"
+                disabled={!personaConversation || personaConversation.done}
+                readOnly={personaBusy}
+                aria-busy={personaBusy}
+              />
+              <button
+                ref={personaSendRef}
+                type="button"
+                className="persona-send"
+                onClick={submitPersonaAnswer}
+                onPointerDown={(event) => {
+                  if (document.activeElement === personaAnswerRef.current)
+                    event.preventDefault();
+                }}
+                aria-label="답변 보내기"
+                disabled={
+                  !personaConversation ||
+                  personaConversation.done ||
+                  personaBusy ||
+                  !answer.trim()
+                }
+              >
+                <PixelIcon name="send" />
+              </button>
+              <small className="persona-composer-count">
+                {answer.length}/{PERSONA_ANSWER_LIMIT}
+              </small>
+            </div>
+          )}
+          {step === "persona-summary" && (
+            <>
+              <PixelButton
+                secondary
+                className="onboarding-ghost"
+                onClick={restartPersona}
+                disabled={personaBusy}
+              >
+                다시 답할래요
+              </PixelButton>
+              <PixelButton onClick={confirmPersona} disabled={personaBusy}>
+                {personaBusy ? "확정 중…" : "이 내용으로 확정"}
+              </PixelButton>
+            </>
+          )}
+          {(step === "photo-intro" || step === "photo") && (
+            <PixelButton
+              onClick={finishOnboarding}
+              disabled={photoSaving || !photoState.ready}
+            >
+              {photoSaving ? "저장 중…" : "사진 저장하고 시작하기"}
+            </PixelButton>
+          )}
+        </div>
+      </form>
+    </main>
   );
 }

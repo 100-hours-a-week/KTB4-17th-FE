@@ -398,7 +398,7 @@ function ChatRoomContent({
         toast(
           apiErrorMessage(
             requestError,
-            "회원을 차단하지 못했어요. 잠시 후 다시 시도해주세요.",
+            "회원을 차단하지 못했어요. 잠시 후 다시 시도해 주세요.",
           ),
         );
     } finally {
@@ -438,7 +438,7 @@ function ChatRoomContent({
         toast(
           apiErrorMessage(
             requestError,
-            "채팅을 종료하지 못했어요. 잠시 후 다시 시도해주세요.",
+            "채팅을 종료하지 못했어요. 잠시 후 다시 시도해 주세요.",
           ),
         );
     } finally {
@@ -451,11 +451,11 @@ function ChatRoomContent({
 
   const connectionMessage =
     connection === "offline"
-      ? "인터넷 연결이 끊겼어요. 연결 후 다시 시도해주세요."
+      ? "인터넷 연결이 끊겼어요. 연결 후 다시 시도해 주세요."
       : connection === "unauthenticated"
-        ? "다시 로그인해주세요."
+        ? "다시 로그인해 주세요."
         : ["error", "reconnecting"].includes(connection)
-          ? "실시간 연결을 복구하고 있어요."
+          ? "실시간 연결을 복구하고 있어요…"
           : "";
   const viewerMessage =
     viewingImage &&
@@ -465,7 +465,7 @@ function ChatRoomContent({
       viewingImage.message);
 
   return (
-    <section ref={rootRef} className="chat-room-view" aria-label="채팅방">
+    <main ref={rootRef} className="chat-room-view" aria-label="채팅방">
       <div
         className="chat-room-content"
         inert={Boolean(viewingImage || blockDialogOpen || endChatDialogOpen)}
@@ -502,6 +502,8 @@ function ChatRoomContent({
                   src={
                     state.room?.image || asset("chat-avatar-heart-terminal.svg")
                   }
+                  width="56"
+                  height="56"
                   alt=""
                   onError={(event) => {
                     const fallback = asset("chat-avatar-heart-terminal.svg");
@@ -556,7 +558,7 @@ function ChatRoomContent({
             </button>
           </div>
         )}
-        <div className="chat-message-area">
+        <div id="main-content" tabIndex={-1} className="chat-message-area">
           <section
             ref={scroll.containerRef}
             className="chat-messages chat-room-messages"
@@ -717,6 +719,8 @@ function ChatRoomContent({
             <div className="image-attachment-preview">
               <img
                 src={state.attachment.previewUrl}
+                width="38"
+                height="38"
                 alt="첨부할 사진 미리보기"
               />
               <div className="image-attachment-file-info">
@@ -752,6 +756,7 @@ function ChatRoomContent({
               ref={imageInputRef}
               className="image-file-input"
               type="file"
+              name="chatImage"
               accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif"
               aria-label="첨부할 사진 선택"
               onChange={selectImage}
@@ -759,6 +764,8 @@ function ChatRoomContent({
             <textarea
               ref={inputRef}
               className="message-text-input"
+              name="message"
+              autoComplete="off"
               value={state.draft}
               onChange={(event) =>
                 updateRoomSession(entry, { draft: event.currentTarget.value })
@@ -781,7 +788,7 @@ function ChatRoomContent({
               placeholder={
                 state.loaded && !canSend
                   ? "종료된 대화예요"
-                  : "메시지를 입력하세요"
+                  : "메시지를 입력해 주세요…"
               }
               aria-label="메시지"
               aria-describedby={
@@ -858,6 +865,6 @@ function ChatRoomContent({
           onClose={closeViewer}
         />
       )}
-    </section>
+    </main>
   );
 }

@@ -173,7 +173,7 @@ export async function processOutbox(entry, api) {
             if (!remaining.complete)
               patchMessage(entry, remaining, {
                 status: "FAILED",
-                error: "앞선 사진과 함께 다시 전송해주세요.",
+                error: "앞선 사진과 함께 다시 전송해 주세요.",
               });
           }
           if (

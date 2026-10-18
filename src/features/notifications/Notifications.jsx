@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import {
   BrandHeader,
@@ -20,9 +20,17 @@ import {
 import { useNotificationInbox } from "./useNotificationInbox.js";
 import { useUnreadCategories } from "./useUnreadCategories.js";
 
-export function Notifications({ navigate, toast }) {
+const notificationCategory = (value) =>
+  NOTIFICATION_CATEGORIES.some(([key]) => key === value) ? value : "ALL";
+
+export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
   const notifications = useNotifications();
-  const [category, setCategory] = useState("ALL");
+  const [category, setCategory] = useState(() =>
+    notificationCategory(initialCategory),
+  );
+  useEffect(() => {
+    setCategory(notificationCategory(initialCategory));
+  }, [initialCategory]);
   const unreadCategories = useUnreadCategories(notifications);
   const page = useNotificationInbox(
     category,
@@ -31,6 +39,15 @@ export function Notifications({ navigate, toast }) {
   );
   const [pending, setPending] = useState(new Set());
   const inFlight = useRef(new Set());
+  function selectCategory(nextCategory) {
+    if (nextCategory === category) return;
+    setCategory(nextCategory);
+    const params = new URLSearchParams(window.location.search);
+    if (nextCategory === "ALL") params.delete("category");
+    else params.set("category", nextCategory);
+    const query = params.toString();
+    navigate(`/notifications${query ? `?${query}` : ""}`);
+  }
   async function act(item, action) {
     if (inFlight.current.has(item.notificationId)) return;
     inFlight.current.add(item.notificationId);
@@ -43,7 +60,7 @@ export function Notifications({ navigate, toast }) {
       } else await notifications.open(item);
     } catch (error) {
       toast(
-        apiErrorMessage(error, "알림을 삭제하지 못했어요. 다시 시도해주세요."),
+        apiErrorMessage(error, "알림을 삭제하지 못했어요. 다시 시도해 주세요."),
       );
     } finally {
       inFlight.current.delete(item.notificationId);
@@ -54,7 +71,12 @@ export function Notifications({ navigate, toast }) {
   return (
     <>
       <BrandHeader navigate={navigate} />
-      <main className="main-scroll notifications-main" aria-busy={page.loading}>
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="main-scroll notifications-main"
+        aria-busy={page.loading}
+      >
         <div className="notification-toolbar">
           <div className="notification-heading">
             <h1>알림</h1>
@@ -78,7 +100,7 @@ export function Notifications({ navigate, toast }) {
                     ? `${label}, 읽지 않은 알림 있음`
                     : label
                 }
-                onClick={() => setCategory(key)}
+                onClick={() => selectCategory(key)}
               >
                 {label}
                 {unreadCategories[key] && (
@@ -90,7 +112,7 @@ export function Notifications({ navigate, toast }) {
         </div>
         {notifications.connection === "reconnecting" && (
           <p className="notification-connection" role="status">
-            실시간 연결을 복구하고 있어요. 소식은 주기적으로 확인하고 있어요.
+            실시간 연결을 복구하고 있어요… 소식은 주기적으로 확인하고 있어요.
           </p>
         )}
         {page.error && (

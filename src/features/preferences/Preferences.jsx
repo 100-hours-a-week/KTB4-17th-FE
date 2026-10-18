@@ -45,6 +45,7 @@ function RangeField({ name, preference, onChange }) {
         <input
           type="range"
           className="preference-range-lower"
+          name={lowerKey}
           min={min}
           max={max}
           step="1"
@@ -58,6 +59,7 @@ function RangeField({ name, preference, onChange }) {
         />
         <input
           type="range"
+          name={upperKey}
           min={min}
           max={max}
           step="1"
@@ -119,7 +121,7 @@ function PreferenceSheet({ field, selected, onDone, onClose }) {
       </button>
       <h1 id="preference-sheet-title">
         {field.label}
-        {field.key === "religion" ? "를 선택해주세요" : ""}
+        {field.key === "religion" ? "를 선택해 주세요" : ""}
       </h1>
       <div className="preference-sheet-options">
         {[["ANY", "상관없음"], ...field.options].map(([value, label]) => (
@@ -127,6 +129,8 @@ function PreferenceSheet({ field, selected, onDone, onClose }) {
             <span>{label}</span>
             <input
               type="checkbox"
+              name={`preference-${field.key}`}
+              value={value}
               checked={
                 value === "ANY" ? draft.length === 0 : draft.includes(value)
               }
@@ -181,7 +185,7 @@ export function Preferences({ navigate, toast, onSaved }) {
         setError(
           apiErrorMessage(
             requestError,
-            "선호 설정을 불러오지 못했어요. 다시 시도해주세요.",
+            "선호 설정을 불러오지 못했어요. 다시 시도해 주세요.",
           ),
         );
         setStatus("error");
@@ -219,7 +223,7 @@ export function Preferences({ navigate, toast, onSaved }) {
         setSaveError(
           apiErrorMessage(
             requestError,
-            "선호 조건을 저장하지 못했어요. 다시 시도해주세요.",
+            "선호 조건을 저장하지 못했어요. 다시 시도해 주세요.",
           ),
         );
     } finally {
@@ -244,6 +248,8 @@ export function Preferences({ navigate, toast, onSaved }) {
         <h1>선호 설정</h1>
       </header>
       <main
+        id="main-content"
+        tabIndex={-1}
         className="main-scroll preferences-main"
         aria-busy={status === "loading" || saving}
       >
@@ -251,8 +257,8 @@ export function Preferences({ navigate, toast, onSaved }) {
           <div role="status">
             <EmptyState
               icon="✦"
-              title="선호 설정을 불러오고 있어요"
-              description="잠시만 기다려주세요."
+              title="선호 설정을 불러오고 있어요…"
+              description="잠시만 기다려 주세요…"
             />
           </div>
         ) : status === "error" ? (
@@ -306,7 +312,7 @@ export function Preferences({ navigate, toast, onSaved }) {
               className="preferences-primary preferences-save"
               disabled={saving}
             >
-              {saving ? "저장 중..." : "저장하기"}
+              {saving ? "저장 중…" : "저장하기"}
             </PixelButton>
           </form>
         )}

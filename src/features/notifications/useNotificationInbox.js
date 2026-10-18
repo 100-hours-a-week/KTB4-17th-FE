@@ -64,7 +64,7 @@ export function useNotificationInbox(category, revision, subject) {
             loading: false,
             error: apiErrorMessage(
               error,
-              "소식을 불러오지 못했어요. 다시 시도해주세요.",
+              "소식을 불러오지 못했어요. 다시 시도해 주세요.",
             ),
           }));
       } finally {

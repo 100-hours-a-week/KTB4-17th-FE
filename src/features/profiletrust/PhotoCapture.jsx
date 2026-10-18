@@ -95,7 +95,7 @@ export function PhotoCapture({ onCapture, onCancel, disabled }) {
 
   return (
     <>
-      <h1>정면 사진을 촬영해주세요</h1>
+      <h1>정면 사진을 촬영해 주세요</h1>
       <p className="trust-subcopy">
         밝은 곳에서 얼굴 전체가 보이도록 정면을 바라봐주세요.
       </p>
@@ -109,7 +109,7 @@ export function PhotoCapture({ onCapture, onCancel, disabled }) {
         />
         {status === "starting" && (
           <div className="trust-camera-placeholder" role="status">
-            <PixelIcon name="bust" scale={8} /> 카메라를 준비하고 있어요
+            <PixelIcon name="bust" scale={8} /> 카메라를 준비하고 있어요…
           </div>
         )}
       </div>
@@ -142,8 +142,8 @@ export function PhotoCapture({ onCapture, onCancel, disabled }) {
         촬영 취소 · 사진 선택으로 돌아가기
       </button>
       <p className="trust-subcopy trust-small">
-        카메라가 열리지 않으면 사이트 설정에서 카메라 권한을 허용해주세요. 앱
-        안에서 접속했다면 Safari 또는 Chrome으로 열어주세요.
+        카메라가 열리지 않으면 사이트 설정에서 카메라 권한을 허용해 주세요. 앱
+        안에서 접속했다면 Safari 또는 Chrome으로 열어 주세요.
       </p>
     </>
   );

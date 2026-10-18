@@ -30,6 +30,7 @@ function PhotoPicker({ children, onSelect, disabled, className = "" }) {
       <input
         ref={input}
         type="file"
+        name="profilePhoto"
         accept={PHOTO_ACCEPT}
         hidden
         disabled={disabled}
@@ -55,6 +56,7 @@ function GuidePortrait({ variant = "good" }) {
       alt={descriptions[variant]}
       width={640}
       height={640}
+      loading="lazy"
     />
   );
 }
@@ -70,7 +72,7 @@ function CaptureGuide() {
         </figure>
         <figure>
           <GuidePortrait variant="side" />
-          <figcaption>옆모습은 피해주세요</figcaption>
+          <figcaption>옆모습은 피해 주세요</figcaption>
         </figure>
         <figure>
           <GuidePortrait variant="covered" />
@@ -78,8 +80,8 @@ function CaptureGuide() {
         </figure>
       </div>
       <p>
-        혼자 화면에 들어와 주세요. 모자·마스크·선글라스와 강한 필터는
-        피해주세요.
+        혼자 화면에 들어와 주세요. 모자·마스크·선글라스와 강한 필터는 피해
+        주세요.
       </p>
     </details>
   );
@@ -141,15 +143,14 @@ function VerificationProgress({ progress, active }) {
             aria-valuemax={100}
             aria-valuenow={Math.round(clipProgress * 100)}
           >
-            <span style={{ width: `${Math.round(clipProgress * 100)}%` }} />
+            <span style={{ transform: `scaleX(${clipProgress})` }} />
           </div>
-          <small>이번 촬영은 약 5초 동안 진행돼요. 정면을 유지해주세요.</small>
+          <small>이번 촬영은 약 5초 동안 진행돼요. 정면을 유지해 주세요.</small>
         </>
       )}
       {waiting && (
         <div className="trust-waiting">
-          <span aria-hidden="true">···</span> 확인 중이에요. 잠시만
-          기다려주세요.
+          <span aria-hidden="true">…</span> 확인 중이에요. 잠시만 기다려 주세요…
         </div>
       )}
       <small>
@@ -395,6 +396,8 @@ export function ProfilePhotoEditor({
                 <img
                   className="trust-check-photo"
                   src={trust.previewUrl}
+                  width="200"
+                  height="240"
                   alt="확인 중인 정면 사진"
                 />
               )}
@@ -485,6 +488,8 @@ export function ProfilePhotoEditor({
                   <img
                     className="trust-reference-photo"
                     src={trust.previewUrl}
+                    width="52"
+                    height="64"
                     alt="선택한 정면 사진"
                   />
                 )}
@@ -494,8 +499,8 @@ export function ProfilePhotoEditor({
                   trust.progress.stage,
                 )
                   ? trust.cameraOn
-                    ? "촬영한 영상을 확인하고 있어요. 다음 촬영을 위해 정면을 유지해주세요."
-                    : "카메라를 껐어요. 결과 확인이 끝날 때까지 기다려주세요."
+                    ? "촬영한 영상을 확인하고 있어요. 다음 촬영을 위해 정면을 유지해 주세요."
+                    : "카메라를 껐어요. 결과 확인이 끝날 때까지 기다려 주세요."
                   : trust.hint}
               </p>
               <p className="trust-privacy">
@@ -506,8 +511,8 @@ export function ProfilePhotoEditor({
               <details className="trust-permission-help">
                 <summary>카메라가 열리지 않나요?</summary>
                 <p>
-                  주소창의 사이트 설정에서 카메라를 허용해주세요. 앱 안에서
-                  접속했다면 메뉴에서 Safari 또는 Chrome으로 열어주세요.
+                  주소창의 사이트 설정에서 카메라를 허용해 주세요. 앱 안에서
+                  접속했다면 메뉴에서 Safari 또는 Chrome으로 열어 주세요.
                 </p>
               </details>
               <button
@@ -588,9 +593,9 @@ export function ProfilePhotoEditor({
                 <details className="trust-permission-help">
                   <summary>카메라 권한 안내</summary>
                   <p>
-                    브라우저의 사이트 설정에서 카메라를 허용해주세요. 앱 안에서
+                    브라우저의 사이트 설정에서 카메라를 허용해 주세요. 앱 안에서
                     카메라가 열리지 않으면 Safari 또는 Chrome에서 서비스 주소를
-                    열어주세요.
+                    열어 주세요.
                   </p>
                 </details>
               )}
@@ -608,7 +613,12 @@ export function ProfilePhotoEditor({
               </h1>
               <div className="trust-success-art">
                 <AiAvatar size={120} />
-                <img src={asset("verified-shield.svg")} alt="본인 인증 성공" />
+                <img
+                  src={asset("verified-shield.svg")}
+                  width="42"
+                  height="42"
+                  alt="본인 인증 성공"
+                />
               </div>
               <p className="trust-subcopy">이제 사진으로 나를 소개해볼까요?</p>
               <div className="trust-note">
@@ -643,7 +653,7 @@ export function ProfilePhotoEditor({
           <span className="trust-kicker">
             <PixelIcon name="spark" /> MY PHOTOS
           </span>
-          <h2>사진으로 나를 소개해주세요</h2>
+          <h2>사진으로 나를 소개해 주세요</h2>
           <p className="trust-subcopy">사진은 최대 6장까지 등록할 수 있어요.</p>
           <section className="trust-photo-grid" aria-label="프로필 사진 목록">
             {items.map((item, index) => (
@@ -671,6 +681,9 @@ export function ProfilePhotoEditor({
               >
                 <img
                   src={item.previewUrl}
+                  width="300"
+                  height="400"
+                  loading="lazy"
                   alt={`${index === 0 ? "대표사진" : `프로필 사진 ${index + 1}`}${item.isFrontal ? " · 인증한 정면 사진" : ""}`}
                   draggable={false}
                 />
@@ -686,7 +699,7 @@ export function ProfilePhotoEditor({
                 </div>
                 {item.uploading && (
                   <span className="trust-uploading" role="status">
-                    업로드 중
+                    업로드 중…
                   </span>
                 )}
                 {!item.isFrontal && (
@@ -741,7 +754,7 @@ export function ProfilePhotoEditor({
           <div className="trust-note">
             <strong>첫 번째 사진이 추천 피드에 노출돼요</strong>
             <p>
-              화살표 버튼이나 드래그로 대표사진과 사진 순서를 정해주세요. 정면
+              화살표 버튼이나 드래그로 대표사진과 사진 순서를 정해 주세요. 정면
               사진도 이동할 수 있고, 인증 표시는 그대로 유지돼요.
             </p>
           </div>

@@ -337,7 +337,10 @@ export function Home({
       if (await onPass(person.id)) toast(`${person.nickname}님을 패스했어요.`);
     } catch (error) {
       toast(
-        apiErrorMessage(error, "패스하지 못했어요. 잠시 후 다시 시도해주세요."),
+        apiErrorMessage(
+          error,
+          "패스하지 못했어요. 잠시 후 다시 시도해 주세요.",
+        ),
       );
     } finally {
       actionInFlight.current = false;
@@ -386,17 +389,28 @@ export function Home({
         >
           <img
             src={asset("preferences/preference-heart.svg")}
+            width="28"
+            height="28"
             alt=""
             aria-hidden="true"
           />
         </button>
       </BrandHeader>
-      <main className="main-scroll home-main">
+      <main id="main-content" tabIndex={-1} className="main-scroll home-main">
+        {!person && <h1 className="sr-only">오늘의 추천</h1>}
         {recommendationStatus === "loading" ? (
           <EmptyState
-            icon={<img src={asset("illust/pager.svg")} alt="" />}
-            title="추천을 불러오고 있어요"
-            description="잠시만 기다려주세요."
+            icon={
+              <img
+                src={asset("illust/pager.svg")}
+                width="190"
+                height="160"
+                alt=""
+              />
+            }
+            title="추천을 불러오고 있어요…"
+            description="잠시만 기다려 주세요…"
+            role="status"
             action={
               <span className="empty-loader" aria-hidden="true">
                 <i />
@@ -424,7 +438,14 @@ export function Home({
             onPointerCancel={handlePointerCancel}
           >
             <EmptyState
-              icon={<img src={asset("illust/pager.svg")} alt="" />}
+              icon={
+                <img
+                  src={asset("illust/pager.svg")}
+                  width="190"
+                  height="160"
+                  alt=""
+                />
+              }
               title={
                 recommendationExhausted || recommendations.length > 0
                   ? "추천을 모두 봤어요"
@@ -535,9 +556,7 @@ export function Home({
                           <PixelIcon name={icon} scale={scale} />
                         )}
                       </span>
-                      <span>
-                        {actionBusy === busyKey ? "처리 중..." : label}
-                      </span>
+                      <span>{actionBusy === busyKey ? "처리 중…" : label}</span>
                     </button>
                   ))}
                 </div>

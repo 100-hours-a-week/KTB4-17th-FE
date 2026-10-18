@@ -98,7 +98,7 @@ export function useRecommendationFeed({ enabled, isHome }) {
         setError(
           apiErrorMessage(
             requestError,
-            "추천 목록을 불러오지 못했어요. 연결을 확인한 뒤 다시 시도해주세요.",
+            "추천 목록을 불러오지 못했어요. 연결을 확인한 뒤 다시 시도해 주세요.",
           ),
         );
     } finally {
@@ -136,7 +136,7 @@ export function useRecommendationFeed({ enabled, isHome }) {
         setError(
           apiErrorMessage(
             requestError,
-            "추천 목록을 불러오지 못했어요. 연결을 확인한 뒤 다시 시도해주세요.",
+            "추천 목록을 불러오지 못했어요. 연결을 확인한 뒤 다시 시도해 주세요.",
           ),
         );
       return false;

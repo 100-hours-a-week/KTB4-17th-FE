@@ -79,7 +79,7 @@ export function useSimulationLaunch({ navigate, toast, path, tracking }) {
       toast(
         apiErrorMessage(
           error,
-          "시뮬레이션 요청을 확인하지 못했어요. 연결 상태를 확인해주세요.",
+          "시뮬레이션 요청을 확인하지 못했어요. 연결 상태를 확인해 주세요.",
         ),
       );
       return false;

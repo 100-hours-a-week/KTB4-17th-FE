@@ -39,8 +39,8 @@
   top: calc(env(safe-area-inset-top, 0px) + 14px);
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   padding: 0 2px 4px 0;
   border: 0;
   border-radius: 0;
@@ -53,18 +53,18 @@
 
 /* 뒤로가기와 사진 단계 막대를 한 줄에: 버튼 세로 중심 = 막대 세로 중심 */
 .other-profile-hero .other-profile-back {
-  top: calc(env(safe-area-inset-top, 0px) + 18px);
+  top: calc(env(safe-area-inset-top, 0px) + 6px);
   left: 8.5px;
-  width: 30px;
-  height: 21px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   filter: drop-shadow(0 1px 2px #0008);
 }
 
 .other-profile-hero .other-profile-segments {
   z-index: 6;
-  top: calc(env(safe-area-inset-top, 0px) + 26.5px);
-  left: 44px;
+  top: calc(env(safe-area-inset-top, 0px) + 6px);
+  left: 56px;
   right: 16px; /* 왼쪽 화살표 여백(16px)과 같게 */
 }
 
@@ -333,16 +333,23 @@
 
 /* 사진 단계 막대: 홈 카드와 같은 연한 색 (지난 칸 연보라 · 현재 칸 연보라→연분홍 · 남은 칸 반투명 흰색) */
 .other-profile-hero .other-profile-segments button {
+  height: 44px;
+  border-radius: 0;
+  background: transparent;
+}
+
+.other-profile-hero .other-profile-segments button::before {
+  top: 20px;
   height: 4px;
   border-radius: 0;
   background: rgb(255 255 255 / 55%);
 }
 
-.other-profile-hero .other-profile-segments button.seen {
+.other-profile-hero .other-profile-segments button.seen::before {
   background: linear-gradient(90deg, #d4c6ff, #bba6ff);
 }
 
-.other-profile-hero .other-profile-segments button.active {
+.other-profile-hero .other-profile-segments button.active::before {
   background: linear-gradient(90deg, #bba6ff, #f7b3d9);
 }
 

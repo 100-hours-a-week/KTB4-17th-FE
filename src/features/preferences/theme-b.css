@@ -59,7 +59,7 @@
   );
 }
 
-.preference-range input:focus {
+.preference-range input:focus-visible {
   outline: none;
 }
 

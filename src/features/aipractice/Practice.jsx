@@ -37,7 +37,7 @@ export async function loadPracticeHistory(sessionId) {
 
 export function practiceErrorMessage(error) {
   const messages = {
-    AUTH_REQUIRED: "로그인이 만료됐어요. 다시 로그인한 뒤 이용해주세요.",
+    AUTH_REQUIRED: "로그인이 만료됐어요. 다시 로그인한 뒤 이용해 주세요.",
     TARGET_USER_NOT_FOUND: "상대 회원 정보를 찾을 수 없어요.",
     SESSION_NOT_FOUND: "AI 연습대화 정보를 찾을 수 없어요.",
     SESSION_ENDED: "종료된 AI 연습대화에는 새 메시지를 보낼 수 없어요.",
@@ -50,7 +50,7 @@ export function practiceErrorMessage(error) {
     (Object.hasOwn(messages, error?.code) && messages[error.code]) ||
     apiErrorMessage(
       error,
-      "AI 연습대화를 처리하지 못했어요. 잠시 후 다시 시도해주세요.",
+      "AI 연습대화를 처리하지 못했어요. 잠시 후 다시 시도해 주세요.",
     )
   );
 }
@@ -370,12 +370,12 @@ export function Practice({
       : session?.status === "ENDED"
         ? "종료된 대화예요"
         : hasGenerating || sending
-          ? "AI가 답변을 준비하고 있어요"
+          ? "AI가 답변을 준비하고 있어요…"
           : loading
-            ? "대화를 불러오는 중이에요"
-            : "메시지를 입력하세요";
+            ? "대화를 불러오는 중이에요…"
+            : "메시지를 입력해 주세요…";
   return (
-    <section className="ai-conversation-view" aria-label="AI 연습대화">
+    <main className="ai-conversation-view" aria-label="AI 연습대화">
       <BrandHeader navigate={navigate}>
         <ChatModeMenu
           currentMode="practice"
@@ -410,7 +410,11 @@ export function Practice({
           일일 횟수 제한 ({count} / {dailyLimit})
         </span>
       </div>
-      <div className="chat-messages practice-messages">
+      <div
+        id="main-content"
+        tabIndex={-1}
+        className="chat-messages practice-messages"
+      >
         {loading ? (
           <div className="practice-state" role="status">
             AI 연습대화를 불러오고 있어요…
@@ -461,7 +465,7 @@ export function Practice({
               )}
               {chat.status === "GENERATING" && (
                 <div className="typing-indicator" role="status">
-                  AI가 답변을 생각하고 있어요 ···
+                  AI가 답변을 생각하고 있어요…
                 </div>
               )}
               {chat.status === "FAILED" && (
@@ -507,6 +511,8 @@ export function Practice({
           <input
             ref={composerInputRef}
             className="message-text-input"
+            name="message"
+            autoComplete="off"
             value={input}
             onChange={(event) => setInput(event.target.value)}
             placeholder={inputPlaceholder}
@@ -554,6 +560,6 @@ export function Practice({
           </section>
         </div>
       )}
-    </section>
+    </main>
   );
 }
