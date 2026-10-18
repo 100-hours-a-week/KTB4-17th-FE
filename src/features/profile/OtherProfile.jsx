@@ -60,7 +60,7 @@ export function OtherProfile({ userId, returnTo, navigate, isOwn = false }) {
         setError(
           apiErrorMessage(
             requestError,
-            "프로필을 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
+            "프로필을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
           ),
         );
       }
@@ -160,7 +160,7 @@ export function OtherProfile({ userId, returnTo, navigate, isOwn = false }) {
     : [];
 
   return (
-    <main className="other-profile-page">
+    <main id="main-content" tabIndex={-1} className="other-profile-page">
       {profile && (
         <div className="other-profile-backdrop" aria-hidden="true">
           <ProfilePhoto
@@ -229,7 +229,7 @@ export function OtherProfile({ userId, returnTo, navigate, isOwn = false }) {
         )}
         {loading && (
           <p className="other-profile-loading" role="status">
-            프로필을 불러오는 중이에요.
+            프로필을 불러오는 중이에요…
           </p>
         )}
       </section>

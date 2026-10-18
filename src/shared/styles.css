@@ -72,7 +72,8 @@
   --paper: #fff;
   --ink: #1f1830;
   --muted: #5e566e;
-  --subtle: #9a92a8;
+  --subtle: #766d82;
+  --placeholder: #776e84;
   --line: #dcd3e8;
   --line-soft: #ece6f3;
   --purple: #7c5cfa;
@@ -143,10 +144,12 @@ body,
   min-height: 100%;
 }
 
-/* Let the screen's own scroller handle overscroll instead of browser refresh. */
-html,
-body {
-  overscroll-behavior-y: none;
+/* Prevent desktop rubber-band scrolling while preserving touch-browser gestures. */
+@media (pointer: fine) {
+  html,
+  body {
+    overscroll-behavior-y: none;
+  }
 }
 
 body {
@@ -180,9 +183,11 @@ textarea {
   color: var(--ink);
 }
 
-input:focus,
-textarea:focus,
-button:focus-visible {
+input:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+a:focus-visible,
+select:focus-visible {
   outline: 2px solid var(--purple);
   outline-offset: 2px;
 }
@@ -202,6 +207,38 @@ button:focus-visible {
   overflow: hidden;
   background: var(--canvas);
   box-shadow: 0 0 30px #3b26541a;
+}
+
+.skip-link {
+  position: absolute;
+  z-index: 30;
+  top: 8px;
+  left: 8px;
+  padding: 10px 12px;
+  border: 6px solid transparent;
+  border-image: var(--px-frame-dark) 6 fill / 6px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transform: translateY(calc(-100% - 12px));
+  transition: transform 140ms var(--motion-press-ease);
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .brand-header {
@@ -262,11 +299,21 @@ h1 {
   line-height: 1.4;
   font-weight: 700;
   letter-spacing: 0;
+  text-wrap: balance;
 }
 
 h2 {
   font-size: 17px;
   font-weight: 700;
+  text-wrap: balance;
+}
+
+h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 small {
@@ -378,8 +425,8 @@ small {
   line-height: 1.5;
 }
 
-.field input:focus,
-.field textarea:focus {
+.field input:focus-visible,
+.field textarea:focus-visible {
   outline: none;
   border-image-source: var(--px-frame-focus);
   filter: drop-shadow(0 3px 0 rgb(124 92 250 / 18%));
@@ -387,7 +434,7 @@ small {
 
 .field input::placeholder,
 .field textarea::placeholder {
-  color: #b2aabf;
+  color: var(--placeholder);
 }
 
 .hint {
@@ -419,7 +466,7 @@ small {
 
 .choice {
   padding: 4px 10px;
-  min-height: 40px;
+  min-height: 44px;
   border: 6px solid transparent;
   border-image: var(--px-frame) 6 fill / 6px;
   border-radius: 0;
@@ -451,7 +498,6 @@ small {
   display: block;
   height: 100%;
   background: linear-gradient(90deg, #9c80ff, var(--purple) 70%, var(--pink));
-  transition: width 0.3s;
 }
 
 .screen-header {
@@ -460,20 +506,26 @@ small {
   background: var(--paper);
   border-bottom: 1px solid var(--line);
   display: grid;
-  grid-template-columns: 36px 1fr 56px;
+  grid-template-columns: 44px 1fr 56px;
   align-items: center;
   text-align: center;
   position: relative;
   z-index: 2;
 }
 
-.screen-header strong {
+.screen-header h1 {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
   font-size: 18px;
   font-weight: 400;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .screen-header-branded {
-  grid-template-columns: 36px 66px minmax(0, 1fr) 56px;
+  grid-template-columns: 44px 66px minmax(0, 1fr) 56px;
 }
 
 .screen-header-logo {
@@ -489,8 +541,8 @@ small {
   border: 0;
   background: transparent;
   padding: 0;
-  width: 32px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   font-size: 28px;
   line-height: 1;
   text-align: left;
@@ -534,7 +586,7 @@ small {
   z-index: 5;
 }
 
-.bottom-nav button {
+.bottom-nav a {
   width: 25%;
   border: 0;
   background: transparent;
@@ -548,19 +600,38 @@ small {
   font-family: var(--font-pixel);
   font-size: 11px;
   letter-spacing: 0.06em;
+  text-decoration: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 button:active:not(:disabled) {
   transform: scale(0.97);
 }
 
-.bottom-nav button.active {
+@media (hover: hover) {
+  button:not(:disabled):hover:not(:active) {
+    transform: translateY(-1px);
+  }
+}
+
+.bottom-nav a:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) {
+  .bottom-nav a:hover {
+    color: var(--purple-deep);
+  }
+}
+
+.bottom-nav a.active {
   color: var(--purple-deep);
   background: transparent;
   box-shadow: none;
 }
 
-.bottom-nav button.active .bottom-nav-icon::before {
+.bottom-nav a.active .bottom-nav-icon::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -606,7 +677,7 @@ button:active:not(:disabled) {
   pointer-events: none;
 }
 
-.bottom-nav button.active .bottom-nav-badge {
+.bottom-nav a.active .bottom-nav-badge {
   box-shadow: 0 0 0 2px var(--soft-lavender);
 }
 
@@ -641,7 +712,8 @@ button:active:not(:disabled) {
   gap: 12px;
 }
 
-.empty-state strong {
+.empty-state h2 {
+  margin: 0;
   font-size: 18px;
   font-weight: 700;
 }

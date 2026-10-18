@@ -204,10 +204,16 @@ export function ChatList({ navigate }) {
   return (
     <>
       <BrandHeader navigate={navigate} />
-      <main ref={mainRef} className="main-scroll chat-list-main">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        ref={mainRef}
+        className="main-scroll chat-list-main"
+      >
+        <h1 className="sr-only">채팅</h1>
         {loading ? (
           <div className="chat-list-loading" role="status">
-            채팅 목록을 불러오고 있어요.
+            채팅 목록을 불러오고 있어요…
           </div>
         ) : error ? (
           <div className="chat-list-error" role="alert">
@@ -234,6 +240,9 @@ export function ChatList({ navigate }) {
                   <img
                     className={`chat-room-avatar ${room.image ? "has-photo" : ""}`}
                     src={room.image || asset("chat-avatar-heart-terminal.svg")}
+                    width="56"
+                    height="56"
+                    loading="lazy"
                     alt=""
                   />
                   <span className="chat-room-copy">
@@ -243,6 +252,8 @@ export function ChatList({ navigate }) {
                         <img
                           className="chat-notification-muted"
                           src={asset("chat-notification-muted.svg")}
+                          width="13"
+                          height="15"
                           alt="알림 끔"
                         />
                       )}
@@ -281,6 +292,8 @@ export function ChatList({ navigate }) {
             <img
               className="chat-empty-illustration"
               src={asset("illust/chat.svg")}
+              width="190"
+              height="160"
               alt=""
             />
             <strong>

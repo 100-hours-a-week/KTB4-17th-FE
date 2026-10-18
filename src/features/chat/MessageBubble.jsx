@@ -64,6 +64,9 @@ export function MessageBubble({
       <img
         className="bubble-avatar profile-bubble-avatar"
         src={avatar || asset("chat-avatar-heart-terminal.svg")}
+        width="34"
+        height="34"
+        loading="lazy"
         alt=""
         onError={(event) => {
           event.currentTarget.src = asset("chat-avatar-heart-terminal.svg");

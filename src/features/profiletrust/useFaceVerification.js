@@ -132,7 +132,7 @@ export function useFaceVerification() {
         setActive(false);
         setPhase("camera");
         setHint(
-          "사진 확인을 마쳤어요. 카메라를 켜고 본인 인증을 진행해주세요.",
+          "사진 확인을 마쳤어요. 카메라를 켜고 본인 인증을 진행해 주세요.",
         );
       },
       (error) => {

@@ -24,10 +24,6 @@
   word-break: keep-all;
 }
 
-.profile-trust h1:focus {
-  outline: none;
-}
-
 .profile-trust h1 em {
   color: var(--purple-deep);
   font-style: normal;
@@ -141,10 +137,12 @@
 
 .trust-camera-progress span {
   display: block;
-  width: 0;
+  width: 100%;
   height: 100%;
   background: linear-gradient(90deg, #987bff 0%, #7555f3 72%, #e66db3 100%);
-  transition: width 100ms linear;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 100ms linear;
 }
 
 .trust-camera-guidance small {

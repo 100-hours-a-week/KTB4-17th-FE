@@ -9,7 +9,12 @@ function LoginBrand() {
   return (
     <>
       <div className="login-illustration">
-        <img src={asset("logo.png?v=d41514e")} alt="*23#" />
+        <img
+          src={asset("logo.png?v=d41514e")}
+          width="256"
+          height="256"
+          alt="*23#"
+        />
       </div>
       <section className="login-signal">
         <span className="login-signal-status" aria-hidden="true">
@@ -35,11 +40,13 @@ const SPLASH_BLOCKS = Array.from({ length: 12 }, (_, index) => index);
 // 앱 실행 직후 로그인 상태를 확인하는 동안 보여주는 Y2K 로딩 화면
 export function SplashScreen({ message, action }) {
   return (
-    <div className="splash-page">
+    <main id="main-content" tabIndex={-1} className="splash-page">
       <div className="splash-hero">
         <img
           className="splash-logo"
           src={asset("logo.png?v=d41514e")}
+          width="256"
+          height="256"
           alt="*23#"
         />
         <p className="splash-copy">
@@ -76,7 +83,7 @@ export function SplashScreen({ message, action }) {
       <p className="splash-footer" aria-hidden="true">
         ✦ *23# · LITTLE PIXELS, REAL CONNECTIONS ✦
       </p>
-    </div>
+    </main>
   );
 }
 
@@ -102,7 +109,7 @@ export function Login({ onLogin, onLocalTestLogin }) {
           setTestLoginError(
             apiErrorMessage(
               error,
-              "테스트 계정을 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
+              "테스트 계정을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
             ),
           );
       })
@@ -123,7 +130,7 @@ export function Login({ onLogin, onLocalTestLogin }) {
       setTestLoginError(
         apiErrorMessage(
           error,
-          "테스트 로그인을 처리하지 못했어요. 잠시 후 다시 시도해주세요.",
+          "테스트 로그인을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.",
         ),
       );
     } finally {
@@ -132,7 +139,9 @@ export function Login({ onLogin, onLocalTestLogin }) {
   }
 
   return (
-    <div
+    <main
+      id="main-content"
+      tabIndex={-1}
       className={`login-page${localTestAuthEnabled ? " local-test-login-page" : ""}`}
     >
       <div className="login-top-space" aria-hidden="true" />
@@ -180,7 +189,7 @@ export function Login({ onLogin, onLocalTestLogin }) {
             ))
           ) : (
             <div className="local-test-login-status" role="status">
-              활성 테스트 계정이 없어요. 테스트 사용자 900001을 준비해주세요.
+              활성 테스트 계정이 없어요. 테스트 사용자 900001을 준비해 주세요.
             </div>
           )}
           {testLoginError && (
@@ -190,7 +199,7 @@ export function Login({ onLogin, onLocalTestLogin }) {
           )}
         </section>
       )}
-    </div>
+    </main>
   );
 }
 
@@ -203,12 +212,16 @@ export function RegistrationRestricted({ onConfirm }) {
     : "-";
 
   return (
-    <main className="registration-restricted-page">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="registration-restricted-page"
+    >
       <div className="registration-restricted-top-space" aria-hidden="true" />
       <h1>
-        {ageRestriction?.heading || "가입 연령을 확인해주세요"}
+        {ageRestriction?.heading || "가입 연령을 확인해 주세요"}
         <br />
-        {ageRestriction ? "이용할 수 있어요" : "다시 입력해주세요"}
+        {ageRestriction ? "이용할 수 있어요" : "다시 입력해 주세요"}
       </h1>
       <p className="registration-restricted-subtitle">
         {ageRestriction?.description ||
@@ -231,7 +244,7 @@ export function RegistrationRestricted({ onConfirm }) {
       <ul className="registration-restricted-notes">
         <li>카카오 계정에 등록된 생년월일 기준이에요</li>
         <li>입력한 정보는 저장되지 않고 즉시 폐기돼요</li>
-        <li>기본 정보가 다르면 수정 후 다시 시도해주세요</li>
+        <li>기본 정보가 다르면 수정 후 다시 시도해 주세요</li>
       </ul>
       <button
         className="registration-restricted-confirm"

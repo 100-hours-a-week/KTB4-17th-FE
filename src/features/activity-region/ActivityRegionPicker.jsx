@@ -41,12 +41,15 @@ export function ActivityRegionPicker({
   return (
     <Field
       label="활동 지역"
-      hint="활동 지역은 시·군·구 단위까지 검색할 수 있어요. 검색 결과에서 지역을 선택해주세요."
+      hint="활동 지역은 시·군·구 단위까지 검색할 수 있어요. 검색 결과에서 지역을 선택해 주세요."
     >
       <input
+        name="activityRegion"
+        autoComplete="off"
+        spellCheck={false}
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="시·군·구 검색 (예: 수원시, 강남구)"
+        placeholder="시·군·구 검색 (예: 수원시, 강남구)…"
         aria-label="활동 지역 검색"
         disabled={disabled}
       />
@@ -57,17 +60,17 @@ export function ActivityRegionPicker({
       )}
       {status === "loading" && (
         <p className="region-search-state" role="status">
-          활동 지역을 검색하고 있어요.
+          활동 지역을 검색하고 있어요…
         </p>
       )}
       {status === "empty" && (
         <p className="region-search-state" role="status">
-          검색 결과가 없어요. 시·군·구 이름을 확인해주세요.
+          검색 결과가 없어요. 시·군·구 이름을 확인해 주세요.
         </p>
       )}
       {status === "error" && (
         <p className="field-error" role="alert">
-          활동 지역을 불러오지 못했어요. 검색어를 다시 입력해주세요.
+          활동 지역을 불러오지 못했어요. 검색어를 다시 입력해 주세요.
         </p>
       )}
       <section className="region-list" aria-label="활동 지역 검색 결과">

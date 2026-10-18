@@ -165,7 +165,9 @@ export function NotificationProvider({
       if (destination) navigate(destination);
       else navigate("/notifications");
     } catch (error) {
-      toast(apiErrorMessage(error, "알림을 열지 못했어요. 다시 시도해주세요."));
+      toast(
+        apiErrorMessage(error, "알림을 열지 못했어요. 다시 시도해 주세요."),
+      );
     }
   }
 

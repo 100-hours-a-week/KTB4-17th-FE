@@ -50,27 +50,27 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
 
   if (error || !simulation)
     return (
-      <section className="ai-conversation-view" aria-label="AI 시뮬레이션">
+      <main className="ai-conversation-view" aria-label="AI 시뮬레이션">
         {conversationHeader}
-        <main className="ai-conversation-state">
+        <div id="main-content" tabIndex={-1} className="ai-conversation-state">
           <SimulationState
             status={status}
             error={error}
             refresh={refresh}
             attempt={attempt}
           />
-        </main>
-      </section>
+        </div>
+      </main>
     );
 
   return (
-    <section className="ai-conversation-view" aria-label="AI 시뮬레이션">
+    <main className="ai-conversation-view" aria-label="AI 시뮬레이션">
       {conversationHeader}
       <div className="ai-notice">
         ⓘ　AI가 두 사람의 성향을 바탕으로 나눈 대화예요. 두 사람 모두 같은
         결과를 확인할 수 있어요.
       </div>
-      <div className="simulation-body">
+      <div id="main-content" tabIndex={-1} className="simulation-body">
         <div className="simulation-participants">
           <div>
             <AiAvatar size={34} />
@@ -120,7 +120,7 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
           리포트 확인하기 ↗
         </PixelButton>
       </div>
-    </section>
+    </main>
   );
 }
 
@@ -165,7 +165,11 @@ export function Report({ simulationId, chatRoomId, navigate }) {
           title="궁합 리포트"
           onBack={() => navigate(simulationPath)}
         />
-        <main className="main-scroll ai-screen-state-main">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="main-scroll ai-screen-state-main"
+        >
           <SimulationState
             status={status}
             error={error}
@@ -183,14 +187,14 @@ export function Report({ simulationId, chatRoomId, navigate }) {
         title="궁합 리포트"
         onBack={() => navigate(simulationPath)}
       />
-      <main className="main-scroll report-main">
+      <main id="main-content" tabIndex={-1} className="main-scroll report-main">
         <section className="report-intro">
           <span>AI SIMULATION REPORT</span>
-          <h1>
+          <h2>
             AI가 분석한
             <br />
             대화 호흡이에요
-          </h1>
+          </h2>
           <p>
             {report.overall?.headline ||
               "AI가 나눈 대화를 바탕으로 살펴봤어요."}
@@ -242,7 +246,7 @@ export function Report({ simulationId, chatRoomId, navigate }) {
                         <b className="report-grade">{grade}</b>
                       )}
                     </div>
-                    <p>{area.comment || "분석 결과를 확인해주세요."}</p>
+                    <p>{area.comment || "분석 결과를 확인해 주세요."}</p>
                   </div>
                 </article>
               );
@@ -274,7 +278,7 @@ function SimulationState({ status, error, refresh, attempt }) {
         }
         description={apiErrorMessage(
           error,
-          "연결 상태를 확인한 뒤 상태를 다시 확인해주세요.",
+          "연결 상태를 확인한 뒤 상태를 다시 확인해 주세요.",
         )}
         action={
           unavailable ? undefined : (
@@ -296,8 +300,8 @@ function SimulationState({ status, error, refresh, attempt }) {
         description={
           status === "FAILED"
             ? attempt.submissionRejected
-              ? "요청이 몰려 생성을 시작하지 못했어요. 잠시 후 다시 시도해주세요."
-              : "다시 생성해서 두 사람의 대화를 확인해보세요."
+              ? "요청이 몰려 생성을 시작하지 못했어요. 잠시 후 다시 시도해 주세요."
+              : "다시 생성해서 두 사람의 대화를 확인해 보세요."
             : "이 시뮬레이션은 완료 결과를 제공할 수 없어요."
         }
         action={
@@ -307,7 +311,7 @@ function SimulationState({ status, error, refresh, attempt }) {
                 <p className="simulation-retry-error" role="alert">
                   {apiErrorMessage(
                     attempt.attemptError,
-                    "요청 결과를 확인하지 못했어요. 다시 시도해주세요.",
+                    "요청 결과를 확인하지 못했어요. 다시 시도해 주세요.",
                   )}
                 </p>
               )}
@@ -332,14 +336,15 @@ function SimulationState({ status, error, refresh, attempt }) {
         status === "IN_PROGRESS"
           ? "AI가 두 사람의 궁합을 분석하고 있어요"
           : status === "COMPLETED"
-            ? "완료된 결과를 불러오고 있어요"
-            : "시뮬레이션 상태를 확인하고 있어요"
+            ? "완료된 결과를 불러오고 있어요…"
+            : "시뮬레이션 상태를 확인하고 있어요…"
       }
       description={
         status === "IN_PROGRESS"
           ? "보통 수십 초가 걸리며 요청이 몰리면 더 오래 걸릴 수 있어요. 다른 화면을 이용한 뒤 다시 확인해도 돼요."
-          : "잠시만 기다려주세요."
+          : "잠시만 기다려 주세요…"
       }
+      role="status"
     />
   );
 }

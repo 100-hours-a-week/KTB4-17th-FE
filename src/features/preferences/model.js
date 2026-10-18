@@ -82,7 +82,7 @@ export function validatePreferences(preference) {
           (!Number.isInteger(value) || value < min || value > max),
       )
     )
-      return `${label} 범위는 ${min}~${max}${unit}로 설정해주세요.`;
+      return `${label} 범위는 ${min}~${max}${unit}로 설정해 주세요.`;
     if (lower != null && upper != null && lower > upper)
       return `최소 ${label}는 최대 ${label}보다 클 수 없어요.`;
   }
@@ -93,7 +93,7 @@ export function validatePreferences(preference) {
       selected.some((value) => !options.some(([key]) => key === value)) ||
       new Set(selected).size !== selected.length
     )
-      return `${label} 선택을 다시 확인해주세요.`;
+      return `${label} 선택을 다시 확인해 주세요.`;
   }
   return "";
 }

@@ -328,7 +328,7 @@ function AppRouter() {
       setData(makeInitialState());
       navigate("/login");
     } catch {
-      toast("로그아웃을 완료하지 못했어요. 잠시 후 다시 시도해주세요.");
+      toast("로그아웃을 완료하지 못했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
       accountActionPendingRef.current = false;
       setLogoutPending(false);
@@ -350,7 +350,7 @@ function AppRouter() {
           toast(
             apiErrorMessage(
               error,
-              "계정 탈퇴를 완료하지 못했어요. 로그인 상태를 확인한 뒤 다시 시도해주세요.",
+              "계정 탈퇴를 완료하지 못했어요. 로그인 상태를 확인한 뒤 다시 시도해 주세요.",
             ),
           ),
       });
@@ -376,7 +376,7 @@ function AppRouter() {
     ["/", "/home", "/likes", "/chats", "/my", "/notifications"].includes(path);
 
   let page;
-  if (loading) page = <SplashScreen message="잠시만 기다려주세요" />;
+  if (loading) page = <SplashScreen message="잠시만 기다려 주세요…" />;
   else if (sessionCheckError)
     page = (
       <SplashScreen
@@ -518,24 +518,36 @@ function AppRouter() {
       />
     );
   else if (path === "/notifications")
-    page = <Notifications navigate={navigate} toast={toast} />;
+    page = (
+      <Notifications
+        navigate={navigate}
+        toast={toast}
+        initialCategory={new URLSearchParams(search).get("category")}
+      />
+    );
   else
     page = (
-      <EmptyState
-        title="화면을 찾을 수 없어요"
-        description="홈으로 돌아가 다시 시작해주세요."
-        action={
-          <PixelButton onClick={() => navigate("/home")}>
-            홈으로 가기
-          </PixelButton>
-        }
-      />
+      <main id="main-content" tabIndex={-1}>
+        <h1 className="sr-only">화면을 찾을 수 없어요</h1>
+        <EmptyState
+          title="화면을 찾을 수 없어요"
+          description="홈으로 돌아가 다시 시작해 주세요."
+          action={
+            <PixelButton onClick={() => navigate("/home")}>
+              홈으로 가기
+            </PixelButton>
+          }
+        />
+      </main>
     );
 
   return (
     <SimulationTrackingContext.Provider value={tracking}>
       <div className="app-shell" ref={viewportRef}>
         <div className="app-screen" data-has-nav={showNav}>
+          <a className="skip-link" href="#main-content">
+            본문으로 건너뛰기
+          </a>
           <NotificationProvider
             enabled={
               !loading &&

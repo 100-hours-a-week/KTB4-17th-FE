@@ -22,6 +22,8 @@ export function JobCategorySelect({
       <div className="job-category-control">
         <select
           id={id}
+          name="job"
+          autoComplete="off"
           ref={selectRef}
           className={`job-category-select${selected ? " has-value" : ""}`}
           aria-label="직업군"
@@ -33,7 +35,7 @@ export function JobCategorySelect({
           required
         >
           <option value="" disabled>
-            직업군을 선택해주세요
+            직업군을 선택해 주세요
           </option>
           {jobCategories.map(([code, label]) => (
             <option key={code} value={code}>
@@ -46,7 +48,7 @@ export function JobCategorySelect({
         </span>
       </div>
       <small className="hint" id={hintId}>
-        현재 주로 하는 일이나 활동을 선택해주세요.
+        현재 주로 하는 일이나 활동을 선택해 주세요.
       </small>
       {error && (
         <small className="field-error" id={errorId} role="alert">

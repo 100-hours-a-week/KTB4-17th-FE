@@ -110,7 +110,7 @@
   font-size: 14px;
 }
 
-.birth-date-part input:focus {
+.birth-date-part input:focus-visible {
   outline: 0;
 }
 

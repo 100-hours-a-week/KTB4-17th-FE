@@ -91,7 +91,7 @@ export function Likes({
           loading: false,
           error: apiErrorMessage(
             error,
-            "좋아요를 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
+            "좋아요를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
           ),
         },
       }));
@@ -103,6 +103,9 @@ export function Likes({
     if (!pages[tab].loaded && !pages[tab].loading && !pages[tab].error)
       void load(tab);
   }, [load, pages, tab]);
+  useEffect(() => {
+    setTab(initialTab === "sent" ? "sent" : "received");
+  }, [initialTab]);
   const page = pages[tab];
   const removeReceivedLike = useCallback((likeId) => {
     setPages((current) => ({
@@ -137,6 +140,16 @@ export function Likes({
     );
   }
 
+  function selectTab(nextTab) {
+    if (nextTab === tab) return;
+    setTab(nextTab);
+    const params = new URLSearchParams(window.location.search);
+    if (nextTab === "received") params.delete("tab");
+    else params.set("tab", nextTab);
+    const query = params.toString();
+    navigate(`/likes${query ? `?${query}` : ""}`);
+  }
+
   async function rejectLike() {
     if (!rejectTarget || actionInFlight.current) return;
     actionInFlight.current = true;
@@ -156,12 +169,13 @@ export function Likes({
   return (
     <>
       <BrandHeader navigate={navigate} />
-      <div className="segmented-tabs likes-seg">
+      <fieldset className="segmented-tabs likes-seg">
+        <legend className="sr-only">좋아요 목록 종류</legend>
         <button
           type="button"
           className={tab === "received" ? "active" : ""}
           aria-pressed={tab === "received"}
-          onClick={() => setTab("received")}
+          onClick={() => selectTab("received")}
         >
           받은 좋아요
         </button>
@@ -169,17 +183,19 @@ export function Likes({
           type="button"
           className={tab === "sent" ? "active" : ""}
           aria-pressed={tab === "sent"}
-          onClick={() => setTab("sent")}
+          onClick={() => selectTab("sent")}
         >
           보낸 좋아요
         </button>
-      </div>
-      <main className="main-scroll likes-main">
+      </fieldset>
+      <main id="main-content" tabIndex={-1} className="main-scroll likes-main">
+        <h1 className="sr-only">좋아요</h1>
         {page.loading && !page.loaded ? (
           <EmptyState
             icon="♡"
-            title="좋아요를 불러오고 있어요"
-            description="잠시만 기다려주세요."
+            title="좋아요를 불러오고 있어요…"
+            description="잠시만 기다려 주세요…"
+            role="status"
           />
         ) : page.error ? (
           <EmptyState
@@ -200,6 +216,8 @@ export function Likes({
                 src={asset(
                   tab === "received" ? "illust/letter.png" : "illust/plane.svg",
                 )}
+                width={tab === "received" ? 324 : 190}
+                height={tab === "received" ? 248 : 150}
                 alt=""
               />
             }
@@ -265,7 +283,7 @@ export function Likes({
                       onClick={() => acceptLike(person)}
                       disabled={actionLikeId != null || !person.userId}
                     >
-                      {actionLikeId === person.id ? "처리 중..." : "좋아요"}
+                      {actionLikeId === person.id ? "처리 중…" : "좋아요"}
                     </PixelButton>
                   </div>
                 )}
@@ -277,7 +295,7 @@ export function Likes({
                 disabled={page.loading}
                 onClick={() => load(tab, page.nextCursor)}
               >
-                {page.loading ? "불러오는 중..." : "더 보기"}
+                {page.loading ? "불러오는 중…" : "더 보기"}
               </PixelButton>
             )}
           </div>
@@ -307,7 +325,7 @@ export function Likes({
                 onClick={() => void rejectLike()}
                 disabled={actionLikeId != null}
               >
-                {actionLikeId === rejectTarget.id ? "처리 중..." : "관심없음"}
+                {actionLikeId === rejectTarget.id ? "처리 중…" : "관심없음"}
               </button>
             </div>
           </section>

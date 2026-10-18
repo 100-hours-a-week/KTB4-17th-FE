@@ -36,9 +36,9 @@ import { isJobCategory, normalizeJobCategory } from "./jobCategories.js";
 import { profilePayload } from "./serialize.js";
 
 const NICKNAME_PATTERN = /^[가-힣A-Za-z0-9]{2,10}$/;
-const NICKNAME_FORMAT_ERROR = "닉네임은 한글·영문·숫자 2~10자로 입력해주세요.";
+const NICKNAME_FORMAT_ERROR = "닉네임은 한글·영문·숫자 2~10자로 입력해 주세요.";
 const PROFILE_SAVE_ERROR =
-  "프로필을 저장하지 못했어요. 잠시 후 다시 시도해주세요.";
+  "프로필을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.";
 const PROFILE_AI_ERROR_CODES = new Set([
   "PROFILE_NOT_FOUND",
   "PROFILE_NICKNAME_REQUIRED",
@@ -114,7 +114,7 @@ export function MyPage({ navigate }) {
   return (
     <>
       <BrandHeader navigate={navigate} className="my-topbar" />
-      <main className="main-scroll my-main">
+      <main id="main-content" tabIndex={-1} className="main-scroll my-main">
         <div
           className={`my-identity${isProfileLoading ? " my-identity-loading" : ""}`}
         >
@@ -212,10 +212,14 @@ export function Settings({
         title="설정"
         onBack={() => navigate("/my")}
       />
-      <main className="main-scroll settings-main">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="main-scroll settings-main"
+      >
         <div className="settings-intro">
           <span className="settings-kicker">내 설정 노트</span>
-          <h1>계정 설정</h1>
+          <h2>계정 설정</h2>
           <p>프로필과 로그인 상태를 관리해요.</p>
         </div>
         <section className="settings-action-list" aria-label="계정 설정">
@@ -436,7 +440,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
     )
       return;
     if (!isJobCategory(profile.job)) {
-      setJobError("직업군을 선택해주세요.");
+      setJobError("직업군을 선택해 주세요.");
       return;
     }
     setJobError("");
@@ -446,7 +450,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
       return;
     }
     if (!profile.activityRegionId) {
-      toast("검색 결과에서 활동 지역을 선택해주세요.");
+      toast("검색 결과에서 활동 지역을 선택해 주세요.");
       return;
     }
     const nicknameChanged = nickname !== initialNickname.current;
@@ -464,7 +468,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
           toast(
             apiErrorMessage(
               e,
-              "닉네임 사용 가능 여부를 확인하지 못했어요. 잠시 후 다시 시도해주세요.",
+              "닉네임 사용 가능 여부를 확인하지 못했어요. 잠시 후 다시 시도해 주세요.",
             ),
           );
           return;
@@ -482,7 +486,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
           await saveProfileImages(photoState.images);
         } catch {
           toast(
-            "프로필 정보는 저장했지만 사진을 저장하지 못했어요. 사진을 확인하고 다시 시도해주세요.",
+            "프로필 정보는 저장했지만 사진을 저장하지 못했어요. 사진을 확인하고 다시 시도해 주세요.",
           );
           return;
         }
@@ -500,7 +504,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
     } catch (e) {
       if (e?.code === "NICKNAME_ALREADY_IN_USE") {
         setNicknameError(
-          "이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해주세요.",
+          "이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해 주세요.",
         );
       } else {
         toast(profileSaveErrorMessage(e));
@@ -524,18 +528,20 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
         onBack={() => navigateWhenIdle(returnTo)}
       />
       <main
+        id="main-content"
+        tabIndex={-1}
         className="main-scroll edit-main"
         aria-busy={isLoadingProfile || isSaving}
       >
         {isLoadingProfile ? (
           <p className="profile-load-state" role="status">
-            저장된 프로필을 불러오는 중이에요.
+            저장된 프로필을 불러오는 중이에요…
           </p>
         ) : profileLoadFailed ? (
           <div className="profile-load-error" role="alert">
             <p>
-              프로필을 불러오지 못했어요. 이전 화면으로 돌아갔다가 다시
-              시도해주세요.
+              프로필을 불러오지 못했어요. 이전 화면으로 돌아갔다가 다시 시도해
+              주세요.
             </p>
           </div>
         ) : (
@@ -546,7 +552,12 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                   <h2>프로필 사진</h2>
                   <div className="trust-photo-grid">
                     <article className="trust-photo-tile">
-                      <img src={legacyPhoto} alt="저장된 대표사진" />
+                      <img
+                        src={legacyPhoto}
+                        width="300"
+                        height="400"
+                        alt="저장된 대표사진"
+                      />
                       <span className="trust-photo-badge">기존 대표사진</span>
                     </article>
                   </div>
@@ -587,10 +598,14 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
               error={nicknameError}
             >
               <input
+                type="text"
+                name="nickname"
+                autoComplete="nickname"
                 value={profile.nickname}
                 onChange={(e) => set("nickname", e.target.value)}
                 disabled={isSaving}
                 maxLength={10}
+                placeholder="예: 별이…"
                 aria-invalid={Boolean(nicknameError)}
               />
             </Field>
@@ -608,11 +623,15 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
             <Field label="키 (cm)">
               <input
                 type="number"
+                name="height"
+                autoComplete="off"
+                inputMode="numeric"
                 value={profile.height}
                 onChange={(e) => set("height", e.target.value)}
                 disabled={isSaving}
                 min="130"
                 max="220"
+                placeholder="예: 175…"
               />
             </Field>
             <Field label="체형">
@@ -684,10 +703,14 @@ export function Persona({ navigate }) {
         title="내 페르소나"
         onBack={() => navigate("/my")}
       />
-      <main className="main-scroll persona-main">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="main-scroll persona-main"
+      >
         <div className="persona-hero">
           <AiAvatar size={72} />
-          <h1>나를 닮은 AI가 준비됐어요</h1>
+          <h2>나를 닮은 AI가 준비됐어요</h2>
           <p>
             가치관 문답을 바탕으로 상대와의 AI 연습대화와 시뮬레이션에 참여해요.
           </p>

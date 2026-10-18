@@ -19,7 +19,7 @@
 }
 
 .chat-room-header strong {
-  max-width: calc(100% - 112px);
+  max-width: calc(100% - 124px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -583,7 +583,7 @@
 
 .message-composer-controls {
   width: 100%;
-  min-height: 42px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -592,8 +592,8 @@
 .message-text-input {
   width: 100%;
   min-width: 0;
-  height: 42px;
-  min-height: 42px;
+  height: 44px;
+  min-height: 44px;
   max-height: 120px;
   flex: 1;
   border: 0;
@@ -613,9 +613,9 @@
 
 .attach-image-button {
   display: grid;
-  width: 40px;
-  height: 42px;
-  flex: 0 0 40px;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
   place-items: center;
   padding: 8px;
   border: 0;
@@ -636,8 +636,8 @@
 
 .message-composer-controls > button[type="submit"] {
   flex: none;
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border: 0;
   border-radius: 0;
   background: var(--purple);
@@ -748,7 +748,7 @@
 
 .chat-room-partner-header {
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) auto;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
   padding: 0 16px;
 }
 

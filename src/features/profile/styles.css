@@ -86,12 +86,12 @@
 .my-identity > .my-settings-button {
   position: absolute;
   z-index: 2;
-  top: 8px;
-  right: 8px;
+  top: 4px;
+  right: 4px;
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -314,7 +314,7 @@
   font-size: 11px;
 }
 
-.settings-intro h1 {
+.settings-intro h2 {
   margin: 7px 0 4px;
   font-size: 21px;
 }
@@ -622,7 +622,7 @@
   height: 72px;
 }
 
-.persona-hero h1 {
+.persona-hero h2 {
   font-size: 18px;
   margin: 16px 0 10px;
 }
@@ -703,7 +703,7 @@
   color: var(--ink);
 }
 
-.job-category-select:focus {
+.job-category-select:focus-visible {
   outline: none;
   border-image-source: var(--px-frame-focus);
   filter: drop-shadow(0 3px 0 rgb(124 92 250 / 18%));

@@ -43,8 +43,8 @@
 .onboarding-back,
 .onboarding-page .onboarding-back-placeholder {
   flex: none;
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
 }
 
 .onboarding-back {
@@ -203,7 +203,7 @@
 
 .onboarding-step-profile .choice,
 .onboarding-step-lifestyle .choice {
-  min-height: 36px;
+  min-height: 44px;
 }
 
 .onboarding-page .registration-info-fields {
@@ -555,13 +555,13 @@
   resize: none;
 }
 
-.persona-composer textarea:focus {
+.persona-composer textarea:focus-visible {
   outline: none;
   border-image-source: var(--px-frame-focus);
 }
 
 .persona-composer textarea::placeholder {
-  color: #b2aabf;
+  color: var(--placeholder);
 }
 
 .persona-send {

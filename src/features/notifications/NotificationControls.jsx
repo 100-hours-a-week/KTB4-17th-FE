@@ -3,7 +3,13 @@ import { notificationBadge } from "./model.js";
 
 export function PagerIcon() {
   return (
-    <img src="/assets/notifications/pager.svg" alt="" aria-hidden="true" />
+    <img
+      src="/assets/notifications/pager.svg"
+      width="36"
+      height="30"
+      alt=""
+      aria-hidden="true"
+    />
   );
 }
 
