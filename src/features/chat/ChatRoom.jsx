@@ -13,6 +13,7 @@ import {
   EmptyState,
   ScreenHeader,
 } from "../../shared/ui/components.jsx";
+import { useRoomMatchRead } from "../notifications/useRoomMatchRead.js";
 import {
   prepareProfilePhoto,
   profilePhotoErrorMessage,
@@ -39,6 +40,7 @@ import {
 import { CHAT_READ_UPDATED_EVENT } from "./unreadCount.js";
 import { useChatRoom } from "./useChatRoom.js";
 import { useChatScroll } from "./useChatScroll.js";
+import { useComposerAutofocus } from "./useComposerAutofocus.js";
 
 function ChatConfirmationDialog({
   dialogId,
@@ -263,6 +265,13 @@ function ChatRoomContent({
   const viewerOpenerRef = useRef(null);
   const scroll = useChatScroll({ ...room, viewingImage });
   const canSend = Boolean(visit) && state.room?.status === "ACTIVE";
+  useRoomMatchRead(roomId, Boolean(visit && state.room && !error));
+  useComposerAutofocus(
+    inputRef,
+    roomId,
+    canSend,
+    Boolean(viewingImage || blockDialogOpen || endChatDialogOpen),
+  );
   const targetUserId = state.room?.userId;
   const parsedTargetUserId = Number(targetUserId);
   const canBlockUser =

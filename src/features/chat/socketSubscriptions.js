@@ -52,5 +52,10 @@ export function createChatSocketSubscriptions(connectTransport) {
     };
   }
 
-  return { subscribe, clear };
+  return {
+    subscribe,
+    clear,
+    sendPresence: (roomId, action) =>
+      disconnect?.sendPresence?.(roomId, action) || false,
+  };
 }

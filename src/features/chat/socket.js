@@ -198,7 +198,7 @@ function startChatSocket({
 
   onStatus("connecting");
   void connect();
-  return () => {
+  const disconnect = () => {
     stopped = true;
     if (reconnectTimer) window.clearTimeout(reconnectTimer);
     if (heartbeatTimer) window.clearInterval(heartbeatTimer);
@@ -210,9 +210,24 @@ function startChatSocket({
     }
     socket?.close();
   };
+  disconnect.sendPresence = (chatRoomId, action) => {
+    if (!connected || stopped || socket?.readyState !== WebSocket.OPEN)
+      return false;
+    sendFrame(
+      "SEND",
+      {
+        destination: "/app/chat-rooms/presence",
+        "content-type": "application/json",
+      },
+      JSON.stringify({ chatRoomId, action }),
+    );
+    return true;
+  };
+  return disconnect;
 }
 
 const sharedSocket = createChatSocketSubscriptions(startChatSocket);
 window.addEventListener(AUTH_SESSION_CLEARED_EVENT, sharedSocket.clear);
 
 export const connectChatSocket = sharedSocket.subscribe;
+export const sendChatPresence = sharedSocket.sendPresence;
