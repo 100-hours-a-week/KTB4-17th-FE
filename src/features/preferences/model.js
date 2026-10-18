@@ -27,14 +27,30 @@ export function defaultPreferences() {
 // Sliders display the service's full supported range for null bounds.
 export function preferencesFromResponse(response) {
   const preference = response?.preference || defaultPreferences();
+  const ageBound = (value) =>
+    value == null
+      ? null
+      : Math.min(
+          PREFERENCE_RANGES.age.max,
+          Math.max(PREFERENCE_RANGES.age.min, value),
+        );
   return {
-    minAge: preference.minAge ?? null,
-    maxAge: preference.maxAge ?? null,
+    minAge: ageBound(preference.minAge),
+    maxAge: ageBound(preference.maxAge),
     minHeight: preference.minHeight ?? null,
     maxHeight: preference.maxHeight ?? null,
     ...Object.fromEntries(
       PREFERENCE_CHOICES.map(({ key }) => [key, [...(preference[key] || [])]]),
     ),
+  };
+}
+
+export function preferencesPayload(preference) {
+  return {
+    ...preference,
+    // The visible upper age is a real preference when saved, even if an older
+    // server response represented its wider unrestricted range with null.
+    maxAge: preference.maxAge ?? PREFERENCE_RANGES.age.max,
   };
 }
 

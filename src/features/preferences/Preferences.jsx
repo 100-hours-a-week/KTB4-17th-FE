@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
-import { EmptyState, PixelButton } from "../../shared/ui/components.jsx";
+import {
+  BrandHeader,
+  EmptyState,
+  PixelButton,
+} from "../../shared/ui/components.jsx";
 import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import * as preferencesApi from "./api.js";
 import {
@@ -9,6 +13,7 @@ import {
   PREFERENCE_RANGES,
   preferenceSummary,
   preferencesFromResponse,
+  preferencesPayload,
   togglePreference,
   validatePreferences,
 } from "./model.js";
@@ -204,7 +209,7 @@ export function Preferences({ navigate, toast, onSaved }) {
     setSaving(true);
     setSaveError("");
     try {
-      await preferencesApi.savePreferences(preference);
+      await preferencesApi.savePreferences(preferencesPayload(preference));
       if (!mounted.current) return;
       void onSaved();
       toast("선호 조건을 저장했어요.");
@@ -225,17 +230,18 @@ export function Preferences({ navigate, toast, onSaved }) {
 
   return (
     <>
+      <BrandHeader navigate={navigate} />
       <header className="screen-header preferences-header">
-        <strong>선호 설정</strong>
         <button
           type="button"
-          className="preferences-close"
-          aria-label="선호 설정 닫기"
+          className="preferences-back"
+          aria-label="선호 설정 뒤로가기"
           disabled={saving}
           onClick={() => navigate("/home")}
         >
-          <PixelIcon name="x" scale={3} />
+          <PixelIcon name="back" scale={3} />
         </button>
+        <h1>선호 설정</h1>
       </header>
       <main
         className="main-scroll preferences-main"

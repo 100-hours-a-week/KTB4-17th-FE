@@ -10,7 +10,6 @@
 .like-card,
 .report-metric,
 .score-card,
-.notification-card,
 .persona-summary-card,
 .photo-guide,
 .persona-hero,
@@ -127,8 +126,7 @@ section.practice-dialog button.practice-dialog-button,
 }
 
 /* ---------- Tab strips (likes / notifications / preferences) ---------- */
-.segmented-tabs,
-.notification-tabs {
+.segmented-tabs {
   border-bottom: 1px solid var(--line);
 }
 

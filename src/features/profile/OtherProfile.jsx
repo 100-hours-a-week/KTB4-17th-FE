@@ -3,6 +3,7 @@ import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { PhotoSegments, ProfilePhoto } from "../../shared/ui/components.jsx";
 import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import { dateAge } from "../../shared/utils.js";
+import { NotificationButton } from "../notifications/NotificationControls.jsx";
 import { isProfileAccessUnavailable } from "./access.js";
 import { getMyProfile, getUserProfile } from "./api.js";
 import {
@@ -206,6 +207,7 @@ export function OtherProfile({ userId, returnTo, navigate, isOwn = false }) {
         >
           <PixelIcon name="back" scale={3} />
         </button>
+        <NotificationButton className="profile-pager" />
         {isOwn && (
           <button
             type="button"

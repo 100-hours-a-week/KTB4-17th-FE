@@ -14,6 +14,8 @@ import {
 import { AiAvatar } from "../../shared/ui/pixel.jsx";
 import { dateAge } from "../../shared/utils.js";
 import { ActivityRegionPicker } from "../activity-region/ActivityRegionPicker.jsx";
+import { useNotifications } from "../notifications/context.jsx";
+import { PagerIcon } from "../notifications/NotificationControls.jsx";
 import { savedPhotoItems } from "../profiletrust/model.js";
 import { ProfilePhotoEditor } from "../profiletrust/ProfilePhotoEditor.jsx";
 import {
@@ -32,8 +34,9 @@ import { JobCategorySelect } from "./JobCategorySelect.jsx";
 import { isJobCategory, normalizeJobCategory } from "./jobCategories.js";
 import { profilePayload } from "./serialize.js";
 
-export function MyPage({ navigate, toast }) {
+export function MyPage({ navigate }) {
   const { data } = useAppState();
+  const notifications = useNotifications();
   const [serverProfile, setServerProfile] = useState(null);
   const [isProfileLoading, setIsProfileLoading] = useState(true);
   const [profileLoadFailed, setProfileLoadFailed] = useState(false);
@@ -70,19 +73,7 @@ export function MyPage({ navigate, toast }) {
   const age = dateAge(profile.birthDate);
   return (
     <>
-      <BrandHeader navigate={navigate} className="my-topbar">
-        <div className="my-header-actions">
-          <button
-            type="button"
-            aria-disabled="true"
-            onClick={() => toast("알림 기능은 준비 중이에요.")}
-            aria-label="알림"
-          >
-            <Icon name="bell.svg" />
-            {data.notifications.some((item) => !item.read) && <i />}
-          </button>
-        </div>
-      </BrandHeader>
+      <BrandHeader navigate={navigate} className="my-topbar" />
       <main className="main-scroll my-main">
         <div
           className={`my-identity${isProfileLoading ? " my-identity-loading" : ""}`}
@@ -149,22 +140,11 @@ export function MyPage({ navigate, toast }) {
           <button type="button" onClick={() => navigate("/my/persona")}>
             <AiAvatar size={30} />내 페르소나 <span>활성　›</span>
           </button>
-          <button
-            type="button"
-            aria-disabled="true"
-            onClick={() => toast("알림 기능은 준비 중이에요.")}
-          >
-            <Icon name="bell.svg" />
-            알림{" "}
-            <span>
-              {data.notifications.filter((item) => !item.read).length || ""}　›
-            </span>
+          <button type="button" onClick={notifications.openInbox}>
+            <PagerIcon />
+            알림 <span>{notifications.count || ""}　›</span>
           </button>
-          <button
-            type="button"
-            aria-disabled="true"
-            onClick={() => toast("선호 설정은 준비 중이에요.")}
-          >
+          <button type="button" onClick={() => navigate("/preferences")}>
             <span className="menu-glyph">⚙</span>선호 설정 <span>›</span>
           </button>
         </div>
@@ -581,7 +561,11 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
 export function Persona({ navigate }) {
   return (
     <>
-      <ScreenHeader title="내 페르소나" onBack={() => navigate("/my")} />
+      <ScreenHeader
+        notificationAction
+        title="내 페르소나"
+        onBack={() => navigate("/my")}
+      />
       <main className="main-scroll persona-main">
         <div className="persona-hero">
           <AiAvatar size={72} />

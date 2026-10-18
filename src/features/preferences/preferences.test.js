@@ -7,6 +7,7 @@ import {
   PREFERENCE_CHOICES,
   preferenceSummary,
   preferencesFromResponse,
+  preferencesPayload,
   togglePreference,
   validatePreferences,
 } from "./model.js";
@@ -38,6 +39,30 @@ test("saved preferences load all seven fields and do not mutate the API response
   assert.deepEqual(result, saved);
   result.religion.push("OTHER");
   assert.deepEqual(saved.religion, ["NONE", "CATHOLIC"]);
+});
+
+test("older saved age limits are brought back into the visible 19–39 range", () => {
+  const previous = { ...saved, minAge: 40, maxAge: 45 };
+  const result = preferencesFromResponse({ preference: previous });
+  assert.equal(result.minAge, 39);
+  assert.equal(result.maxAge, 39);
+  assert.equal(previous.maxAge, 45);
+  assert.equal(validatePreferences(result), "");
+  const result2 = preferencesFromResponse({
+    preference: { ...saved, maxAge: 45 },
+  });
+  assert.equal(result2.minAge, 25);
+  assert.equal(result2.maxAge, 39);
+});
+
+test("saving an unrestricted age caps the actual payload at 39 and preserves other open bounds", () => {
+  const preference = defaultPreferences();
+  assert.deepEqual(preferencesPayload(preference), {
+    ...preference,
+    maxAge: 39,
+  });
+  assert.equal(preference.maxAge, null);
+  assert.deepEqual(preferencesPayload(saved), saved);
 });
 
 test("editing selections preserves open-ended bounds", () => {
@@ -127,7 +152,7 @@ const saveEnd = preferencesSource.indexOf("\n  return (", saveStart);
 const createSave = new Function(
   "context",
   `const { status, saveInFlight, preference, validatePreferences, setSaveError,
-    setSaving, preferencesApi, mounted, onSaved, toast, navigate, apiErrorMessage } = context;
+    setSaving, preferencesApi, mounted, onSaved, toast, navigate, apiErrorMessage, preferencesPayload } = context;
   ${preferencesSource.slice(saveStart, saveEnd)}
   return save;`,
 );
@@ -141,6 +166,7 @@ function saveHarness(savePreferences) {
     saveInFlight,
     preference: saved,
     validatePreferences,
+    preferencesPayload,
     setSaveError: (error) => {
       if (error) events.push(["error", error]);
     },
