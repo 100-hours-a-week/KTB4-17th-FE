@@ -1,6 +1,6 @@
 /* B안 선호 설정: 픽셀 카드 · 보라→분홍 범위 막대 · 픽셀 손잡이 */
 
-.preferences-close,
+.preferences-back,
 .preference-sheet-close {
   display: grid;
   place-items: center;
@@ -47,7 +47,7 @@
 }
 
 .preference-range-track {
-  inset: 9px 10px auto;
+  inset: 19px 10px auto;
   height: 6px;
   border-radius: 0;
   background: linear-gradient(
@@ -64,9 +64,9 @@
 }
 
 .preference-range input::-webkit-slider-thumb {
-  width: 20px;
-  height: 20px;
-  margin-top: 2px;
+  width: 24px;
+  height: 24px;
+  margin-top: 10px;
   border: 3px solid #ee6ab1;
   border-radius: 0;
   background: var(--paper);
@@ -128,17 +128,15 @@
   color: var(--purple);
 }
 
-/* 상단 빈칸 줄이기: 다른 상단바와 같은 56px (노치 기기는 안전 영역만큼 추가) */
+/* The brand navigation owns the safe area; this second row owns only its title. */
 .screen-header.preferences-header {
-  height: calc(56px + env(safe-area-inset-top, 0px));
-  min-height: 0;
-  padding-top: env(safe-area-inset-top, 0);
-}
-
-.preferences-header .preferences-close {
-  top: calc(env(safe-area-inset-top, 0px) + 6px);
+  height: 52px;
+  min-height: 52px;
+  padding-top: 0;
+  justify-content: flex-start;
 }
 
 .main-scroll.preferences-main {
-  top: calc(56px + env(safe-area-inset-top, 0px));
+  top: calc(108px + env(safe-area-inset-top, 0px));
+  padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
 }
