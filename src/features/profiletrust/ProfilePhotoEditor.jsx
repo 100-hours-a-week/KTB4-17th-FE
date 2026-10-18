@@ -171,9 +171,7 @@ export function ProfilePhotoEditor({
   onChange,
 }) {
   const [items, setItems] = useState(initialPhotos);
-  const [verifying, setVerifying] = useState(
-    requireVerification || !initialPhotos.some((item) => item.isFrontal),
-  );
+  const [verifying, setVerifying] = useState(requireVerification);
   const [error, setError] = useState("");
   const [takingPhoto, setTakingPhoto] = useState(false);
   const itemsRef = useRef(items);
@@ -305,8 +303,17 @@ export function ProfilePhotoEditor({
     setVerifying(true);
   }
 
-  const canCancel =
-    items.some((item) => item.isFrontal) && !requireVerification;
+  const hasFrontalPhoto = items.some((item) => item.isFrontal);
+  const canCancel = !requireVerification;
+  const verificationCancelLabel = hasFrontalPhoto
+    ? "정면 사진 변경 취소"
+    : "정면 사진 인증 취소";
+  const frontalPhotoAction = hasFrontalPhoto
+    ? "정면 사진 변경 · 본인 인증 다시 하기"
+    : "정면 사진 등록 · 본인 인증하기";
+  const frontalPhotoHelp = hasFrontalPhoto
+    ? "정면 사진을 교체할 때만 사진 확인과 카메라 인증을 다시 진행해요. 순서만 바꿀 때는 다시 인증하지 않아요."
+    : "사진을 저장하려면 정면 사진을 등록해야 해요. 선택한 정면 사진은 얼굴 인증을 마친 뒤 갤러리에 추가돼요.";
   return (
     <section
       className="profile-trust"
@@ -627,7 +634,7 @@ export function ProfilePhotoEditor({
               }}
               disabled={disabled}
             >
-              정면 사진 변경 취소
+              {verificationCancelLabel}
             </button>
           )}
         </>
@@ -744,12 +751,9 @@ export function ProfilePhotoEditor({
             onClick={beginReplacement}
             disabled={disabled}
           >
-            정면 사진 변경 · 본인 인증 다시 하기
+            {frontalPhotoAction}
           </button>
-          <p className="trust-subcopy trust-small">
-            정면 사진을 교체하려면 사진 확인과 카메라 인증을 다시 진행해요.
-            순서만 바꿀 때는 다시 인증하지 않아요.
-          </p>
+          <p className="trust-subcopy trust-small">{frontalPhotoHelp}</p>
           {error && (
             <p className="field-error" role="alert">
               {error}
