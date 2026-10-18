@@ -18,6 +18,7 @@ import { useNotifications } from "../notifications/context.jsx";
 import { PagerIcon } from "../notifications/NotificationControls.jsx";
 import { savedPhotoItems } from "../profiletrust/model.js";
 import { ProfilePhotoEditor } from "../profiletrust/ProfilePhotoEditor.jsx";
+import { nickname as checkNicknameAvailability } from "../user/api.js";
 import {
   getMyProfile,
   profile as saveProfile,
@@ -33,6 +34,45 @@ import {
 import { JobCategorySelect } from "./JobCategorySelect.jsx";
 import { isJobCategory, normalizeJobCategory } from "./jobCategories.js";
 import { profilePayload } from "./serialize.js";
+
+const NICKNAME_PATTERN = /^[가-힣A-Za-z0-9]{2,10}$/;
+const NICKNAME_FORMAT_ERROR = "닉네임은 한글·영문·숫자 2~10자로 입력해주세요.";
+const PROFILE_SAVE_ERROR =
+  "프로필을 저장하지 못했어요. 잠시 후 다시 시도해주세요.";
+const PROFILE_AI_ERROR_CODES = new Set([
+  "PROFILE_NOT_FOUND",
+  "PROFILE_NICKNAME_REQUIRED",
+  "PROFILE_MBTI_REQUIRED",
+  "SESSION_NOT_FOUND",
+  "PERSONA_DRAFT_NOT_FOUND",
+  "NO_PENDING_QUESTION",
+  "REQUEST_IN_PROGRESS",
+  "TURN_MISMATCH",
+  "ACTION_NOT_ALLOWED",
+  "ONBOARDING_NOT_FINISHED",
+  "PERSONA_ALREADY_CONFIRMED",
+  "PERSONA_CONFIRMATION_CONFLICT",
+  "AI_REQUEST_REJECTED",
+  "AI_SERVER_NOT_CONFIGURED",
+  "AI_SERVER_UNAVAILABLE",
+  "AI_SERVER_RESPONSE_INVALID",
+]);
+
+function samePhotoItems(left = [], right = []) {
+  return (
+    left.length === right.length &&
+    left.every(
+      (item, index) =>
+        item.fileId === right[index]?.fileId &&
+        Boolean(item.isFrontal) === Boolean(right[index]?.isFrontal),
+    )
+  );
+}
+
+function profileSaveErrorMessage(error) {
+  if (PROFILE_AI_ERROR_CODES.has(error?.code)) return PROFILE_SAVE_ERROR;
+  return apiErrorMessage(error, PROFILE_SAVE_ERROR);
+}
 
 export function MyPage({ navigate }) {
   const { data } = useAppState();
@@ -320,7 +360,9 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
     busy: false,
   });
   const [jobError, setJobError] = useState("");
-  const [photoSaving, setPhotoSaving] = useState(false);
+  const [nicknameError, setNicknameError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const initialNickname = useRef("");
   const saveInFlight = useRef(false);
 
   useEffect(() => {
@@ -332,7 +374,9 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
       .then((serverProfile) => {
         if (!active) return;
         const savedPhotos = savedPhotoItems(serverProfile);
+        const savedNickname = serverProfile.nickname ?? "";
         setInitialPhotos(savedPhotos);
+        initialNickname.current = savedNickname;
         setLegacyPhoto(
           savedPhotos.length ? "" : serverProfile.profileImageUrl || "",
         );
@@ -340,7 +384,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
           ...old,
           profile: {
             ...old.profile,
-            nickname: serverProfile.nickname ?? "",
+            nickname: savedNickname,
             birthDate: serverProfile.birthDate ?? old.profile.birthDate,
             activityRegionId: serverProfile.activityRegionId ?? null,
             regionName: serverProfile.activityRegionName ?? "",
@@ -369,11 +413,16 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
     };
   }, [setData]);
 
-  const set = (key, value) =>
+  const set = (key, value) => {
+    if (key === "nickname") setNicknameError("");
     setData((old) => ({ ...old, profile: { ...old.profile, [key]: value } }));
+  };
 
   const keepLegacyPhoto = Boolean(legacyPhoto) && !replacingLegacyPhoto;
   const photosReady = keepLegacyPhoto || photoState.ready;
+  const navigateWhenIdle = (path) => {
+    if (!saveInFlight.current) navigate(path);
+  };
 
   async function save() {
     if (
@@ -388,43 +437,92 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
       return;
     }
     setJobError("");
+    const nickname = String(profile.nickname ?? "");
+    if (!NICKNAME_PATTERN.test(nickname)) {
+      setNicknameError(NICKNAME_FORMAT_ERROR);
+      return;
+    }
     if (!profile.activityRegionId) {
       toast("검색 결과에서 활동 지역을 선택해주세요.");
       return;
     }
+    const nicknameChanged = nickname !== initialNickname.current;
+    const photosChanged =
+      !keepLegacyPhoto && !samePhotoItems(initialPhotos, photoState.images);
     saveInFlight.current = true;
-    setPhotoSaving(true);
+    setIsSaving(true);
+    let saveSucceeded = false;
     try {
+      if (nicknameChanged) {
+        let nicknameAvailability;
+        try {
+          nicknameAvailability = await checkNicknameAvailability(nickname);
+        } catch (e) {
+          toast(
+            apiErrorMessage(
+              e,
+              "닉네임 사용 가능 여부를 확인하지 못했어요. 잠시 후 다시 시도해주세요.",
+            ),
+          );
+          return;
+        }
+        if (!nicknameAvailability?.available) {
+          setNicknameError("이미 사용 중인 닉네임이에요.");
+          return;
+        }
+      }
+
       await saveProfile(profilePayload(profile));
-      if (!keepLegacyPhoto) await saveProfileImages(photoState.images);
+      initialNickname.current = nickname;
+      if (photosChanged) {
+        try {
+          await saveProfileImages(photoState.images);
+        } catch {
+          toast(
+            "프로필 정보는 저장했지만 사진을 저장하지 못했어요. 사진을 확인하고 다시 시도해주세요.",
+          );
+          return;
+        }
+      }
+
+      const refreshedProfile = await getMyProfile().catch(() => null);
+      setData((old) => ({
+        ...old,
+        profile: {
+          ...old.profile,
+          photo: refreshedProfile?.profileImageUrl || old.profile.photo,
+        },
+      }));
+      saveSucceeded = true;
     } catch (e) {
-      toast(apiErrorMessage(e, "프로필을 저장하지 못했어요."));
-      saveInFlight.current = false;
-      setPhotoSaving(false);
+      if (e?.code === "NICKNAME_ALREADY_IN_USE") {
+        setNicknameError(
+          "이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해주세요.",
+        );
+      } else {
+        toast(profileSaveErrorMessage(e));
+      }
       return;
+    } finally {
+      saveInFlight.current = false;
+      setIsSaving(false);
     }
-    const refreshedProfile = await getMyProfile().catch(() => null);
-    setData((old) => ({
-      ...old,
-      profile: {
-        ...old.profile,
-        photo: refreshedProfile?.profileImageUrl || old.profile.photo,
-      },
-    }));
-    toast("프로필을 저장했어요.");
-    navigate(returnTo);
+    if (saveSucceeded) {
+      toast("프로필을 저장했어요.");
+      navigate(returnTo);
+    }
   }
   return (
     <>
-      <BrandHeader navigate={navigate} />
+      <BrandHeader navigate={navigateWhenIdle} />
       <ScreenHeader
         className="chat-room-header"
         title="프로필 수정"
-        onBack={() => navigate(returnTo)}
+        onBack={() => navigateWhenIdle(returnTo)}
       />
       <main
         className="main-scroll edit-main"
-        aria-busy={isLoadingProfile || photoSaving}
+        aria-busy={isLoadingProfile || isSaving}
       >
         {isLoadingProfile ? (
           <p className="profile-load-state" role="status">
@@ -452,7 +550,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                   <button
                     type="button"
                     className="trust-replace"
-                    disabled={photoSaving}
+                    disabled={isSaving}
                     onClick={() => setReplacingLegacyPhoto(true)}
                   >
                     사진 편집 · 정면 사진 인증하기
@@ -461,7 +559,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
               ) : (
                 <ProfilePhotoEditor
                   initialPhotos={initialPhotos}
-                  disabled={photoSaving}
+                  disabled={isSaving}
                   onChange={setPhotoState}
                 />
               )}
@@ -469,20 +567,30 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                 <button
                   type="button"
                   className="trust-text-button"
-                  disabled={photoSaving}
+                  disabled={isSaving}
                   onClick={() => setReplacingLegacyPhoto(false)}
                 >
                   기존 대표사진 유지
                 </button>
               )}
             </section>
-            <Field label="닉네임">
-              <input value={profile.nickname} disabled />
+            <Field
+              label="닉네임"
+              hint="한글·영문·숫자 2~10자"
+              error={nicknameError}
+            >
+              <input
+                value={profile.nickname}
+                onChange={(e) => set("nickname", e.target.value)}
+                disabled={isSaving}
+                maxLength={10}
+                aria-invalid={Boolean(nicknameError)}
+              />
             </Field>
             <ActivityRegionPicker
               selectedId={profile.activityRegionId}
               selectedName={profile.regionName}
-              disabled={photoSaving}
+              disabled={isSaving}
               onSelect={(region) =>
                 setData((old) => ({
                   ...old,
@@ -495,6 +603,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                 type="number"
                 value={profile.height}
                 onChange={(e) => set("height", e.target.value)}
+                disabled={isSaving}
                 min="130"
                 max="220"
               />
@@ -504,6 +613,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                 options={bodyTypes}
                 value={profile.bodyType}
                 onChange={(v) => set("bodyType", v)}
+                disabled={isSaving}
               />
             </Field>
             <Field label="학력">
@@ -511,6 +621,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                 options={educationLevels}
                 value={profile.educationLevel}
                 onChange={(v) => set("educationLevel", v)}
+                disabled={isSaving}
               />
             </Field>
             <JobCategorySelect
@@ -519,7 +630,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                 set("job", value);
                 setJobError("");
               }}
-              disabled={photoSaving}
+              disabled={isSaving}
               error={jobError}
             />
             <Field label="종교">
@@ -527,6 +638,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                 options={religions}
                 value={profile.religion}
                 onChange={(v) => set("religion", v)}
+                disabled={isSaving}
               />
             </Field>
             <Field label="음주">
@@ -534,6 +646,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                 options={drinkings}
                 value={profile.drinking}
                 onChange={(v) => set("drinking", v)}
+                disabled={isSaving}
               />
             </Field>
             <Field label="흡연">
@@ -541,14 +654,12 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                 options={smokings}
                 value={profile.smoking}
                 onChange={(v) => set("smoking", v)}
+                disabled={isSaving}
               />
             </Field>
             <div className="edit-actions">
-              <PixelButton
-                onClick={save}
-                disabled={photoSaving || !photosReady}
-              >
-                {photoSaving ? "저장 중…" : "저장하기"}
+              <PixelButton onClick={save} disabled={isSaving || !photosReady}>
+                {isSaving ? "저장 중…" : "저장하기"}
               </PixelButton>
             </div>
           </>
