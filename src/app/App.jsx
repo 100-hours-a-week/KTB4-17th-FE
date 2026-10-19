@@ -431,6 +431,8 @@ function AppRouter() {
         userId={Number(path.split("/").pop())}
         returnTo={profileReturnPath(search)}
         navigate={navigate}
+        onStartSimulation={startSimulation}
+        simulationStartingFor={simulationStartingFor}
       />
     );
   else if (path.startsWith("/profiles/"))
@@ -544,7 +546,17 @@ function AppRouter() {
   return (
     <SimulationTrackingContext.Provider value={tracking}>
       <div className="app-shell" ref={viewportRef}>
-        <div className="app-screen" data-has-nav={showNav}>
+        <div
+          className="app-screen"
+          data-has-nav={showNav}
+          data-view={
+            /^\/(chats\/|ai\/practice\/|ai\/simulations\/\d+$)/.test(path)
+              ? "conversation"
+              : /^\/(profiles\/|my\/profile\/view)/.test(path)
+                ? "profile"
+                : "standard"
+          }
+        >
           <a className="skip-link" href="#main-content">
             본문으로 건너뛰기
           </a>

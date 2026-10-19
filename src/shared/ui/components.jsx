@@ -81,7 +81,7 @@ export function ScreenHeader({
         onClick={onBack}
         aria-label="뒤로가기"
       >
-        ‹
+        <PixelIcon name="back" scale={2} />
       </button>
       {brandLogo && (
         <img
@@ -102,10 +102,10 @@ export function ScreenHeader({
 }
 
 const tabItems = [
-  ["HOME", "/home", "home"],
-  ["LIKES", "/likes", "heart"],
-  ["CHAT", "/chats", "chat"],
-  ["MY", "/my", "user"],
+  ["홈", "/home", "home"],
+  ["좋아요", "/likes", "heart"],
+  ["채팅", "/chats", "chat"],
+  ["마이", "/my", "user"],
 ];
 
 export function BottomNav({ path, navigate, unreadMessageCount = null }) {
