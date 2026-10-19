@@ -18,7 +18,7 @@ function LoginBrand() {
       </div>
       <section className="login-signal">
         <span className="login-signal-status" aria-hidden="true">
-          LITTLE PIXELS, REAL CONNECTIONS
+          SIGNAL · ONLINE
         </span>
         <h1>
           좋아하는 사람 앞에서는,
@@ -30,14 +30,6 @@ function LoginBrand() {
         가볍게 시작하는
         <br />
         새로운 관계의 신호.
-        <img
-          className="login-companion"
-          src={asset("ai-companion-v1.webp")}
-          width="1254"
-          height="1254"
-          alt=""
-          aria-hidden="true"
-        />
       </p>
     </>
   );

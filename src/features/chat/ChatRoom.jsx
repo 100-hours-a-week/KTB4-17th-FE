@@ -9,6 +9,7 @@ import {
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { asset } from "../../shared/assets.js";
 import { EmptyState, ScreenHeader } from "../../shared/ui/components.jsx";
+import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import { useRoomMatchRead } from "../notifications/useRoomMatchRead.js";
 import {
   prepareProfilePhoto,
@@ -154,7 +155,7 @@ function ImageViewer({ message, entry, onClose }) {
         aria-label="사진 닫기"
         onClick={onClose}
       >
-        ×
+        <PixelIcon name="x" scale={2} />
       </button>
       <ChatImage message={message} entry={entry} viewer />
     </div>
@@ -621,8 +622,9 @@ function ChatRoomContent({
               onClick={scroll.scrollToLatest}
             >
               {scroll.newCount
-                ? `새 메시지 ${scroll.newCount}개 ↓`
-                : "최신 메시지 ↓"}
+                ? `새 메시지 ${scroll.newCount}개`
+                : "최신 메시지"}{" "}
+              <PixelIcon name="arrowDown" scale={1.5} />
             </button>
           )}
         </div>
@@ -670,7 +672,7 @@ function ChatRoomContent({
                 aria-label="첨부 사진 삭제"
                 onClick={clearAttachment}
               >
-                ×
+                <PixelIcon name="x" scale={1.5} />
               </button>
             </div>
           )}
@@ -752,7 +754,7 @@ function ChatRoomContent({
                 if (event.pointerType === "mouse") event.preventDefault();
               }}
             >
-              ➤
+              <PixelIcon name="send" scale={2} />
             </button>
           </div>
           {state.draft.length >= 900 && (

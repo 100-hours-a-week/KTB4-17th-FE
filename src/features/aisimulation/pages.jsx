@@ -155,7 +155,9 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
               <small>{partner.headline || "상대의 성향을 반영했어요"}</small>
             </span>
           </div>
-          <b>↔</b>
+          <b>
+            <PixelIcon name="swap" scale={2} />
+          </b>
           <div>
             <ParticipantAvatar
               participant={me}
@@ -205,7 +207,7 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
             navigate(`/ai/simulations/${simulationId}/report${chatRoomQuery}`)
           }
         >
-          리포트 확인하기 ↗
+          리포트 확인하기 <PixelIcon name="arrowUpRight" scale={1.5} />
         </PixelButton>
       </div>
     </main>

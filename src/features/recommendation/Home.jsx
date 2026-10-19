@@ -5,6 +5,7 @@ import {
   BrandHeader,
   EmptyState,
   Icon,
+  PhotoSegments,
   PixelButton,
   ProfilePhoto,
 } from "../../shared/ui/components.jsx";
@@ -482,29 +483,11 @@ export function Home({
                 person={person}
                 index={photoIndex}
               />
-              {profilePhotoUrls(person).length > 0 && (
-                <button
-                  type="button"
-                  className="recommendation-photo-count"
-                  aria-label={`사진 ${photoIndex + 1}/${profilePhotoUrls(person).length}. 선택하면 다음 사진, 좌우 방향키로 사진 탐색`}
-                  aria-live="polite"
-                  aria-atomic="true"
-                  disabled={Boolean(actionBusy) || isCardSettling}
-                  onClick={() => cyclePhoto(1)}
-                  onKeyDown={(event) => {
-                    if (
-                      event.key === "ArrowLeft" ||
-                      event.key === "ArrowRight"
-                    ) {
-                      event.preventDefault();
-                      cyclePhoto(event.key === "ArrowLeft" ? -1 : 1);
-                    }
-                  }}
-                >
-                  <span className="sr-only">사진 </span>
-                  {photoIndex + 1}/{profilePhotoUrls(person).length}
-                </button>
-              )}
+              <PhotoSegments
+                person={person}
+                index={photoIndex}
+                onSelect={setPhotoIndex}
+              />
               <div className="recommendation-gradient" />
               <div className="recommendation-info">
                 {person.activity && (
@@ -550,40 +533,40 @@ export function Home({
                 >
                   프로필 상세 보기 <PixelIcon name="chev" />
                 </button>
+                <div className="recommendation-actions">
+                  {[
+                    ["패스", "action-pass.svg", 3, pass, "pass"],
+                    ["시뮬레이션", "sim", 3, startSimulation, "simulation"],
+                    ["연습 대화", "chat", 3, startPractice, "practice"],
+                    ["좋아요", "heart", 3, like, "like"],
+                  ].map(([label, icon, scale, action, busyKey]) => (
+                    <button
+                      type="button"
+                      key={label}
+                      className="card-action"
+                      onClick={action}
+                      disabled={
+                        Boolean(actionBusy) ||
+                        isCardSettling ||
+                        recommendationRefreshing
+                      }
+                      aria-busy={actionBusy === busyKey}
+                    >
+                      <span
+                        className={`action-key${busyKey === "like" ? " action-key-like" : ""}${busyKey === "pass" ? " action-key-pass" : ""}`}
+                      >
+                        {busyKey === "pass" ? (
+                          <Icon name={icon} />
+                        ) : (
+                          <PixelIcon name={icon} scale={scale} />
+                        )}
+                      </span>
+                      <span>{actionBusy === busyKey ? "처리 중…" : label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </article>
-            <div className="recommendation-actions">
-              {[
-                ["패스", "action-pass.svg", 3, pass, "pass"],
-                ["시뮬레이션", "sim", 3, startSimulation, "simulation"],
-                ["연습 대화", "chat", 3, startPractice, "practice"],
-                ["좋아요", "heart", 3, like, "like"],
-              ].map(([label, icon, scale, action, busyKey]) => (
-                <button
-                  type="button"
-                  key={label}
-                  className="card-action"
-                  onClick={action}
-                  disabled={
-                    Boolean(actionBusy) ||
-                    isCardSettling ||
-                    recommendationRefreshing
-                  }
-                  aria-busy={actionBusy === busyKey}
-                >
-                  <span
-                    className={`action-key${busyKey === "like" ? " action-key-like" : ""}${busyKey === "pass" ? " action-key-pass" : ""}`}
-                  >
-                    {busyKey === "pass" ? (
-                      <Icon name={icon} />
-                    ) : (
-                      <PixelIcon name={icon} scale={scale} />
-                    )}
-                  </span>
-                  <span>{actionBusy === busyKey ? "처리 중…" : label}</span>
-                </button>
-              ))}
-            </div>
           </div>
         )}
       </main>

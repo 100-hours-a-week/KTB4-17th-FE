@@ -2,7 +2,7 @@ import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { profilePhotoErrorMessage } from "../profile/photoUpload.js";
 
 export const MAX_ATTEMPTS = 5;
-export const CLIP_DURATION_MS = 5_000;
+export const CLIP_DURATION_MS = 3_000;
 export const MAX_VIDEO_BYTES = 5 * 1024 * 1024;
 
 export function trustError(code, extra = {}) {

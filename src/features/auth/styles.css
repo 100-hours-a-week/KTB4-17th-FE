@@ -41,7 +41,9 @@
 .login-page:not(.local-test-login-page) {
   display: grid;
   height: 100%;
-  grid-template-rows: minmax(0, 1fr) auto auto minmax(0, 1fr) auto;
+
+  /* 위아래 끝으로 벌어지지 않게 내용을 한 덩어리로 가운데에 모은다 */
+  align-content: center;
   place-items: center;
   row-gap: var(--login-gap);
 }
@@ -116,7 +118,8 @@
 }
 
 .login-tagline {
-  margin: 0;
+  /* 문구와 시작 버튼 사이에만 숨 쉴 간격을 둔다 */
+  margin: 0 0 clamp(16px, 6vh, 56px);
   color: var(--muted);
   font-size: 15px;
   line-height: 23px;
@@ -127,7 +130,6 @@
 .kakao-login-button {
   position: relative;
   isolation: isolate;
-  align-self: end;
   display: flex;
   align-items: center;
   justify-content: center;

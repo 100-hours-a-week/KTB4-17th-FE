@@ -1,5 +1,5 @@
 .ai-screen-state-main {
-  top: var(--header-height);
+  top: 96px;
   bottom: 0;
   display: grid;
   place-items: center;
@@ -111,7 +111,7 @@
 }
 
 .report-main {
-  top: var(--header-height);
+  top: 96px;
   bottom: 0;
   padding: 20px 18px 28px;
 }
@@ -361,7 +361,7 @@
   }
 }
 
-/* A single contextual bar keeps the conversation and report in the foreground. */
+/* #218에서 새로 추가된 요소 스타일 (최신 버전 유지) */
 .screen-header.simulation-screen-header {
   flex-shrink: 0;
   height: var(--header-height);
@@ -548,119 +548,8 @@
   line-height: 1.6;
 }
 
-.simulation-footer > div:first-child > span {
-  display: block;
-  margin-top: 2px;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 400;
-}
-
 .simulation-view .simulation-footer .pixel-button {
   min-height: 46px;
-}
-
-.main-scroll.report-main,
-.main-scroll.ai-screen-state-main {
-  top: var(--header-height);
-}
-
-.main-scroll.report-main {
-  padding: 20px 16px calc(28px + env(safe-area-inset-bottom, 0px));
-  background: var(--canvas);
-}
-
-.report-main .report-intro {
-  padding: 8px 4px 6px;
-  text-align: center;
-}
-
-.report-main .report-intro h2 {
-  margin: 10px 0;
-  font-size: 22px;
-  line-height: 1.5;
-}
-
-.report-main .report-intro h2 br {
-  display: none;
-}
-
-.report-main .report-intro p {
-  padding: 0;
-  background: transparent;
-  font-size: 13px;
-  font-weight: 400;
-  line-height: 1.7;
-}
-
-.report-main .score-card,
-.report-main .report-areas {
-  padding: 18px;
-  border: 1px solid #d9c7ef;
-  border-image: none;
-  border-radius: 14px;
-  background: rgb(255 255 255 / 90%);
-  box-shadow: 0 3px 10px rgb(78 43 123 / 4%);
-  filter: none;
-}
-
-.report-main .score-card-value strong {
-  color: #dc4ca8;
-}
-
-.report-main .score-meter {
-  gap: 4px;
-}
-
-.report-main .score-meter i {
-  height: 12px;
-  border-radius: 3px;
-}
-
-.report-main .score-meter i.on {
-  background: linear-gradient(#f58dc5, #e955ab);
-}
-
-.report-main .report-section-label {
-  color: var(--ink);
-  font-size: 14px;
-}
-
-.report-main .score-card-summary p {
-  padding: 0;
-  line-height: 1.8;
-}
-
-.report-main .score-card-summary p::before {
-  display: none;
-}
-
-.report-main .report-grade {
-  max-width: 52%;
-  padding: 5px 8px;
-  font-size: 12px;
-  white-space: normal;
-  text-align: center;
-  line-height: 1.6;
-}
-
-.report-main .report-area {
-  gap: 10px;
-}
-
-.report-main .report-area-heading {
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.report-main .report-area-body p {
-  line-height: 1.8;
-}
-
-.report-main .report-disclaimer {
-  border-radius: 10px;
-  background: #efe7f8;
-  clip-path: none;
 }
 
 @media (width <= 350px) {
@@ -677,11 +566,6 @@
     align-items: flex-start;
     padding: 9px;
   }
-
-  .report-main .score-card,
-  .report-main .report-areas {
-    padding: 14px;
-  }
 }
 
 @media (width >= 720px) {
@@ -691,9 +575,5 @@
 
   .simulation-view .simulation-footer {
     padding-inline: 30px;
-  }
-
-  .main-scroll.report-main {
-    padding-inline: 28px;
   }
 }

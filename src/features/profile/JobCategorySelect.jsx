@@ -3,6 +3,11 @@ import { Field } from "../../shared/ui/components.jsx";
 import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import { jobCategories, normalizeJobCategory } from "./jobCategories.js";
 
+// 목록은 가나다순으로 보여 주고, '기타 직군'만 맨 끝에 둔다.
+const sortedJobCategories = [...jobCategories].sort(([codeA, a], [codeB, b]) =>
+  codeA === "OTHER" ? 1 : codeB === "OTHER" ? -1 : a.localeCompare(b, "ko"),
+);
+
 export function JobCategorySelect({
   value,
   onChange,
@@ -37,7 +42,7 @@ export function JobCategorySelect({
           <option value="" disabled>
             직업군을 선택해 주세요
           </option>
-          {jobCategories.map(([code, label]) => (
+          {sortedJobCategories.map(([code, label]) => (
             <option key={code} value={code}>
               {label}
             </option>

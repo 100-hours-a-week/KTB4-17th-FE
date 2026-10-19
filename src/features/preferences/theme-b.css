@@ -47,7 +47,7 @@
 }
 
 .preference-range-track {
-  inset: 19px 22px auto;
+  inset: 19px 10px auto;
   height: 6px;
   border-radius: 0;
   background: linear-gradient(
@@ -64,26 +64,30 @@
 }
 
 .preference-range input::-webkit-slider-thumb {
-  width: 44px;
-  height: 44px;
-  margin-top: 0;
-  border: 0;
-  border-radius: 8px;
-  background:
-    url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2228%22%20height%3D%2228%22%20viewBox%3D%220%200%2026%2026%22%3E%3Cpath%20d%3D%22M4%204h6v2h2v2h2V6h2V4h6v2h2v6h-2v2h-2v2h-2v2h-2v2h-2v2h-2v-2h-2v-2H8v-2H6v-2H4v-2H2V6h2Z%22%20fill%3D%22%23f5b4d8%22%20stroke%3D%22%238053b6%22%20stroke-width%3D%221.3%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M6%207h4M5%209v3%22%20stroke%3D%22%23fff%22%20stroke-width%3D%222%22%2F%3E%3C%2Fsvg%3E")
-    center / 28px 28px no-repeat;
-  box-shadow: none;
+  width: 24px;
+  height: 24px;
+  margin-top: 10px;
+  border: 3px solid #ee6ab1;
+  border-radius: 0;
+  background: var(--paper);
+  box-shadow: 0 2px 0 rgb(91 63 214 / 28%);
 }
 
 .preference-range input::-moz-range-thumb {
-  width: 44px;
-  height: 44px;
-  border: 0;
-  border-radius: 8px;
-  background:
-    url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2228%22%20height%3D%2228%22%20viewBox%3D%220%200%2026%2026%22%3E%3Cpath%20d%3D%22M4%204h6v2h2v2h2V6h2V4h6v2h2v6h-2v2h-2v2h-2v2h-2v2h-2v2h-2v-2h-2v-2H8v-2H6v-2H4v-2H2V6h2Z%22%20fill%3D%22%23f5b4d8%22%20stroke%3D%22%238053b6%22%20stroke-width%3D%221.3%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M6%207h4M5%209v3%22%20stroke%3D%22%23fff%22%20stroke-width%3D%222%22%2F%3E%3C%2Fsvg%3E")
-    center / 28px 28px no-repeat;
-  box-shadow: none;
+  width: 14px;
+  height: 14px;
+  border: 3px solid #ee6ab1;
+  border-radius: 0;
+  background: var(--paper);
+  box-shadow: 0 2px 0 rgb(91 63 214 / 28%);
+}
+
+.preference-range input.preference-range-lower::-webkit-slider-thumb {
+  border-color: #7c5cfa;
+}
+
+.preference-range input.preference-range-lower::-moz-range-thumb {
+  border-color: #7c5cfa;
 }
 
 .preference-range input:focus-visible::-webkit-slider-thumb {
@@ -133,11 +137,11 @@
 }
 
 .main-scroll.preferences-main {
+  top: calc(108px + env(safe-area-inset-top, 0px));
   padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
-  top: calc(54px + env(safe-area-inset-top, 0px));
-  padding-top: 20px;
 }
 
+/* #218에서 새로 추가된 요소 스타일 (최신 버전 유지) */
 .screen-header.preferences-header.account-header {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr) 44px;
@@ -153,74 +157,4 @@
   font-size: 14px;
   line-height: 1.75;
   word-break: keep-all;
-}
-
-.preferences-main .preference-range-field {
-  margin-bottom: 16px;
-  padding: 18px 16px 12px;
-  box-shadow: inset 0 0 0 1px var(--line-soft);
-}
-
-.preferences-main .preference-choice-row {
-  min-height: 62px;
-  padding: 10px;
-  filter: none;
-}
-
-.preferences-main .preference-choice-summary {
-  font-size: 13px;
-  line-height: 1.65;
-}
-
-.preference-sheet {
-  width: min(100%, 480px);
-  max-width: 480px;
-  border-radius: 20px 20px 0 0;
-  box-shadow: 0 -8px 40px rgb(45 21 81 / 12%);
-  background: #fdfbff;
-}
-
-.preference-sheet .preference-sheet-handle {
-  margin: 0 auto 22px;
-  background: #cbbdda;
-}
-
-.preference-sheet h1 {
-  padding-right: 32px;
-  font-size: 20px;
-  line-height: 1.5;
-}
-
-.preference-sheet .preference-sheet-option {
-  min-height: 58px;
-  padding: 8px 2px;
-  border-bottom: 1px solid var(--line-soft);
-  font-size: 15px;
-}
-
-.preference-sheet .preference-sheet-option input {
-  flex: 0 0 24px;
-  width: 24px;
-  height: 24px;
-}
-
-@media (width >= 600px) {
-  .preference-sheet {
-    bottom: 24px;
-    border-radius: 18px;
-  }
-}
-
-@media (width <= 350px) {
-  .main-scroll.preferences-main {
-    padding-inline: 16px;
-  }
-
-  .preferences-main .preference-range-field {
-    padding-inline: 12px;
-  }
-
-  .preference-sheet {
-    padding-inline: 16px;
-  }
 }

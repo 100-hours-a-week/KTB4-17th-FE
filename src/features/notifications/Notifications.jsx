@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import {
+  BrandHeader,
   EmptyState,
   PixelButton,
-  ScreenHeader,
 } from "../../shared/ui/components.jsx";
 import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import { useNotifications } from "./context.jsx";
@@ -70,11 +70,7 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
   let previousDay;
   return (
     <>
-      <ScreenHeader
-        className="account-header"
-        title="알림"
-        onBack={() => navigate("/home")}
-      />
+      <BrandHeader navigate={navigate} />
       <main
         id="main-content"
         tabIndex={-1}
@@ -83,7 +79,7 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
       >
         <div className="notification-toolbar">
           <div className="notification-heading">
-            <h2>나에게 온 소식</h2>
+            <h1>알림</h1>
             <span className="notification-count" role="status">
               <PagerIcon />
               {notifications.count == null

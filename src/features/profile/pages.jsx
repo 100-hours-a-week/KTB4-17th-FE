@@ -7,12 +7,11 @@ import {
   ChoiceGroup,
   EmptyState,
   Field,
-  Icon,
   PersonAvatar,
   PixelButton,
   ScreenHeader,
 } from "../../shared/ui/components.jsx";
-import { AiAvatar } from "../../shared/ui/pixel.jsx";
+import { AiAvatar, PixelIcon } from "../../shared/ui/pixel.jsx";
 import { dateAge } from "../../shared/utils.js";
 import { ActivityRegionPicker } from "../activity-region/ActivityRegionPicker.jsx";
 import { useNotifications } from "../notifications/context.jsx";
@@ -128,7 +127,9 @@ export function MyPage({ navigate }) {
             onClick={() => navigate("/settings")}
             aria-label="설정"
           >
-            <span aria-hidden="true">⚙︎</span>
+            <span aria-hidden="true">
+              <PixelIcon name="gear" scale={2} />
+            </span>
           </button>
           {isProfileLoading ? (
             <div
@@ -168,7 +169,7 @@ export function MyPage({ navigate }) {
                   {age > 0 ? `${age}세` : "나이 정보 없음"}
                 </p>
                 <p className="my-profile-region">
-                  <Icon name="detail-location.svg" />
+                  <PixelIcon name="pin" scale={2} />
                   {profile.regionName || "활동 지역 미설정"}
                 </p>
               </div>
@@ -182,14 +183,39 @@ export function MyPage({ navigate }) {
         )}
         <div className="my-menu">
           <button type="button" onClick={() => navigate("/my/persona")}>
-            <AiAvatar size={30} />내 페르소나 <span>›</span>
+            <img
+              className="icon persona-menu-icon"
+              src={asset("persona-tamagotchi.svg")}
+              width="32"
+              height="32"
+              alt=""
+              aria-hidden="true"
+            />
+            내 페르소나{" "}
+            <span>
+              <PixelIcon name="chev" scale={1.5} />
+            </span>
           </button>
           <button type="button" onClick={notifications.openInbox}>
             <PagerIcon />
-            알림 <span>{notifications.count || ""}　›</span>
+            알림{" "}
+            <span>
+              {notifications.count || ""}　<PixelIcon name="chev" scale={1.5} />
+            </span>
           </button>
           <button type="button" onClick={() => navigate("/preferences")}>
-            <span className="menu-glyph">⚙</span>선호 설정 <span>›</span>
+            <img
+              className="icon persona-menu-icon"
+              src={asset("preferences-menu.svg")}
+              width="32"
+              height="32"
+              alt=""
+              aria-hidden="true"
+            />
+            선호 설정{" "}
+            <span>
+              <PixelIcon name="chev" scale={1.5} />
+            </span>
           </button>
         </div>
         <p className="my-footer">*23# · LITTLE PIXELS, REAL CONNECTIONS.</p>
@@ -245,14 +271,14 @@ export function Settings({
               className="settings-action-icon profile-action-icon"
               aria-hidden="true"
             >
-              ✎
+              <PixelIcon name="pencil" scale={2} />
             </span>
             <span className="settings-action-copy">
               <strong>프로필 수정</strong>
               <small>닉네임과 활동 정보를 관리해요.</small>
             </span>
             <span className="settings-action-chevron" aria-hidden="true">
-              ›
+              <PixelIcon name="chev" scale={1.5} />
             </span>
           </button>
 
@@ -268,14 +294,14 @@ export function Settings({
                 className="settings-action-icon logout-action-icon"
                 aria-hidden="true"
               >
-                ↗
+                <PixelIcon name="arrowUpRight" scale={2} />
               </span>
               <span className="settings-action-copy">
                 <strong>로그아웃</strong>
                 <small>계정에서 안전하게 나가요.</small>
               </span>
               <span className="settings-action-chevron" aria-hidden="true">
-                ›
+                <PixelIcon name="chev" scale={1.5} />
               </span>
             </button>
           ) : (
@@ -318,14 +344,14 @@ export function Settings({
                 className="settings-action-icon withdrawal-action-icon"
                 aria-hidden="true"
               >
-                ×
+                <PixelIcon name="x" scale={2} />
               </span>
               <span className="settings-action-copy">
                 <strong>계정 탈퇴</strong>
                 <small>계정과 프로필을 삭제하고 서비스를 떠나요.</small>
               </span>
               <span className="settings-action-chevron" aria-hidden="true">
-                ›
+                <PixelIcon name="chev" scale={1.5} />
               </span>
             </button>
           ) : (
@@ -619,7 +645,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                 onChange={(e) => set("nickname", e.target.value)}
                 disabled={isSaving}
                 maxLength={10}
-                placeholder="예: 별이…"
+                placeholder="예: 발신자표시제한번호"
                 aria-invalid={Boolean(nicknameError)}
               />
             </Field>
@@ -645,7 +671,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                 disabled={isSaving}
                 min="130"
                 max="220"
-                placeholder="예: 175…"
+                placeholder="예: 175"
               />
             </Field>
             <Field label="체형">

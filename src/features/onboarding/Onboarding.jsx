@@ -288,7 +288,7 @@ export function BirthDateInput({ value, onChange, autoFocus = false }) {
                 )
               }
             >
-              ‹
+              <PixelIcon name="back" scale={1.5} />
             </button>
             <div className="birth-date-calendar-selectors">
               <button
@@ -329,7 +329,7 @@ export function BirthDateInput({ value, onChange, autoFocus = false }) {
                 )
               }
             >
-              ›
+              <PixelIcon name="chev" scale={1.5} />
             </button>
           </div>
           {calendarPicker === "year" ? (
@@ -1215,7 +1215,7 @@ export function Onboarding({ navigate, toast }) {
                       aria-describedby={
                         nameHelper ? "identity-name-helper" : undefined
                       }
-                      placeholder="예: 홍길동…"
+                      placeholder="예: 홍길동"
                     />
                   </div>
                   {nameHelper && (
@@ -1279,7 +1279,7 @@ export function Onboarding({ navigate, toast }) {
                     aria-label="활동 지역 검색"
                     value={regionQuery}
                     onChange={(e) => setRegionQuery(e.target.value)}
-                    placeholder="시·군·구 검색 (예: 수원시, 강남구)…"
+                    placeholder="시·군·구 검색 (예: 수원시, 강남구)"
                   />
                 </div>
               </Field>
@@ -1365,7 +1365,7 @@ export function Onboarding({ navigate, toast }) {
                   autoComplete="nickname"
                   value={profile.nickname}
                   onChange={(e) => updateProfile("nickname", e.target.value)}
-                  placeholder="예: 별이…"
+                  placeholder="예: 발신자표시제한번호"
                   maxLength={10}
                 />
               </Field>
@@ -1385,7 +1385,7 @@ export function Onboarding({ navigate, toast }) {
                         e.target.value.replace(/\D/g, "").slice(0, 3),
                       )
                     }
-                    placeholder="예: 175…"
+                    placeholder="예: 175"
                   />
                   <span className="input-suffix">cm</span>
                 </div>

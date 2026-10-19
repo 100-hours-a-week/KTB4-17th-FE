@@ -16,12 +16,11 @@
 .onboarding-page .onboarding-top {
   position: relative;
   flex: none;
+  height: 42px;
+  padding: 0 15px 0 20px;
   display: flex;
   align-items: center;
-  height: auto;
-  min-height: 38px;
   gap: 12px;
-  padding: 4px 24px 12px;
 }
 
 .onboarding-dot {
@@ -53,9 +52,8 @@
   place-items: center;
   padding: 0;
   border: 4px solid transparent;
-  border-image: var(--px-frame) 6 fill / 4px;
   background: transparent;
-  color: var(--ink);
+  color: var(--purple);
 }
 
 .onboarding-progress {
@@ -89,7 +87,16 @@
 
 /* ---------- 상단바 (A안) ---------- */
 .onboarding-brand {
+  position: relative;
   justify-content: flex-start;
+}
+
+/* 온보딩 동안만 로고를 상단 가운데에 둔다 (가입 후 화면은 왼쪽 정렬 유지) */
+.onboarding-brand > .brand-header-logo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .brand-signal {
@@ -145,7 +152,7 @@
 /* ---------- STEP 머리말 · 제목 ---------- */
 .onboarding-eyebrow {
   flex: none;
-  margin: 8px 24px 0;
+  margin: 0 24px 14px;
   color: var(--purple);
   font-size: 11px;
   line-height: 14px;
@@ -163,9 +170,6 @@
   min-height: 0;
   padding: 6px 24px 20px;
   overflow-y: auto;
-  padding-top: 4px;
-  overscroll-behavior-y: contain;
-  scroll-padding-block: 16px;
 }
 
 .onboarding-page .onboarding-body h1 {
@@ -313,11 +317,9 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
   align-items: start;
+  gap: 8px;
   padding: 12px 20px max(16px, env(safe-area-inset-bottom));
-  gap: 10px;
-  padding-block: 12px max(14px, env(safe-area-inset-bottom, 0px));
-  border-top: 1px solid rgb(177 154 214 / 18%);
-  background: rgb(250 247 255 / 95%);
+  background: var(--canvas);
 }
 
 .onboarding-page .onboarding-action .pixel-button {
@@ -478,15 +480,6 @@
   animation: persona-typing 1.2s infinite;
 }
 
-.onboarding-page .onboarding-progress i {
-  flex: 0 1 12px;
-  aspect-ratio: 1;
-  height: auto;
-  border: 1.5px solid #c2afe6;
-  border-radius: 50%;
-  background: rgb(255 255 255 / 80%);
-}
-
 .persona-bubble.typing i:nth-child(2) {
   animation-delay: 0.2s;
 }
@@ -528,11 +521,10 @@
 
 .onboarding-page .persona-actions button,
 .onboarding-page .persona-retry {
+  min-height: 34px;
   padding: 2px 8px;
   color: var(--purple-deep);
   font-size: 12px;
-  min-height: 44px;
-  line-height: 1.5;
 }
 
 .onboarding-page .persona-retry {
@@ -883,12 +875,6 @@
 }
 
 /* 성별 선택과 PRIVATE MODE 안내 사이 간격 */
-
-.onboarding-page .onboarding-note {
-  margin-top: 18px;
-  padding: 12px;
-}
-
 .onboarding-page .registration-info-fields + .onboarding-note {
   margin-top: 22px;
 }
@@ -917,8 +903,6 @@
   min-height: 0;
   padding: 6px 24px 20px;
   overflow-y: auto;
-  padding-top: 4px;
-  overscroll-behavior-y: contain;
 }
 
 .onboarding-step-kakao .kakao-conversation-content .onboarding-title {
@@ -947,14 +931,14 @@
   align-items: center;
   gap: 10px;
   width: 100%;
+  min-height: 180px;
   margin-bottom: 22px;
+  padding: 18px 12px;
   border: 6px solid transparent;
   border-image: var(--px-frame-tint) 6 fill / 6px;
   background: none;
   color: var(--muted);
   text-align: center;
-  min-height: 168px;
-  padding: 20px 12px;
 }
 
 .onboarding-step-kakao .kakao-upload-icon {
@@ -1050,16 +1034,16 @@
 
 .onboarding-step-kakao .kakao-speakers legend {
   padding: 0;
+  font-size: 15px;
   font-weight: 700;
   line-height: 23px;
-  font-size: 16px;
 }
 
 .onboarding-step-kakao .kakao-speakers p {
   margin: 6px 0 12px;
   color: var(--muted);
-  font-size: 13px;
-  line-height: 1.65;
+  font-size: 12px;
+  line-height: 19px;
 }
 
 .onboarding-step-kakao .kakao-speaker-list {
@@ -1115,57 +1099,7 @@
   line-height: 21px;
 }
 
-/* A single brand row and a quiet conversation guide throughout registration. */
-.onboarding-page .onboarding-brand {
-  position: relative;
-  justify-content: center;
-  padding-inline: 58px;
-  background: transparent;
-  border-bottom: 0;
-}
-
-.onboarding-page .onboarding-brand .onboarding-back,
-.onboarding-page .onboarding-brand .onboarding-back-placeholder {
-  position: absolute;
-  left: 10px;
-  border: 0;
-  border-image: none;
-}
-
-.onboarding-page .brand-signal,
-.onboarding-page .brand-battery,
-.onboarding-page .onboarding-dot {
-  display: none;
-}
-
-.onboarding-page .onboarding-progress {
-  align-items: center;
-  justify-content: flex-start;
-  gap: clamp(6px, 2vw, 12px);
-}
-
-.onboarding-page .onboarding-progress i.on {
-  border-color: var(--purple);
-  background: var(--purple);
-}
-
-.onboarding-page .onboarding-progress i.cur {
-  border-color: #d2468f;
-  background: var(--pink);
-  box-shadow: 0 0 0 3px rgb(238 106 177 / 12%);
-}
-
-.onboarding-page .onboarding-count {
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-}
-
-.onboarding-page .onboarding-eyebrow {
-  margin: 2px 24px 10px;
-  font-size: 10px;
-  letter-spacing: 0.04em;
-}
-
+/* #218에서 새로 추가된 요소 스타일 (최신 버전 유지) */
 .onboarding-page .onboarding-prompt {
   display: flex;
   align-items: flex-start;
@@ -1200,112 +1134,7 @@
   overflow-wrap: anywhere;
 }
 
-.onboarding-page .agreement {
-  min-height: 58px;
-  gap: 10px;
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.onboarding-page .agreement input {
-  flex: 0 0 21px;
-  width: 21px;
-  height: 21px;
-  margin: 0;
-  accent-color: var(--pink-deep, #ca397f);
-}
-
-.onboarding-page .agreement.all {
-  margin: 0 0 8px;
-  padding: 12px;
-  background: var(--soft-lavender);
-}
-
-.onboarding-page .onboarding-note-label {
-  font-weight: 700;
-  letter-spacing: 0;
-}
-
-.onboarding-page .persona-bubble {
-  max-width: min(82%, 420px);
-  padding: 9px 12px;
-  font-size: 15px;
-  line-height: 1.65;
-}
-
-.onboarding-page .persona-chat {
-  gap: 10px;
-  overscroll-behavior-y: contain;
-  scrollbar-width: thin;
-}
-
-.onboarding-page .persona-composer {
-  gap: 8px;
-}
-
-.onboarding-page .persona-composer textarea {
-  min-height: 50px;
-  height: 50px;
-  font-size: 16px;
-  line-height: 24px;
-}
-
-.onboarding-page .persona-send {
-  width: 48px;
-  height: 50px;
-}
-
-.onboarding-page .birth-date-calendar-toggle {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-}
-
-.onboarding-page .birth-date-calendar {
-  top: 112px;
-  padding: 12px;
-  border-radius: 12px;
-  border-color: var(--line);
-  box-shadow: 0 12px 32px rgb(54 30 90 / 12%);
-}
-
-.onboarding-page .birth-date-calendar-grid .birth-date-day {
-  min-height: 36px;
-  border-radius: 6px;
-}
-
-.onboarding-page .birth-date-calendar-header .birth-date-calendar-nav {
-  width: 44px;
-  height: 44px;
-}
-
-.onboarding-page .birth-date-calendar-list .birth-date-calendar-option {
-  min-height: 44px;
-}
-
-.onboarding-page .birth-date-part {
-  padding-inline: 8px;
-  border-radius: 7px;
-}
-
-.onboarding-step-kakao .kakao-file-card,
-.onboarding-step-kakao .kakao-automatic-speaker {
-  filter: none;
-  margin-bottom: 18px;
-}
-
 @media (width <= 350px) {
-  .onboarding-page .onboarding-top,
-  .onboarding-page .onboarding-body,
-  .onboarding-step-kakao .kakao-conversation-content {
-    padding-inline: 16px;
-  }
-
-  .onboarding-page .onboarding-eyebrow {
-    margin-inline: 16px;
-  }
-
   .onboarding-page .onboarding-prompt {
     gap: 7px;
   }
@@ -1317,32 +1146,6 @@
 
   .onboarding-page .onboarding-prompt > div {
     padding: 9px;
-  }
-
-  .onboarding-page .persona-bubble.left,
-  .onboarding-page .persona-chat-meta.left {
-    margin-left: 30px;
-  }
-
-  .onboarding-page .persona-actions {
-    margin-left: 30px;
-  }
-
-  .onboarding-step-kakao .kakao-speaker-list {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .onboarding-page .persona-bubble.typing i {
-    animation: none;
-    opacity: 0.7;
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .onboarding-page .onboarding-body {
-    animation: onboarding-step-enter 160ms ease-out;
   }
 }
 
@@ -1358,7 +1161,6 @@
   }
 }
 
-/* Keep all 16 MBTI choices on a predictable four-column grid. */
 .onboarding-page .mbti-choice-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1388,7 +1190,6 @@
   }
 }
 
-/* The summary prompt stays fixed while only the analyzed value cards drift. */
 .onboarding-step-persona-summary .onboarding-body {
   animation: none;
 }
@@ -1422,8 +1223,6 @@
   }
 }
 
-/* Remove the browser's default focus ring from the programmatically focused
-   photo step heading; focus still moves there for screen-reader context. */
 .onboarding-step-photo-intro .profile-trust h1:focus,
 .onboarding-step-photo .profile-trust h1:focus {
   outline: none;

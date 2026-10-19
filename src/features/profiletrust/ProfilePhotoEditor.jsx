@@ -8,7 +8,11 @@ import {
   prepareProfilePhoto,
   profilePhotoErrorMessage,
 } from "../profile/photoUpload.js";
-import { reorderPhotos, replaceFrontalPhoto } from "./model.js";
+import {
+  CLIP_DURATION_MS,
+  reorderPhotos,
+  replaceFrontalPhoto,
+} from "./model.js";
 import { PhotoCapture } from "./PhotoCapture.jsx";
 import { useFaceVerification } from "./useFaceVerification.js";
 
@@ -44,15 +48,17 @@ function PhotoPicker({ children, onSelect, disabled, className = "" }) {
   );
 }
 
+const CLIP_SECONDS = CLIP_DURATION_MS / 1000;
+
 function GuidePortrait({ variant = "good" }) {
   const descriptions = {
-    good: "밝은 곳에서 얼굴 전체가 정면으로 보이는 좋은 촬영 예시",
-    side: "얼굴이 옆을 향한 피해야 할 촬영 예시",
-    covered: "마스크로 얼굴이 가려진 피해야 할 촬영 예시",
+    good: "좋은 예: 밝은 곳에서 얼굴 전체가 정면으로 보이는 모습",
+    side: "피해야 할 예: 얼굴이 옆을 향한 모습",
+    covered: "피해야 할 예: 마스크로 얼굴이 가려진 모습",
   };
   return (
     <img
-      src={asset(`profiletrust/guide-${variant}.jpg`)}
+      src={asset(`profiletrust/guide-${variant}.svg?v=haru7`)}
       alt={descriptions[variant]}
       width={640}
       height={640}
@@ -68,15 +74,21 @@ function CaptureGuide() {
       <div className="trust-examples">
         <figure className="trust-example-good">
           <GuidePortrait />
-          <figcaption>✓ 밝고 선명한 정면</figcaption>
+          <figcaption>
+            <PixelIcon name="check" scale={1.5} /> 밝고 선명한 정면
+          </figcaption>
         </figure>
         <figure>
           <GuidePortrait variant="side" />
-          <figcaption>옆모습은 피해 주세요</figcaption>
+          <figcaption>
+            <PixelIcon name="x" scale={2} /> 옆모습 피하기
+          </figcaption>
         </figure>
         <figure>
           <GuidePortrait variant="covered" />
-          <figcaption>얼굴을 가리지 않기</figcaption>
+          <figcaption>
+            <PixelIcon name="x" scale={2} /> 얼굴 가리지 않기
+          </figcaption>
         </figure>
       </div>
       <p>
@@ -138,14 +150,16 @@ function VerificationProgress({ progress, active }) {
           <div
             className="trust-camera-progress"
             role="progressbar"
-            aria-label="현재 5초 촬영 진행"
+            aria-label={`현재 ${CLIP_SECONDS}초 촬영 진행`}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={Math.round(clipProgress * 100)}
           >
             <span style={{ transform: `scaleX(${clipProgress})` }} />
           </div>
-          <small>이번 촬영은 약 5초 동안 진행돼요. 정면을 유지해 주세요.</small>
+          <small>
+            이번 촬영은 약 {CLIP_SECONDS}초 동안 진행돼요. 정면을 유지해 주세요.
+          </small>
         </>
       )}
       {waiting && (
@@ -710,7 +724,7 @@ export function ProfilePhotoEditor({
                     disabled={disabled}
                     onClick={() => removePhoto(item.localId)}
                   >
-                    ×
+                    <PixelIcon name="x" scale={1.5} />
                   </button>
                 )}
                 <div className="trust-photo-order">
@@ -722,7 +736,7 @@ export function ProfilePhotoEditor({
                       movePhoto(item.localId, items[index - 1]?.localId)
                     }
                   >
-                    ←
+                    <PixelIcon name="arrowLeft" scale={1.5} />
                   </button>
                   <button
                     type="button"
@@ -734,7 +748,7 @@ export function ProfilePhotoEditor({
                       movePhoto(item.localId, items[index + 1]?.localId)
                     }
                   >
-                    →
+                    <PixelIcon name="arrowRight" scale={1.5} />
                   </button>
                 </div>
               </article>

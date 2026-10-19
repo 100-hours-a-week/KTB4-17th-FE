@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import { simulationPath } from "./model.js";
 
 export function CompletionToast({ completion, navigate, onDismiss, blocked }) {
@@ -68,7 +69,9 @@ export function CompletionToast({ completion, navigate, onDismiss, blocked }) {
           setInteracting(false);
       }}
     >
-      <span role="status">✦ 시뮬레이션이 완료됐어요</span>
+      <span role="status">
+        <PixelIcon name="spark" scale={1.5} /> 시뮬레이션이 완료됐어요
+      </span>
       <button
         type="button"
         onClick={() => {
@@ -78,7 +81,7 @@ export function CompletionToast({ completion, navigate, onDismiss, blocked }) {
           );
         }}
       >
-        결과 보기 →
+        결과 보기 <PixelIcon name="arrowRight" scale={1.5} />
       </button>
       <button
         type="button"
@@ -86,7 +89,7 @@ export function CompletionToast({ completion, navigate, onDismiss, blocked }) {
         aria-label="완료 안내 닫기"
         onClick={onDismiss}
       >
-        ×
+        <PixelIcon name="x" scale={2} />
       </button>
     </section>
   );
