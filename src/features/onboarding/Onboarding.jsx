@@ -78,20 +78,6 @@ const PERSONA_FLOW_STEPS = new Set([
   "photo",
 ]);
 
-export function isHangulSyllable(character) {
-  const codePoint = character.codePointAt(0);
-  return codePoint >= 0xac00 && codePoint <= 0xd7a3;
-}
-
-export function isValidKoreanName(value) {
-  const characters = Array.from(value);
-  return (
-    characters.length >= 2 &&
-    characters.length <= 8 &&
-    characters.every(isHangulSyllable)
-  );
-}
-
 export { isValidBirthDate } from "../user/birthDate.js";
 
 export function splitBirthDate(value) {
@@ -454,8 +440,6 @@ export function Onboarding({ navigate, toast }) {
   const [error, setError] = useState("");
   const [identitySaving, setIdentitySaving] = useState(false);
   const [identityAuthExpired, setIdentityAuthExpired] = useState(false);
-  const [nameTouched, setNameTouched] = useState(false);
-  const [nameHelper, setNameHelper] = useState("");
   const [regionQuery, setRegionQuery] = useState("");
   const [regionResults, setRegionResults] = useState([]);
   const [regionSearchStatus, setRegionSearchStatus] = useState("idle");
@@ -516,24 +500,6 @@ export function Onboarding({ navigate, toast }) {
   const canGoBack = stepIndex > (hasRegisteredIdentity ? 1 : 0);
   const updateProfile = (key, value) =>
     setData((old) => ({ ...old, profile: { ...old.profile, [key]: value } }));
-  function handleNameChange(event) {
-    const nextName = event.currentTarget.value;
-    updateProfile("name", nextName);
-    setError("");
-    if (nameTouched) {
-      setNameHelper(
-        isValidKoreanName(nextName)
-          ? ""
-          : "이름은 한글 2~8자 이내로 입력해 주세요",
-      );
-    }
-  }
-
-  function handleNameBlur() {
-    setNameTouched(true);
-    if (!isValidKoreanName(profile.name))
-      setNameHelper("이름은 한글 2~8자 이내로 입력해 주세요");
-  }
   const advance = useCallback(
     (next) => {
       setError("");
@@ -730,18 +696,11 @@ export function Onboarding({ navigate, toast }) {
       navigate("/onboarding", { replace: true });
       return;
     }
-    const name = profile.name;
     const birthDate = normalizeBirthDate(profile.birthDate);
     if (!birthDate)
       return setError(
         "실제로 존재하는 생년월일을 입력해 주세요. 월과 일은 한 자리로 입력해도 돼요.",
       );
-    if (!isValidKoreanName(name)) {
-      setError("");
-      setNameTouched(true);
-      setNameHelper("이름은 한글 2~8자 이내로 입력해 주세요");
-      return;
-    }
     if (getRegistrationAgeRestriction(birthDate)) {
       setError("");
       navigate("/registration/restricted");
@@ -754,7 +713,6 @@ export function Onboarding({ navigate, toast }) {
     setError("");
     try {
       const authResponse = await userApi.identity({
-        name,
         birthDate,
         gender: profile.gender,
       });
@@ -766,7 +724,6 @@ export function Onboarding({ navigate, toast }) {
         registrationInfoConfirmed: true,
         profile: {
           ...old.profile,
-          name,
           birthDate,
           gender: profile.gender,
         },
@@ -1206,32 +1163,6 @@ export function Onboarding({ navigate, toast }) {
                 </p>
               )}
               <div className="registration-info-fields">
-                <Field label="본명">
-                  <div className="pixel-field-frame">
-                    <input
-                      type="text"
-                      name="name"
-                      autoComplete="name"
-                      value={profile.name}
-                      onChange={handleNameChange}
-                      onBlur={handleNameBlur}
-                      aria-invalid={!isValidKoreanName(profile.name)}
-                      aria-describedby={
-                        nameHelper ? "identity-name-helper" : undefined
-                      }
-                      placeholder="예: 홍길동"
-                    />
-                  </div>
-                  {nameHelper && (
-                    <small
-                      id="identity-name-helper"
-                      className="identity-name-helper"
-                      role="status"
-                    >
-                      {nameHelper}
-                    </small>
-                  )}
-                </Field>
                 <Field label="성별">
                   <ChoiceGroup
                     options={[

@@ -57,7 +57,6 @@ export const mbtis = [
 ];
 
 export const initialProfile = {
-  name: "",
   birthDate: "",
   gender: "",
   nickname: "",

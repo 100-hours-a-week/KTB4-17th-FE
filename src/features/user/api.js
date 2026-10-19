@@ -12,10 +12,10 @@ export const withdrawUser = () =>
     cache: "no-store",
   });
 
-export const identity = (body) =>
+export const identity = ({ birthDate, gender }) =>
   apiRequest("/api/v1/registration/identity", {
     method: "PUT",
-    body,
+    body: { birthDate, gender },
     skipAuth: true,
   });
 

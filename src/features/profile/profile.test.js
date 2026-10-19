@@ -14,7 +14,7 @@ import {
   detectPhotoType,
   prepareProfilePhoto,
 } from "./photoUpload.js";
-import { profilePayload } from "./serialize.js";
+import { profilePayload, withoutRegistrationName } from "./serialize.js";
 
 test("single-digit month and day are accepted and sent in ISO format", () => {
   assert.equal(normalizeBirthDate("1998-1-1"), "1998-01-01");
@@ -165,6 +165,16 @@ test("restoring legacy job drafts clears only the job and preserves valid OTHER"
     normalizeProfileJob({ ...selectedProfile, job: "IT_DATA" }),
     { ...selectedProfile, job: "IT_DATA" },
   );
+});
+
+test("legacy registration names are removed before profile state is restored or persisted", () => {
+  const legacy = {
+    ...selectedProfile,
+    name: "Alice",
+  };
+
+  assert.deepEqual(withoutRegistrationName(legacy), selectedProfile);
+  assert.equal(legacy.name, "Alice");
 });
 
 test("unknown job values never leak raw text into profile labels", () => {
