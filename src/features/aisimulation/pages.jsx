@@ -1,15 +1,84 @@
+import { useEffect, useState } from "react";
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import {
-  BrandHeader,
   EmptyState,
   PixelButton,
+  ProfilePhoto,
   ScreenHeader,
 } from "../../shared/ui/components.jsx";
 import { AiAvatar, PixelIcon } from "../../shared/ui/pixel.jsx";
 import { MessageBubble } from "../chat/Chat.jsx";
 import { ChatModeMenu } from "../chat/ChatModeMenu.jsx";
+import { getMyProfile, getUserProfile } from "../profile/api.js";
+import { profileImageUrls } from "../profile/imageUrls.js";
 import { useSimulationAttempt } from "./useSimulationAttempt.js";
 import { useSimulationResult } from "./useSimulationResult.js";
+
+function useParticipantPhotos(partnerUserId, myUserId) {
+  const [profiles, setProfiles] = useState(null);
+  useEffect(() => {
+    if (!partnerUserId || !myUserId) return undefined;
+    let active = true;
+    function updateProfile(key, profile) {
+      if (!active) return;
+      setProfiles((current) => ({
+        partnerUserId,
+        myUserId,
+        partner: null,
+        me: null,
+        ...(current?.partnerUserId === partnerUserId &&
+        current?.myUserId === myUserId
+          ? current
+          : {}),
+        [key]: profile,
+      }));
+    }
+    // Each participant can render as soon as their own profile is available.
+    // These API helpers do not accept a signal, so cleanup ignores late results.
+    getUserProfile(partnerUserId).then(
+      (profile) => updateProfile("partner", profile),
+      () => updateProfile("partner", null),
+    );
+    getMyProfile().then(
+      (profile) => updateProfile("me", profile),
+      () => updateProfile("me", null),
+    );
+    return () => {
+      active = false;
+    };
+  }, [partnerUserId, myUserId]);
+  return profiles?.partnerUserId === partnerUserId &&
+    profiles?.myUserId === myUserId
+    ? profiles
+    : null;
+}
+
+function ParticipantAvatar({ participant, profile, mine = false }) {
+  const photos = profileImageUrls(profile);
+  return (
+    <span
+      className={`simulation-person-avatar${mine ? " is-mine" : ""}`}
+      aria-hidden="true"
+    >
+      {photos.length ? (
+        <ProfilePhoto
+          person={{
+            ...profile,
+            id: mine ? "me" : participant.userId,
+            userId: mine ? "me" : participant.userId,
+            nickname: participant.nickname,
+            photos,
+          }}
+          className="simulation-person-photo"
+        />
+      ) : (
+        <span>
+          {Array.from(participant.nickname || (mine ? "나" : "상대"))[0]}
+        </span>
+      )}
+    </span>
+  );
+}
 
 export function Simulation({ simulationId, chatRoomId, navigate }) {
   const roomId = Number(chatRoomId);
@@ -24,6 +93,7 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
 
   const partner = simulation?.partner || {};
   const me = simulation?.me || {};
+  const participantPhotos = useParticipantPhotos(partner.userId, me.userId);
   const chatRoomQuery =
     Number.isSafeInteger(roomId) && roomId > 0 ? `?chatRoomId=${roomId}` : "";
   const partnerUserId = Number(partner.userId);
@@ -32,25 +102,26 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
       ? `/ai/practice/${partnerUserId}${chatRoomQuery}`
       : null;
   const conversationHeader = (
-    <>
-      <BrandHeader navigate={navigate}>
+    <ScreenHeader
+      className="simulation-screen-header contextual-header"
+      title="AI 시뮬레이션"
+      onBack={() => navigate(backPath)}
+      right={
         <ChatModeMenu
           currentMode="simulation"
           targetUserId={partnerUserId}
           onPractice={practicePath ? () => navigate(practicePath) : undefined}
         />
-      </BrandHeader>
-      <ScreenHeader
-        className="chat-room-header conversation-header"
-        title="AI 시뮬레이션"
-        onBack={() => navigate(backPath)}
-      />
-    </>
+      }
+    />
   );
 
   if (error || !simulation)
     return (
-      <main className="ai-conversation-view" aria-label="AI 시뮬레이션">
+      <main
+        className="ai-conversation-view simulation-view"
+        aria-label="AI 시뮬레이션"
+      >
         {conversationHeader}
         <div id="main-content" tabIndex={-1} className="ai-conversation-state">
           <SimulationState
@@ -64,16 +135,21 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
     );
 
   return (
-    <main className="ai-conversation-view" aria-label="AI 시뮬레이션">
+    <main
+      className="ai-conversation-view simulation-view"
+      aria-label="AI 시뮬레이션"
+    >
       {conversationHeader}
       <div className="ai-notice">
-        ⓘ　AI가 두 사람의 성향을 바탕으로 나눈 대화예요. 두 사람 모두 같은
-        결과를 확인할 수 있어요.
+        <AiAvatar size={22} /> AI가 두 사람의 성향을 바탕으로 나눈 대화예요.
       </div>
       <div id="main-content" tabIndex={-1} className="simulation-body">
         <div className="simulation-participants">
           <div>
-            <AiAvatar size={34} />
+            <ParticipantAvatar
+              participant={partner}
+              profile={participantPhotos?.partner}
+            />
             <span>
               {partner.nickname || "상대"} AI
               <small>{partner.headline || "상대의 성향을 반영했어요"}</small>
@@ -81,7 +157,11 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
           </div>
           <b>↔</b>
           <div>
-            <AiAvatar size={34} />
+            <ParticipantAvatar
+              participant={me}
+              profile={participantPhotos?.me}
+              mine
+            />
             <span>
               {me.nickname || "나"}의 AI
               <small>{me.headline || "내 성향을 반영했어요"}</small>
@@ -89,28 +169,36 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
           </div>
         </div>
         <div className="simulation-live">
-          ●　대화 {simulation.turns || simulation.transcript?.length || 0}턴
+          대화 {simulation.turns || simulation.transcript?.length || 0}턴
         </div>
         <div className="simulation-messages">
-          {(simulation.transcript || []).map((message) => (
-            <MessageBubble
-              key={message.index}
-              message={{
-                id: message.index,
-                mine: message.speaker === simulation.mySpeaker,
-                text: message.text,
-              }}
-            />
-          ))}
+          {(simulation.transcript || []).map((message) => {
+            const mine = message.speaker === simulation.mySpeaker;
+            return (
+              <div
+                className={`simulation-message${mine ? " is-mine" : ""}`}
+                key={message.index}
+              >
+                <ParticipantAvatar
+                  participant={mine ? me : partner}
+                  profile={
+                    mine ? participantPhotos?.me : participantPhotos?.partner
+                  }
+                  mine={mine}
+                />
+                <MessageBubble
+                  message={{ id: message.index, mine, text: message.text }}
+                  showTime={false}
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
       <div className="simulation-footer">
         <div>
           AI 시뮬레이션이 완료됐어요.
-          <span>{simulation.report?.overall?.gradeLabel || "궁합 결과"}</span>
-        </div>
-        <div className="progress-track">
-          <span style={{ width: "100%" }} />
+          <span>두 사람의 대화 호흡을 확인해 보세요</span>
         </div>
         <PixelButton
           onClick={() =>
@@ -159,9 +247,8 @@ export function Report({ simulationId, chatRoomId, navigate }) {
   if (error || !report)
     return (
       <>
-        <BrandHeader navigate={navigate} />
         <ScreenHeader
-          className="chat-room-header"
+          className="simulation-screen-header contextual-header"
           title="궁합 리포트"
           onBack={() => navigate(simulationPath)}
         />
@@ -181,9 +268,8 @@ export function Report({ simulationId, chatRoomId, navigate }) {
     );
   return (
     <>
-      <BrandHeader navigate={navigate} />
       <ScreenHeader
-        className="chat-room-header"
+        className="simulation-screen-header contextual-header"
         title="궁합 리포트"
         onBack={() => navigate(simulationPath)}
       />

@@ -10,12 +10,12 @@ export function notificationCopy(item) {
     case "LIKE":
       return {
         title: "새로운 인연이 도착했어요",
-        body: "누군가 회원님의 프로필을 좋아해요",
+        body: "누군가 회원님에게 좋아요를 보냈어요",
         illustration: "like",
       };
     case "MATCH":
       return {
-        title: "두근두근, 서로 마음이 통했어요!",
+        title: "두근두근, 서로 좋아요를 주고받았어요!",
         body: "매칭된 인연과 대화를 시작해보세요",
         illustration: "match",
       };
@@ -46,8 +46,7 @@ export function notificationDestination(item) {
   if (id && item.targetType === "PROFILE")
     return `/profiles/${id}?returnTo=%2Fnotifications`;
   if (id && item.targetType === "CHAT_ROOM") return `/chats/${id}`;
-  if (id && item.targetType === "AI_SIMULATION")
-    return `/ai/simulations/${id}/report`;
+  if (id && item.targetType === "AI_SIMULATION") return `/ai/simulations/${id}`;
   if (item.type === "PERSONA_TRAINING_COMPLETED") return "/my/persona";
   if (item.type === "FACE_ANALYSIS_COMPLETED") return "/my/profile";
   // Notice and future types stay in the inbox until a supported target exists.
