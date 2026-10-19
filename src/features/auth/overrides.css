@@ -3,3 +3,103 @@
   height: 100px;
   margin-top: 0;
 }
+
+.login-page .login-signal {
+  padding: 0;
+  border: 0;
+  border-image: none;
+  color: var(--ink);
+  filter: none;
+  text-align: center;
+}
+
+.login-page .login-signal-status {
+  justify-content: center;
+  margin-bottom: 14px;
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+}
+
+.login-page .login-signal-status::before {
+  width: 4px;
+  height: 4px;
+  background: var(--pink);
+  box-shadow: none;
+}
+
+.login-page .login-signal h1 {
+  height: auto;
+  font-size: clamp(20px, 5.4vw, 26px);
+  line-height: 1.65;
+  text-align: center;
+  word-break: keep-all;
+}
+
+.login-page .login-signal h1 em {
+  color: var(--purple-deep);
+  background: none;
+}
+
+.login-page .login-tagline {
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.login-page .login-companion {
+  object-fit: contain;
+  display: block;
+  width: 68px;
+  height: 68px;
+  margin: clamp(14px, 3vh, 30px) auto 0;
+  image-rendering: auto;
+}
+
+.login-page .login-terms {
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+.login-page .kakao-login-button {
+  min-height: 54px;
+}
+
+.registration-restricted-page {
+  background:
+    radial-gradient(ellipse at 90% 0, #eee5ff 0, transparent 55%), #faf7fd;
+  color: var(--ink);
+  padding-block: max(32px, env(safe-area-inset-top, 0px))
+    max(24px, env(safe-area-inset-bottom, 0px));
+}
+
+.registration-restricted-page .registration-restricted-card {
+  padding: 20px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 85%);
+}
+
+.registration-restricted-page .registration-restricted-confirm {
+  margin-top: max(32px, 8vh);
+  background: var(--purple);
+  border-radius: 8px;
+}
+
+.registration-restricted-page .registration-restricted-subtitle,
+.registration-restricted-page .registration-restricted-notes {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+@media (height <= 640px) {
+  .login-page .login-companion {
+    width: 44px;
+    height: 44px;
+    margin-top: 10px;
+  }
+
+  .login-page .login-signal-status {
+    margin-bottom: 8px;
+  }
+}

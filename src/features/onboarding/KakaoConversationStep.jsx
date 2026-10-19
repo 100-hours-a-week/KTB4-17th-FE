@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { PixelButton } from "../../shared/ui/components.jsx";
-import { PixelIcon } from "../../shared/ui/pixel.jsx";
+import { AiAvatar, PixelIcon } from "../../shared/ui/pixel.jsx";
 import { kakaoExtract, kakaoInspect } from "../persona/api.js";
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
@@ -171,12 +171,18 @@ export function KakaoConversationStep({ onContinue, toast }) {
       aria-label="카카오톡 대화 추가"
     >
       <div className="kakao-conversation-content">
-        <h1 className="onboarding-title">
-          평소 말투도 알려 주세요 <small>선택사항</small>
-        </h1>
-        <p className="subcopy">
-          카카오톡 대화를 참고해 AI가 내 말투와 표현 방식을 이해할 수 있어요.
-        </p>
+        <div className="onboarding-prompt">
+          <AiAvatar size={42} />
+          <div>
+            <h1 className="onboarding-title">
+              평소 말투도 알려 주세요 <small>선택사항</small>
+            </h1>
+            <p className="subcopy">
+              카카오톡 대화를 참고해 AI가 내 말투와 표현 방식을 이해할 수
+              있어요.
+            </p>
+          </div>
+        </div>
 
         <section className="onboarding-note tint">
           <strong className="onboarding-note-label">
@@ -242,18 +248,23 @@ export function KakaoConversationStep({ onContinue, toast }) {
           (automaticSpeaker ? (
             <section
               className="kakao-automatic-speaker"
-              aria-label="분석할 이름"
+              aria-label="대화에서 확인된 본인 이름"
             >
               <PixelIcon name="check" />
               <div>
-                <span className="kakao-section-label">분석할 이름</span>
+                <span className="kakao-section-label">
+                  대화에서 확인된 내 이름
+                </span>
                 <strong>{speakerName}</strong>
               </div>
             </section>
           ) : (
             <fieldset className="kakao-speakers">
-              <legend>대화에서 본인을 선택해 주세요</legend>
-              <p>대화에 표시된 본인의 이름을 선택해 주세요.</p>
+              <legend>대화 참여자 중 본인은 누구인가요?</legend>
+              <p>
+                업로드한 대화에 등장하는 이름 중 본인의 이름을 선택해 주세요.
+                본인의 메시지를 구분하는 데 사용돼요.
+              </p>
               <div className="kakao-speaker-list">
                 {participants.map(({ name }) => (
                   <label
