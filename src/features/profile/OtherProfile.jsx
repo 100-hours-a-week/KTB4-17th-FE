@@ -208,7 +208,9 @@ export function OtherProfile({
             title="프로필 설정"
             onClick={() => navigate("/my/profile?returnTo=/my/profile/view")}
           >
-            <span aria-hidden="true">⚙︎</span>
+            <span aria-hidden="true">
+              <PixelIcon name="gear" scale={2} />
+            </span>
           </button>
         )}
         {profile && photos.length > 0 && (
@@ -277,7 +279,7 @@ export function OtherProfile({
               <span className="other-profile-age">, {profile.age}</span>
             )}
             <span className="other-profile-heart" aria-hidden="true">
-              ♡
+              <PixelIcon name="heartOutline" scale={2} />
             </span>
           </h1>
           <div className="other-profile-facts">

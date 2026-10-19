@@ -172,12 +172,11 @@
 
 /* 좋아요 탭 — 세그먼트 토글 */
 .segmented-tabs.likes-seg {
-  height: 42px;
-  min-height: 42px;
-  margin: 0 16px;
-  padding: 3px;
-  border: 0;
-  background: #eee8f5;
+  height: 52px;
+  margin: 16px 16px 0;
+  padding: 4px;
+  border-bottom: 0;
+  background: #ede8f4;
   clip-path: var(--pixel-step-shape);
 }
 
@@ -185,26 +184,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 0;
-  gap: 4px;
-  border: 0;
-  background: transparent;
-  color: #736b80;
-  font-size: 12px;
+  color: var(--subtle);
+  font-size: 14px;
   font-weight: 700;
-  line-height: 1.2;
-  white-space: nowrap;
 }
 
 .segmented-tabs.likes-seg button.active {
-  background: var(--button-fill);
+  background: var(--paper);
   box-shadow: none;
-  color: #fff;
+  color: var(--ink);
   clip-path: var(--pixel-step-shape);
 }
 
 .segmented-tabs.likes-seg button.active::before {
-  content: none;
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  background: var(--purple);
+  mask:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7' shape-rendering='crispEdges'%3E%3Cpath d='M3 0h1v2h-1zM2 2h3v1h-3zM0 3h7v1h-7zM2 4h3v1h-3zM3 5h1v2h-1z'/%3E%3C/svg%3E")
+    center / contain no-repeat;
 }
 
 .empty-state .empty-icon img.empty-letter {
@@ -220,8 +221,14 @@
 }
 
 .pixel-button.pink::before {
-  background: var(--button-fill-pink);
-  box-shadow: inset 0 -2px 0 rgb(120 10 70 / 12%);
+  background:
+    linear-gradient(#ffffff8c 0 0) 10px 5px / calc(66% - 10px) 3px no-repeat,
+    repeating-linear-gradient(90deg, #ffffffbf 0 3px, transparent 3px 6px)
+    calc(100% - 14px) 5px / 15px 3px no-repeat,
+    var(--button-fill-pink);
+  box-shadow:
+    inset 0 -3px 0 rgb(120 10 70 / 20%),
+    inset 0 2px 0 rgb(255 255 255 / 35%);
 }
 
 /* 채팅 목록 — 빈 상태 */
@@ -293,12 +300,13 @@
 
 /* 좋아요 목록: 탭 바와 같은 좌우 16px, 탭 바 아래 · 카드 사이 모두 16px */
 .segmented-tabs.likes-seg + .likes-main {
-  top: 124px;
+  /* 헤더 56 + 페이지 제목(#218) 40 + 탭 여백 16 + 탭 52 */
+  top: calc(164px + env(safe-area-inset-top, 0px) - 8px);
   padding: 16px 16px 24px;
 }
 
 .likes-main .like-list {
-  gap: 14px;
+  gap: 16px;
 }
 
 .segmented-tabs.likes-seg + .likes-main:has(> .empty-state) {
@@ -328,7 +336,55 @@
   filter: drop-shadow(0 4px 0 rgb(40 10 120 / 28%));
 }
 
-/* Likes page follows the mobile concept: title, compact tabs, photo-led cards. */
+/* 좋아요 키도 패스 · 시뮬레이션 · 연습 대화와 같은 56px */
+.recommendation-actions .action-key-like {
+  width: 56px;
+  height: 56px;
+}
+
+/* 추천 카드: 상단바 · 하단바와의 간격을 위아래 같게 */
+.home-main:has(> .recommendation-stack) {
+  padding-bottom: 16px;
+}
+
+/* 추천 카드가 상단바와 하단바 사이를 채우고, 위아래 16px만 남긴다 */
+.home-main:has(> .recommendation-stack) > .recommendation-stack {
+  height: 100%;
+  min-height: 0;
+}
+
+.home-main:has(> .recommendation-stack) .recommendation-card {
+  height: 100%;
+}
+
+/* 카드 정보 · 버튼을 카드 바닥에서 띄우기 (좌우 15px보다 조금 넉넉하게) */
+.recommendation-card .recommendation-info {
+  bottom: 18px;
+}
+
+/* 홈 카드 사진 막대: 프로필 상세와 같은 방식, 색은 한 톤 연하게 */
+.recommendation-card .photo-steps button {
+  height: 44px;
+  border-radius: 0;
+  background: transparent;
+}
+
+.recommendation-card .photo-steps button::before {
+  top: 10px;
+  height: 4px;
+  border-radius: 0;
+  background: rgb(255 255 255 / 55%);
+}
+
+.recommendation-card .photo-steps button.seen::before {
+  background: linear-gradient(90deg, #d4c6ff, #bba6ff);
+}
+
+.recommendation-card .photo-steps button.active::before {
+  background: linear-gradient(90deg, #bba6ff, #f7b3d9);
+}
+
+/* #218에서 새로 추가된 요소 스타일 (최신 버전 유지) */
 .likes-page-title {
   display: grid;
   height: 28px;
@@ -342,17 +398,6 @@
 .likes-tab-count {
   font-variant-numeric: tabular-nums;
   opacity: 0.8;
-}
-
-.likes-main .like-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 10px;
-  border: 1px solid #d5c6e9;
-  background: #fff;
-  box-shadow: 0 3px 12px rgb(67 42 102 / 7%);
 }
 
 .like-profile-button {
@@ -370,17 +415,6 @@
 
 .like-profile-button:focus-visible {
   outline-offset: 3px;
-}
-
-.likes-main .person-avatar.large {
-  display: block;
-  width: clamp(88px, 31vw, 108px);
-  height: 138px;
-  flex: 0 0 clamp(88px, 31vw, 108px);
-  border: 0;
-  border-radius: 7px;
-  clip-path: none;
-  object-fit: cover;
 }
 
 .like-person-copy {
@@ -450,49 +484,24 @@
   padding-top: 16px;
 }
 
-.likes-main .like-actions {
-  gap: 8px;
-  margin-top: 0;
-}
-
-.likes-main .like-actions .pixel-button {
+.likes-main .like-actions :is(.like-action-reject, .like-action-accept) {
   display: inline-flex;
-  min-width: 0;
-  min-height: 42px;
+  flex: 1;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 7px 8px;
-  font-size: 13px;
-  line-height: 1.2;
-}
-
-.likes-main .like-actions .like-action-reject {
-  flex: 1;
-  color: #49365f;
-}
-
-.likes-main .like-actions .like-action-accept {
-  flex: 1;
-
-  --button-fill: linear-gradient(135deg, #f24c9b, #dc3f8c);
-
-  filter: drop-shadow(0 3px 0 rgb(190 42 112 / 17%));
 }
 
 .likes-main .like-actions .pixel-icon {
+  position: static;
   flex: none;
 }
 
+.like-confirm-dialog::backdrop {
+  background: #24183399;
+}
+
 @media (width < 360px) {
-  .likes-main .like-card {
-    padding: 8px;
-  }
-
-  .likes-main .person-avatar.large {
-    height: 128px;
-  }
-
   .like-profile-button {
     gap: 9px;
   }
@@ -504,68 +513,6 @@
   .like-person-facts {
     font-size: 10px;
   }
-}
-
-/* 좋아요 키도 패스 · 시뮬레이션 · 연습 대화와 같은 56px */
-.recommendation-actions .action-key-like {
-  width: 56px;
-  height: 56px;
-}
-
-/* 홈 카드 사진 막대: 프로필 상세와 같은 방식, 색은 한 톤 연하게 */
-.recommendation-card .photo-steps button {
-  height: 44px;
-  border-radius: 0;
-  background: transparent;
-}
-
-.recommendation-card .photo-steps button::before {
-  top: 10px;
-  height: 4px;
-  border-radius: 0;
-  background: rgb(255 255 255 / 55%);
-}
-
-.recommendation-card .photo-steps button.seen::before {
-  background: linear-gradient(90deg, #d4c6ff, #bba6ff);
-}
-
-.recommendation-card .photo-steps button.active::before {
-  background: linear-gradient(90deg, #bba6ff, #f7b3d9);
-}
-
-/* Photo-led discovery: keep actions below the image and preserve a generous hit area. */
-.home-main:has(> .recommendation-stack) {
-  padding: 10px 14px 12px;
-}
-
-.home-main:has(> .recommendation-stack) > .recommendation-stack {
-  display: grid;
-  height: 100%;
-  min-height: 0;
-  grid-template-rows: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: stretch;
-}
-
-.home-main:has(> .recommendation-stack) .recommendation-card {
-  height: 100%;
-  min-height: 0;
-  border: 1px solid rgb(173 144 207 / 70%);
-  border-radius: 16px;
-  box-shadow: 0 3px 12px rgb(53 29 88 / 8%);
-}
-
-.recommendation-stack .recommendation-card-preview {
-  grid-area: 1 / 1 / 2 / 2;
-  inset: 0;
-  height: 100%;
-  transform: none;
-}
-
-.recommendation-card-current:focus-visible {
-  outline: 3px solid var(--purple);
-  outline-offset: 3px;
 }
 
 .recommendation-card .recommendation-photo-count {
@@ -584,140 +531,4 @@
   line-height: 1.4;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
-}
-
-.recommendation-card .recommendation-gradient {
-  height: 42%;
-  background: linear-gradient(0deg, #1a0d29d9, #1a0d2966 58%, transparent);
-  pointer-events: none;
-}
-
-.recommendation-card .recommendation-info {
-  right: 18px;
-  bottom: 10px;
-  left: 18px;
-}
-
-.recommendation-card .recommendation-info h1 {
-  font-size: clamp(24px, 6.5vw, 30px);
-  line-height: 1.3;
-  overflow-wrap: anywhere;
-}
-
-.recommendation-card .recommendation-meta {
-  flex-wrap: wrap;
-  row-gap: 2px;
-  font-size: 13px;
-  opacity: 1;
-}
-
-.recommendation-card .recommendation-profile-link {
-  margin-top: 2px;
-  color: #fff;
-  font-size: 12px;
-}
-
-.recommendation-stack > .recommendation-actions {
-  display: grid;
-  width: 100%;
-  justify-self: stretch;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  align-items: stretch;
-  margin: 0;
-}
-
-.recommendation-stack > .recommendation-actions .card-action {
-  width: auto;
-  min-width: 0;
-  min-height: 70px;
-  gap: 6px;
-  justify-content: center;
-  padding: 9px 2px 8px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: rgb(255 255 255 / 86%);
-  color: var(--purple-deep);
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1.25;
-  box-shadow: 0 2px 0 rgb(114 78 158 / 6%);
-  filter: none;
-  transition:
-    background 140ms ease,
-    transform 140ms ease;
-}
-
-.recommendation-stack > .recommendation-actions .card-action:hover {
-  background: var(--soft-lavender);
-}
-
-.recommendation-stack > .recommendation-actions .card-action:active {
-  transform: translateY(1px);
-}
-
-.recommendation-stack > .recommendation-actions .card-action:focus-visible {
-  outline: 2px solid var(--purple);
-  outline-offset: 3px;
-}
-
-.recommendation-stack > .recommendation-actions .card-action:disabled {
-  opacity: 0.55;
-  cursor: wait;
-}
-
-.recommendation-stack > .recommendation-actions .action-key {
-  width: 28px;
-  height: 26px;
-  color: var(--purple);
-  background: transparent;
-  clip-path: none;
-  box-shadow: none;
-  backdrop-filter: none;
-}
-
-.recommendation-stack > .recommendation-actions .action-key .icon {
-  width: 25px;
-  height: 25px;
-  filter: none;
-}
-
-.recommendation-stack > .recommendation-actions .action-key-like {
-  color: #d94a9b;
-}
-
-@media (height <= 600px) {
-  .recommendation-card .recommendation-gradient {
-    height: 100%;
-    background: linear-gradient(0deg, #1a0d29ed, #1a0d298c 70%, #1a0d2940);
-  }
-
-  .home-main:has(> .recommendation-stack) {
-    padding-block: 6px;
-  }
-
-  .home-main:has(> .recommendation-stack) > .recommendation-stack {
-    gap: 6px;
-  }
-
-  .recommendation-stack > .recommendation-actions .card-action {
-    min-height: 54px;
-    gap: 3px;
-    padding-block: 5px;
-  }
-
-  .recommendation-card .recommendation-info {
-    bottom: 4px;
-  }
-
-  .recommendation-card .recommendation-profile-link {
-    min-height: 44px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .recommendation-card-current.is-settling,
-  .recommendation-stack > .recommendation-actions .card-action {
-    transition: none;
-  }
 }

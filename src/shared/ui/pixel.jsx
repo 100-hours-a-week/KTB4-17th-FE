@@ -1,5 +1,3 @@
-import { asset } from "../assets.js";
-
 // Pixel icons drawn from character grids (B안 시안과 같은 도트). "." is empty;
 // any other character is a pixel whose colour comes from `colors[char]` or currentColor.
 const ICONS = {
@@ -130,6 +128,70 @@ const ICONS = {
   ],
   burgerSm: ["XXXXXXX", ".......", "XXXXXXX", ".......", "XXXXXXX"],
   heart: [".XX.XX.", "XXXXXXX", "XXXXXXX", ".XXXXX.", "..XXX..", "...X..."],
+  heartOutline: [
+    ".XX.XX.",
+    "X..X..X",
+    "X.....X",
+    ".X...X.",
+    "..X.X..",
+    "...X...",
+  ],
+  gear: [
+    "X..X..X",
+    ".XXXXX.",
+    ".XX.XX.",
+    "XX...XX",
+    ".XX.XX.",
+    ".XXXXX.",
+    "X..X..X",
+  ],
+  pencil: [
+    ".....X.",
+    "....XXX",
+    "...XXX.",
+    "..XXX..",
+    ".XXX...",
+    "XXX....",
+    "XX.....",
+  ],
+  arrowDown: [
+    "..XXX..",
+    "..XXX..",
+    "..XXX..",
+    "XXXXXXX",
+    ".XXXXX.",
+    "..XXX..",
+    "...X...",
+  ],
+  arrowRight: [
+    "...X...",
+    "...XX..",
+    "XXXXXX.",
+    "XXXXXXX",
+    "XXXXXX.",
+    "...XX..",
+    "...X...",
+  ],
+  arrowLeft: [
+    "...X...",
+    "..XX...",
+    ".XXXXXX",
+    "XXXXXXX",
+    ".XXXXXX",
+    "..XX...",
+    "...X...",
+  ],
+  arrowUpRight: [
+    "..XXXXX",
+    "....XXX",
+    "...XXXX",
+    "..XXX.X",
+    ".XXX...",
+    "XXX....",
+    ".X.....",
+  ],
+  swap: ["..X...X..", ".XX...XX.", "XXXXXXXXX", ".XX...XX.", "..X...X.."],
+  dot: [".XXX.", "XXXXX", "XXXXX", "XXXXX", ".XXX."],
   chat: [
     "XXXXXXXX",
     "X......X",
@@ -226,20 +288,14 @@ export function PixelIcon({ name, scale = 2, colors, className = "" }) {
 
 // AI 캐릭터 아바타: 홀로그램 바탕 + 흰 계단 테두리 + 픽셀 로봇 (온보딩 '하루'와 같은 모양)
 export function AiAvatar({ size = 34, className = "" }) {
+  const scale = Math.max(1, Math.round((size * 0.6) / 12));
   return (
     <span
       className={`ai-avatar ${className}`}
       style={{ "--ai-avatar-size": `${size}px` }}
       aria-hidden="true"
     >
-      <img
-        className="ai-avatar-image"
-        src={asset("ai-companion-v1.webp")}
-        width="1254"
-        height="1254"
-        alt=""
-        draggable="false"
-      />
+      <PixelIcon name="robot" scale={scale} />
     </span>
   );
 }

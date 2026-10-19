@@ -402,7 +402,11 @@
 }
 
 .registration-info-page .registration-info-fields .choice.selected::before {
+  width: auto;
+  height: auto;
+  margin: 0;
   background: var(--purple);
+  mask: none;
 }
 
 .registration-info-page .registration-info-fields .choice.selected::after {

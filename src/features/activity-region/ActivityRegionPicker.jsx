@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Field } from "../../shared/ui/components.jsx";
+import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import { regions } from "./api.js";
 
 export function ActivityRegionPicker({
@@ -49,7 +50,7 @@ export function ActivityRegionPicker({
         spellCheck={false}
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="시·군·구 검색 (예: 수원시, 강남구)…"
+        placeholder="시·군·구 검색 (예: 수원시, 강남구)"
         aria-label="활동 지역 검색"
         disabled={disabled}
       />
@@ -93,7 +94,11 @@ export function ActivityRegionPicker({
             >
               {name}
               <span aria-hidden="true">
-                {selectedId === item.activityRegionId ? "●" : "○"}
+                <PixelIcon
+                  name={
+                    selectedId === item.activityRegionId ? "radioOn" : "radio"
+                  }
+                />
               </span>
             </button>
           );

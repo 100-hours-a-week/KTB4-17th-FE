@@ -83,7 +83,6 @@ div.practice-retry button.practice-retry-button:disabled {
   place-items: center;
   padding: 24px;
   background: #21172f75;
-  overflow-y: auto;
 }
 
 .practice-dialog {
@@ -91,8 +90,7 @@ div.practice-retry button.practice-retry-button:disabled {
   padding: 22px 20px 18px;
   border: 1px solid #d8c5e7;
   background: var(--paper);
-  box-shadow: 0 14px 45px #38205f24;
-  border-radius: 14px;
+  box-shadow: 4px 5px 0 #8758cf46;
 }
 
 .practice-dialog h2 {
@@ -115,13 +113,12 @@ div.practice-retry button.practice-retry-button:disabled {
 
 section.practice-dialog button.practice-dialog-button {
   flex: 1;
-  min-height: 44px;
+  min-height: 42px;
   border: 1px solid #d8c5e7;
   background: var(--paper);
   color: var(--ink);
   font: inherit;
   font-size: 12px;
-  border-radius: 8px;
 }
 
 section.practice-dialog button.practice-dialog-button.is-primary {
@@ -130,6 +127,7 @@ section.practice-dialog button.practice-dialog-button.is-primary {
   color: white;
 }
 
+/* #218에서 새로 추가된 요소 스타일 (최신 버전 유지) */
 .practice-partner {
   display: flex;
   min-width: 0;
@@ -198,11 +196,6 @@ section.practice-dialog button.practice-dialog-button.is-primary {
 .practice-view .practice-composer {
   padding: 10px 12px max(10px, env(safe-area-inset-bottom));
   border-top: 1px solid var(--line-soft, var(--line));
-}
-
-.practice-composer .message-text-input {
-  font-size: 16px;
-  line-height: 20px;
 }
 
 .practice-view .message-row.theirs .bubble-group {

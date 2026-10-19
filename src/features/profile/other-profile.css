@@ -1,44 +1,17 @@
 .other-profile-page {
   position: absolute;
   inset: 0;
-  overflow: hidden auto;
-  overscroll-behavior-y: contain;
-  background: var(--canvas);
-  scrollbar-gutter: stable;
-}
-
-.other-profile-backdrop {
-  position: absolute;
-  z-index: 0;
-  inset: 0;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
-  pointer-events: none;
-}
-
-.other-profile-backdrop > * {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.16;
-  filter: blur(28px);
-  transform: scale(1.1);
-}
-
-.other-profile-toolbar {
-  position: sticky;
-  z-index: 8;
-  top: 0;
-  height: var(--header-height);
-  margin-bottom: calc(-1 * var(--header-height));
-  background: linear-gradient(rgb(30 20 44 / 22%), rgb(30 20 44 / 8%));
-  backdrop-filter: blur(5px);
+  background: var(--canvas);
 }
 
 .other-profile-hero {
   position: relative;
-  z-index: 1;
+  flex: 0 0 clamp(220px, 40dvh, 360px);
   width: 100%;
-  height: clamp(300px, 57dvh, 520px);
+  min-height: 0;
   overflow: hidden;
   background: linear-gradient(145deg, #e9d7ff, #fbc6e8);
   touch-action: pan-y;
@@ -50,21 +23,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 32%;
-}
-
-.other-profile-hero::after {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    180deg,
-    #1e142c50,
-    transparent 30%,
-    transparent 80%,
-    #1e142c25
-  );
-  content: "";
-  pointer-events: none;
+  object-position: center 35%;
 }
 
 .other-profile-hero-placeholder {
@@ -77,28 +36,374 @@
 .other-profile-settings {
   position: absolute;
   z-index: 7;
-  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  top: calc(env(safe-area-inset-top, 0px) + 14px);
   display: grid;
   place-items: center;
   width: 44px;
   height: 44px;
-  padding: 0;
+  padding: 0 2px 4px 0;
   border: 0;
-  border-radius: 12px;
-  background: rgb(32 18 47 / 24%);
+  border-radius: 0;
+  background: transparent;
   color: #fff;
-  font-size: 25px;
+  font-size: 32px;
   line-height: 1;
-  text-shadow: 0 1px 3px #0005;
-  backdrop-filter: blur(6px);
+  text-shadow: 0 1px 3px #0008;
 }
 
-.other-profile-back {
-  left: 10px;
+/* 뒤로가기와 사진 단계 막대를 한 줄에: 버튼 세로 중심 = 막대 세로 중심 */
+.other-profile-hero .other-profile-back {
+  top: calc(env(safe-area-inset-top, 0px) + 6px);
+  left: 8.5px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  filter: drop-shadow(0 1px 2px #0008);
+}
+
+.other-profile-hero .other-profile-segments {
+  z-index: 6;
+  top: calc(env(safe-area-inset-top, 0px) + 6px);
+  left: 56px;
+  right: 16px; /* 왼쪽 화살표 여백(16px)과 같게 */
 }
 
 .other-profile-settings {
-  right: 62px;
+  right: 14px;
+  padding: 0;
+  font-size: 24px;
+}
+
+.other-profile-loading {
+  position: absolute;
+  z-index: 2;
+  right: 12px;
+  bottom: 12px;
+  left: 12px;
+  margin: 0;
+  color: #fff;
+  font-size: 13px;
+  text-align: center;
+  text-shadow: 0 1px 4px #241833;
+}
+
+.other-profile-info {
+  flex: 1 1 0;
+  min-height: 0;
+  margin: 8px 10px calc(env(safe-area-inset-bottom, 0px) + 8px);
+  padding: 12px 12px 14px;
+  overflow-y: auto;
+  border: 1px solid #d8c5e7;
+  background: var(--paper);
+  box-shadow: 3px 4px 0 #8758cf35;
+}
+
+.other-profile-kicker {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--purple);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+.other-profile-section-title > span {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 22px;
+  border: 1px solid #d8c5e7;
+  background: var(--soft-lavender);
+  color: var(--purple);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+}
+
+.other-profile-info h1 {
+  margin: 0 0 14px;
+  color: var(--ink);
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.other-profile-info h1 > span:where(:first-child) {
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.other-profile-heart {
+  display: inline-flex;
+  margin-left: 6px;
+  color: var(--purple);
+  font-size: 17px;
+  vertical-align: middle;
+}
+
+.other-profile-facts {
+  display: grid;
+  gap: 8px;
+  color: #51445f;
+  font-size: 13px;
+}
+
+.other-profile-facts p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.other-profile-facts p > span {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  color: var(--purple);
+}
+
+.other-profile-detail-section {
+  margin-top: 22px;
+}
+
+.other-profile-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.other-profile-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.other-profile-lifestyle-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.other-profile-detail-tile {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 12px;
+  border: 1px solid #e5d9ee;
+  background: #fbf8ff;
+  box-shadow: 2px 2px 0 #8758cf1c;
+}
+
+.other-profile-detail-tile dt {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.other-profile-detail-tile dd {
+  overflow-wrap: anywhere;
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+@media (height <= 700px) {
+  .other-profile-hero {
+    flex-basis: clamp(190px, 42dvh, 300px);
+  }
+
+  .other-profile-info {
+    margin: 6px 9px calc(env(safe-area-inset-bottom, 0px) + 6px);
+    padding: 9px 10px 10px;
+  }
+
+  .other-profile-detail-section {
+    margin-top: 16px;
+  }
+
+  .other-profile-detail-tile {
+    min-height: 48px;
+    gap: 4px;
+    padding: 6px 8px;
+  }
+
+  .other-profile-detail-tile dd {
+    font-size: 12px;
+  }
+}
+
+@media (height <= 520px) {
+  .other-profile-hero {
+    flex-basis: clamp(135px, 27dvh, 170px);
+  }
+
+  .other-profile-info {
+    padding: 6px 8px 7px;
+  }
+
+  .other-profile-kicker {
+    margin-bottom: 3px;
+  }
+
+  .other-profile-info h1 {
+    margin-bottom: 5px;
+    font-size: 18px;
+  }
+
+  .other-profile-facts {
+    gap: 2px;
+    font-size: 11px;
+  }
+
+  .other-profile-detail-section {
+    margin-top: 6px;
+  }
+
+  .other-profile-section-title {
+    margin-bottom: 4px;
+  }
+
+  .other-profile-detail-grid {
+    gap: 4px;
+  }
+
+  .other-profile-detail-tile {
+    min-height: 40px;
+    gap: 3px;
+    padding: 5px 6px;
+  }
+
+  .other-profile-detail-tile dd {
+    font-size: 11px;
+  }
+}
+
+.other-profile-error {
+  margin: 20px;
+  padding: 22px 18px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  text-align: center;
+}
+
+.other-profile-error p {
+  margin-bottom: 14px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.other-profile-error button {
+  min-height: 40px;
+  padding: 8px 18px;
+  border: 1px solid #8758cf;
+  background: var(--soft-lavender);
+  color: var(--ink);
+}
+
+.profile-bubble-avatar-button {
+  display: block;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+}
+
+.profile-bubble-avatar-button .profile-bubble-avatar {
+  width: 100%;
+  height: 100%;
+  margin-top: 0;
+}
+
+.chat-message-row.theirs .profile-bubble-avatar-button {
+  margin-top: 20px;
+}
+
+.chat-message-row.theirs .profile-bubble-avatar-button .profile-bubble-avatar {
+  margin-top: 0;
+}
+
+/* 사진 단계 막대: 홈 카드와 같은 연한 색 (지난 칸 연보라 · 현재 칸 연보라→연분홍 · 남은 칸 반투명 흰색) */
+.other-profile-hero .other-profile-segments button {
+  height: 44px;
+  border-radius: 0;
+  background: transparent;
+}
+
+.other-profile-hero .other-profile-segments button::before {
+  top: 20px;
+  height: 4px;
+  border-radius: 0;
+  background: rgb(255 255 255 / 55%);
+}
+
+.other-profile-hero .other-profile-segments button.seen::before {
+  background: linear-gradient(90deg, #d4c6ff, #bba6ff);
+}
+
+.other-profile-hero .other-profile-segments button.active::before {
+  background: linear-gradient(90deg, #bba6ff, #f7b3d9);
+}
+
+/* 정보 카드: 반투명 흰 유리 느낌, 사진 위로 살짝 겹쳐 뒤가 은은하게 비침 */
+.other-profile-page .other-profile-info {
+  position: relative;
+  z-index: 2;
+  margin-top: -18px;
+  border: 0;
+  border-image: none;
+  padding: 20px 20px 22px;
+  background: rgb(255 255 255 / 78%);
+  box-shadow:
+    inset 0 0 0 1px rgb(220 211 232 / 90%),
+    inset 0 -3px 0 rgb(124 92 250 / 8%);
+  clip-path: var(--pixel-step-shape);
+  backdrop-filter: blur(12px);
+}
+
+/* 카드 바깥 여백: 사진을 흐리게 깔아 투명하게 비쳐 보이도록 */
+.other-profile-backdrop {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.other-profile-backdrop > * {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.55;
+  filter: blur(24px) saturate(1.1);
+  transform: scale(1.15);
+}
+
+.other-profile-page > .other-profile-hero {
+  z-index: 1;
+}
+
+/* #218에서 새로 추가된 요소 스타일 (최신 버전 유지) */
+.other-profile-toolbar {
+  position: sticky;
+  z-index: 8;
+  top: 0;
+  height: var(--header-height);
+  margin-bottom: calc(-1 * var(--header-height));
+  background: linear-gradient(rgb(30 20 44 / 22%), rgb(30 20 44 / 8%));
+  backdrop-filter: blur(5px);
 }
 
 .other-profile-toolbar .profile-pager {
@@ -122,174 +427,10 @@
   transform: translateX(-50%);
 }
 
-.other-profile-hero .other-profile-segments {
-  z-index: 6;
-  inset: auto 18px 20px;
-}
-
-.other-profile-hero .other-profile-segments button {
-  height: 44px;
-  border-radius: 0;
-  background: transparent;
-}
-
-.other-profile-hero .other-profile-segments button::before {
-  top: 22px;
-  height: 3px;
-  border-radius: 2px;
-  background: rgb(255 255 255 / 55%);
-}
-
-.other-profile-hero .other-profile-segments button.seen::before {
-  background: #d4c6ff;
-}
-
-.other-profile-hero .other-profile-segments button.active::before {
-  background: #fff;
-}
-
-.other-profile-loading {
-  position: absolute;
-  z-index: 2;
-  right: 12px;
-  bottom: 22px;
-  left: 12px;
-  margin: 0;
-  color: #fff;
-  font-size: 13px;
-  text-align: center;
-  text-shadow: 0 1px 4px #241833;
-}
-
-.other-profile-info {
-  position: relative;
-  z-index: 2;
-  margin: -12px 10px calc(env(safe-area-inset-bottom, 0px) + 16px);
-  padding: 22px 18px;
-  border: 1px solid rgb(218 202 237 / 85%);
-  border-radius: 18px;
-  background: rgb(255 253 255 / 95%);
-  box-shadow: 0 5px 20px rgb(75 44 108 / 5%);
-}
-
-.other-profile-kicker {
-  display: block;
-  margin-bottom: 8px;
-  color: var(--purple);
-  font-size: 10px;
-  letter-spacing: 0.1em;
-}
-
-.other-profile-info h1 {
-  margin: 0 0 12px;
-  color: var(--ink);
-  font-size: 25px;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
-}
-
 .other-profile-info .other-profile-age {
   color: var(--muted);
   font-size: 20px;
   font-weight: 400;
-}
-
-.other-profile-heart {
-  margin-left: 8px;
-  color: #da6aa8;
-  font-size: 20px;
-}
-
-.other-profile-facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 14px;
-  color: #51445f;
-  font-size: 13px;
-}
-
-.other-profile-facts p {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0;
-  line-height: 1.6;
-}
-
-.other-profile-section-title > span {
-  color: var(--purple);
-  font-size: 11px;
-  font-weight: 400;
-}
-
-.other-profile-facts p > span {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  color: var(--purple);
-}
-
-.other-profile-detail-section {
-  margin-top: 26px;
-}
-
-.other-profile-section-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 12px;
-  color: var(--ink);
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.other-profile-detail-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin: 0;
-}
-
-.other-profile-lifestyle-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.other-profile-detail-tile {
-  display: flex;
-  min-width: 0;
-  min-height: 64px;
-  flex-direction: column;
-  justify-content: center;
-  gap: 7px;
-  padding: 11px 10px;
-  border: 1px solid #e5d9ee;
-  border-radius: 10px;
-  background: #fbf8ff;
-}
-
-.other-profile-detail-tile dt {
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.3;
-}
-
-.other-profile-detail-tile dd {
-  overflow-wrap: anywhere;
-  margin: 0;
-  color: var(--ink);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.other-profile-page .other-profile-error button {
-  min-height: 44px;
-  padding: 8px 18px;
-  border: 1px solid #8758cf;
-  border-radius: 8px;
-  background: var(--soft-lavender);
-  color: var(--ink);
 }
 
 .other-profile-ai-actions {
@@ -346,74 +487,7 @@
   outline-offset: -3px;
 }
 
-.other-profile-error {
-  position: relative;
-  margin: 20px;
-  padding: 22px 18px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--paper);
-  text-align: center;
-}
-
-.other-profile-error p {
-  margin-bottom: 14px;
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1.7;
-}
-
-.profile-bubble-avatar-button {
-  display: block;
-  flex: 0 0 34px;
-  width: 34px;
-  height: 34px;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  border: 0;
-  background: transparent;
-}
-
-.profile-bubble-avatar-button .profile-bubble-avatar {
-  width: 100%;
-  height: 100%;
-  margin-top: 0;
-}
-
-.chat-message-row.theirs .profile-bubble-avatar-button {
-  margin-top: 20px;
-}
-
-.chat-message-row.theirs .profile-bubble-avatar-button .profile-bubble-avatar {
-  margin-top: 0;
-}
-
-@media (width <= 350px) {
-  .other-profile-info {
-    margin-inline: 8px;
-    padding-inline: 14px;
-  }
-
-  .other-profile-detail-grid {
-    gap: 6px;
-  }
-
-  .other-profile-detail-tile {
-    padding-inline: 8px;
-  }
-}
-
 @media (width >= 720px) {
-  .other-profile-hero {
-    height: min(60dvh, 580px);
-  }
-
-  .other-profile-info {
-    margin-inline: 24px;
-    padding: 26px;
-  }
-
   .other-profile-ai-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

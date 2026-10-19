@@ -532,7 +532,7 @@ function AppRouter() {
     );
   else
     page = (
-      <main id="main-content" tabIndex={-1}>
+      <main id="main-content" tabIndex={-1} className="not-found-main">
         <h1 className="sr-only">화면을 찾을 수 없어요</h1>
         <EmptyState
           title="화면을 찾을 수 없어요"

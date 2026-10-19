@@ -1,43 +1,29 @@
-/* Approved illustrations are referenced directly to preserve the original art. */
+/* Y2K 픽셀 배지 (16x16 도트, 정수 배율로 선명하게) */
 .notification-art {
-  --notification-art-size: 55px;
+  --notification-art-size: 48px;
 
   display: block;
   flex: 0 0 var(--notification-art-size);
   width: var(--notification-art-size);
   height: var(--notification-art-size);
-  overflow: hidden;
-  border-radius: 50%;
-  background-image: url("/assets/notifications/inbox-reference.png");
-  background-repeat: no-repeat;
-  background-size: calc(var(--notification-art-size) * 1024 / 110)
-    calc(var(--notification-art-size) * 1536 / 110);
+  background: center / contain no-repeat;
+  image-rendering: pixelated;
 }
 
 .notification-art-like {
-  background-position: calc(var(--notification-art-size) * -255 / 110)
-    calc(var(--notification-art-size) * -678 / 110);
+  background-image: url("/assets/notifications/y2k-like.svg");
 }
 
 .notification-art-match {
-  background-position: calc(var(--notification-art-size) * -255 / 110)
-    calc(var(--notification-art-size) * -875 / 110);
+  background-image: url("/assets/notifications/y2k-match.svg");
 }
 
 .notification-art-chat {
-  background-position: calc(var(--notification-art-size) * -255 / 110)
-    calc(var(--notification-art-size) * -1075 / 110);
+  background-image: url("/assets/notifications/y2k-chat.svg");
 }
 
 .notification-art-system {
-  display: grid;
-  place-items: center;
-  background: var(--soft-lavender);
-}
-
-.notification-art-system img {
-  width: calc(var(--notification-art-size) * 35 / 55);
-  height: calc(var(--notification-art-size) * 30 / 55);
+  background-image: url("/assets/notifications/y2k-system.svg");
 }
 
 .pager-button {
@@ -50,7 +36,6 @@
   padding: 0;
   margin-left: auto;
   border: 6px solid transparent;
-  border-image: var(--px-frame) 6 fill / 6px;
   border-radius: 0;
   background: none;
   color: var(--purple-deep);
@@ -66,18 +51,9 @@
   margin-left: 0;
 }
 
-.pager-button,
-.home-header .home-preference-action {
-  border: 0;
-  border-image: none;
-  border-radius: 9px;
-  background: transparent;
-}
-
 .pager-button:hover,
 .pager-button[aria-current="page"] {
-  border-image-source: var(--px-frame-selected);
-  background: var(--soft-lavender);
+  color: var(--purple);
 }
 
 .pager-button:active {
@@ -109,9 +85,8 @@
   height: 44px;
   padding: 0;
   margin-left: auto;
-  border: 0;
-  border-image: none;
-  background: transparent;
+  border: 6px solid transparent;
+  background: none;
 }
 
 .home-preference-action img {
@@ -152,11 +127,11 @@
 }
 
 .main-scroll.notifications-main {
+  top: calc(56px + env(safe-area-inset-top, 0px));
   padding: 0 16px 28px;
+  background: var(--canvas);
   color: var(--ink);
   overscroll-behavior: contain;
-  top: calc(54px + env(safe-area-inset-top, 0px));
-  background: transparent;
 }
 
 .notification-toolbar {
@@ -165,8 +140,6 @@
   top: 0;
   padding: 20px 0 14px;
   border-bottom: 1px solid var(--line-soft);
-  padding-top: 18px;
-  padding-bottom: 12px;
   background: var(--canvas);
 }
 
@@ -218,49 +191,33 @@
 
 .notification-tabs button {
   position: relative;
-  isolation: isolate;
   flex: 1 1 0;
   min-width: 0;
-  padding: 4px 3px;
+  min-height: 44px;
+  padding: 7px 3px;
+  border: 6px solid transparent;
+  border-image: var(--px-frame) 6 fill / 6px;
+  background: none;
   color: var(--muted);
   font-size: 12px;
   white-space: nowrap;
-  border: 0;
-  border-image: none;
-  border-radius: 8px;
-  background: transparent;
-  min-height: 44px;
-}
-
-.notification-tabs button::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  inset: 5px 0;
-  border-radius: 6px;
-  background: #f0eaf8;
 }
 
 .notification-tabs button.active {
   border-image-source: var(--px-frame-selected);
-  font-weight: 700;
-  background: transparent;
   color: var(--purple-deep);
-}
-
-.notification-tabs button.active::before {
-  background: #e5d9fb;
+  font-weight: 700;
 }
 
 .notification-tab-dot {
   position: absolute;
+  top: -5px;
+  right: -5px;
   width: 8px;
   height: 8px;
   border: 1px solid var(--paper);
   border-radius: 50%;
   background: #d94861;
-  top: 4px;
-  right: 5px;
 }
 
 .notification-day {
@@ -277,38 +234,26 @@
   border-image: var(--px-card) 8 fill / 6px;
   border-radius: 0;
   background: none;
-  margin-bottom: 10px;
-  filter: none;
+  filter: var(--shadow-pixel);
 }
 
 .notification-card.unread {
   border-image-source: var(--px-card-tint);
 }
 
-.notification-card::before {
-  position: absolute;
-  z-index: 0;
-  inset: 6px;
-  background: rgb(255 255 255 / 84%);
-  backdrop-filter: blur(4px);
-  content: "";
-  pointer-events: none;
-}
-
 .notification-open {
-  position: relative;
-  z-index: 1;
   display: flex;
   align-items: center;
+
+  /* 아이콘 좌우 여백을 맞추고 글과의 간격을 넓혀 균형을 잡는다 */
+  gap: 20px;
   width: 100%;
-  padding: 12px 40px 10px 6px;
+  min-height: 88px;
+  padding: 14px 44px 14px 14px;
   border: 0;
   background: transparent;
   color: inherit;
   text-align: left;
-  gap: 12px;
-  min-height: 96px;
-  padding-left: 8px;
 }
 
 .notification-open .notification-art {
@@ -324,19 +269,19 @@
 }
 
 .notification-copy strong {
+  font-size: 13px;
   font-weight: 700;
+  line-height: 1.5;
   word-break: keep-all;
   overflow-wrap: anywhere;
-  font-size: 14px;
-  line-height: 1.55;
 }
 
 .notification-copy > span {
   color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
   word-break: keep-all;
   overflow-wrap: anywhere;
-  font-size: 13px;
-  line-height: 1.65;
 }
 
 .notification-copy time {
@@ -358,7 +303,6 @@
 
 .notification-delete {
   position: absolute;
-  z-index: 2;
   top: -4px;
   right: -4px;
   display: grid;
@@ -437,6 +381,7 @@
 .notification-toast {
   position: absolute;
   z-index: 60;
+  top: calc(64px + env(safe-area-inset-top, 0px));
   right: 12px;
   left: 12px;
   max-height: calc(100% - 84px - env(safe-area-inset-top, 0px));
@@ -445,24 +390,11 @@
   border-image: var(--px-card) 8 fill / 8px;
   background: none;
   color: var(--ink);
+  filter: var(--shadow-pixel-strong);
   animation: notification-arrive 220ms ease-out;
-  top: calc(60px + env(safe-area-inset-top, 0px));
-  filter: drop-shadow(0 8px 18px rgb(52 25 90 / 14%));
-}
-
-.notification-toast::before {
-  position: absolute;
-  z-index: 0;
-  inset: 8px;
-  background: rgb(255 255 255 / 84%);
-  backdrop-filter: blur(6px);
-  content: "";
-  pointer-events: none;
 }
 
 .notification-toast-open {
-  position: relative;
-  z-index: 1;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -502,7 +434,6 @@
 
 .notification-toast-close {
   position: absolute;
-  z-index: 2;
   top: -4px;
   right: -4px;
   display: grid;
@@ -598,8 +529,8 @@
   }
 
   .notification-open {
-    gap: 8px;
-    padding-left: 4px;
+    gap: 14px;
+    padding-left: 10px;
   }
 }
 
@@ -616,21 +547,4 @@
   .notifications-main .empty-state {
     min-height: 180px;
   }
-}
-
-/* Pager identity remains visible without framing every icon as a card. */
-
-.pager-button .pager-badge {
-  top: 0;
-  right: -1px;
-  min-width: 17px;
-  height: 17px;
-  font-size: 9px;
-}
-
-.notification-heading h2 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1.5;
 }

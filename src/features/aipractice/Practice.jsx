@@ -8,7 +8,7 @@ import {
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { createMessageId } from "../../shared/messageId.js";
 import { ScreenHeader } from "../../shared/ui/components.jsx";
-import { AiAvatar } from "../../shared/ui/pixel.jsx";
+import { AiAvatar, PixelIcon } from "../../shared/ui/pixel.jsx";
 import { MessageBubble } from "../chat/Chat.jsx";
 import { ChatModeMenu } from "../chat/ChatModeMenu.jsx";
 import { useKeyboardViewport } from "../chat/useKeyboardViewport.js";
@@ -567,7 +567,7 @@ export function Practice({
             className="chat-latest-button"
             onClick={scroll.scrollToLatest}
           >
-            최신 메시지 ↓
+            최신 메시지 <PixelIcon name="arrowDown" scale={1.5} />
           </button>
         )}
       </div>
@@ -626,7 +626,7 @@ export function Practice({
             disabled={!input.trim() || inputDisabled}
             aria-label="보내기"
           >
-            ➤
+            <PixelIcon name="send" scale={2} />
           </button>
         </div>
       </form>

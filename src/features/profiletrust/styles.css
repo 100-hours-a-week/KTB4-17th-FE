@@ -169,7 +169,7 @@
 .trust-photo-intro > img {
   width: min(65%, 220px);
   height: auto;
-  image-rendering: auto;
+  image-rendering: pixelated;
 }
 
 .trust-photo-intro span {
@@ -258,7 +258,7 @@
   display: block;
   width: 100%;
   height: auto;
-  image-rendering: auto;
+  image-rendering: pixelated;
 }
 
 .trust-examples figcaption {
@@ -273,6 +273,18 @@
 .trust-example-good figcaption {
   color: var(--purple-deep);
   font-weight: 700;
+}
+
+/* ✓ 초록·✕ 빨강은 그림 스티커와 같은 색. 글이 두 줄이 돼도 아이콘이 첫 글자 앞에 붙게 인라인으로 둔다 */
+.trust-examples figcaption > svg {
+  display: inline-block;
+  margin-right: 3px;
+  vertical-align: -1px;
+  color: #e0365f;
+}
+
+.trust-example-good figcaption > svg {
+  color: #1e9c62;
 }
 
 .trust-guide p,
@@ -440,7 +452,6 @@
 }
 
 .trust-photo-tile {
-  border-radius: 8px;
   position: relative;
   min-width: 0;
   aspect-ratio: 3 / 4;
@@ -497,7 +508,6 @@
 }
 
 .trust-photo-remove {
-  border-bottom-left-radius: 8px;
   position: absolute;
   top: 0;
   right: 0;
@@ -530,9 +540,6 @@
 }
 
 .trust-photo-add {
-  border-radius: 8px;
-  font-family: var(--font-body);
-  line-height: 1.6;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -573,20 +580,5 @@
   .trust-guide,
   .trust-note {
     padding: 8px;
-  }
-}
-
-.trust-photo-order button:disabled {
-  color: rgb(255 255 255 / 50%);
-}
-
-@media (width <= 350px) {
-  .trust-photo-grid {
-    gap: 8px;
-  }
-
-  .trust-photo-badges {
-    right: 44px;
-    left: 4px;
   }
 }

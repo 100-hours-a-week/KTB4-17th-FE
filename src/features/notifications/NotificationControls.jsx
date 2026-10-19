@@ -1,3 +1,4 @@
+import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import { useNotifications } from "./context.jsx";
 import { notificationBadge } from "./model.js";
 
@@ -30,7 +31,7 @@ export function NotificationButton({ className = "" }) {
       onClick={notifications.openInbox}
       title="알림"
     >
-      <PagerIcon />
+      <PixelIcon name="burger" scale={3} />
       {badge && (
         <span className="pager-badge" aria-hidden="true">
           {badge}
@@ -45,8 +46,6 @@ export function NotificationIllustration({ kind }) {
     <span
       className={`notification-art notification-art-${kind}`}
       aria-hidden="true"
-    >
-      {kind === "system" && <PagerIcon />}
-    </span>
+    />
   );
 }

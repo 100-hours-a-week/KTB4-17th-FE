@@ -102,10 +102,10 @@ export function ScreenHeader({
 }
 
 const tabItems = [
-  ["홈", "/home", "home"],
-  ["좋아요", "/likes", "heart"],
-  ["채팅", "/chats", "chat"],
-  ["마이", "/my", "user"],
+  ["HOME", "/home", "home"],
+  ["LIKES", "/likes", "heart"],
+  ["CHAT", "/chats", "chat"],
+  ["MY", "/my", "user"],
 ];
 
 export function BottomNav({ path, navigate, unreadMessageCount = null }) {
@@ -248,10 +248,19 @@ export function ChoiceGroup({
   );
 }
 
+// Glyph shorthands used by callers, drawn as pixel icons to match the rest of the UI.
+const EMPTY_STATE_ICONS = { "♡": "heartOutline", "✦": "spark", "!": "alert" };
+
 export function EmptyState({ icon = "♡", title, description, action, role }) {
   return (
     <div className="empty-state" role={role}>
-      <div className="empty-icon">{icon}</div>
+      <div className="empty-icon">
+        {EMPTY_STATE_ICONS[icon] ? (
+          <PixelIcon name={EMPTY_STATE_ICONS[icon]} scale={4} />
+        ) : (
+          icon
+        )}
+      </div>
       <h2>{title}</h2>
       {description && <p>{description}</p>}
       {action}
@@ -276,7 +285,7 @@ export function PersonAvatar({ person, size = "medium" }) {
     />
   ) : (
     <span className={`person-avatar generated ${size}`} aria-hidden="true">
-      ♥
+      <PixelIcon name="heart" scale={3} />
     </span>
   );
 }
@@ -295,7 +304,9 @@ export function ProfilePhoto({ person, index = 0, className = "" }) {
         role="img"
         aria-label={`${person?.nickname || "프로필"}님의 사진이 없어요`}
       >
-        <span aria-hidden="true">♥</span>
+        <span aria-hidden="true">
+          <PixelIcon name="heart" scale={6} />
+        </span>
       </div>
     );
   }
