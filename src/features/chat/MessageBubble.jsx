@@ -69,7 +69,9 @@ export function MessageBubble({
         loading="lazy"
         alt=""
         onError={(event) => {
-          event.currentTarget.src = asset("chat-avatar-heart-terminal.svg");
+          const fallback = asset("chat-avatar-heart-terminal.svg");
+          if (event.currentTarget.getAttribute("src") !== fallback)
+            event.currentTarget.src = fallback;
         }}
       />
     </span>

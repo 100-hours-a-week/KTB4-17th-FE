@@ -83,6 +83,7 @@ div.practice-retry button.practice-retry-button:disabled {
   place-items: center;
   padding: 24px;
   background: #21172f75;
+  overflow-y: auto;
 }
 
 .practice-dialog {
@@ -90,7 +91,8 @@ div.practice-retry button.practice-retry-button:disabled {
   padding: 22px 20px 18px;
   border: 1px solid #d8c5e7;
   background: var(--paper);
-  box-shadow: 4px 5px 0 #8758cf46;
+  box-shadow: 0 14px 45px #38205f24;
+  border-radius: 14px;
 }
 
 .practice-dialog h2 {
@@ -113,16 +115,152 @@ div.practice-retry button.practice-retry-button:disabled {
 
 section.practice-dialog button.practice-dialog-button {
   flex: 1;
-  min-height: 42px;
+  min-height: 44px;
   border: 1px solid #d8c5e7;
   background: var(--paper);
   color: var(--ink);
   font: inherit;
   font-size: 12px;
+  border-radius: 8px;
 }
 
 section.practice-dialog button.practice-dialog-button.is-primary {
   border-color: var(--purple);
   background: var(--purple);
   color: white;
+}
+
+.practice-partner {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.practice-partner-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.practice-partner-copy > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.practice-partner-copy small {
+  color: var(--purple);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.practice-view .ai-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 0;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line-soft, var(--line));
+  background: #f1eaf8;
+  color: #625171;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.practice-ai-notice-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.practice-view .ai-notice span {
+  margin-top: 3px;
+  color: #766282;
+  font-size: 10px;
+}
+
+.practice-message-area {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.practice-message-area .practice-messages {
+  position: absolute;
+  inset: 0;
+  padding: 20px 16px 24px;
+  gap: 18px;
+  background: #f7f4fb;
+  overflow-anchor: none;
+}
+
+.practice-view .practice-composer {
+  padding: 10px 12px max(10px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line-soft, var(--line));
+}
+
+.practice-composer .message-text-input {
+  font-size: 16px;
+  line-height: 20px;
+}
+
+.practice-view .message-row.theirs .bubble-group {
+  max-width: calc(100% - 41px);
+}
+
+.practice-view .message-row.mine .bubble-group {
+  max-width: 84%;
+}
+
+.practice-view .typing-indicator {
+  align-self: flex-start;
+  margin-left: 41px;
+  padding: 10px 12px;
+  background: #eee6f6;
+  color: #6d577c;
+  font-size: 12px;
+  line-height: 1.5;
+  clip-path: var(--pixel-step-shape);
+}
+
+.practice-view .practice-state {
+  width: 100%;
+  max-width: 300px;
+  margin: auto;
+  padding: 24px 12px;
+}
+
+@media (width < 360px) {
+  .practice-view .ai-notice {
+    padding-inline: 12px;
+  }
+
+  .practice-message-area .practice-messages {
+    padding-inline: 12px;
+  }
+
+  .practice-partner {
+    gap: 5px;
+  }
+}
+
+@media (height < 500px) and (width < 600px) {
+  .practice-view .ai-notice {
+    padding-block: 5px;
+    font-size: 10px;
+  }
+
+  .practice-view .ai-notice span {
+    margin-top: 0;
+  }
+}
+
+.practice-message-list {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 100%;
+  gap: 18px;
 }
