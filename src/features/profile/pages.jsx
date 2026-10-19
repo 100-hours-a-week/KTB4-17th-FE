@@ -5,6 +5,7 @@ import { asset } from "../../shared/assets.js";
 import {
   BrandHeader,
   ChoiceGroup,
+  EmptyState,
   Field,
   Icon,
   PersonAvatar,
@@ -18,7 +19,10 @@ import { useNotifications } from "../notifications/context.jsx";
 import { PagerIcon } from "../notifications/NotificationControls.jsx";
 import { savedPhotoItems } from "../profiletrust/model.js";
 import { ProfilePhotoEditor } from "../profiletrust/ProfilePhotoEditor.jsx";
-import { nickname as checkNicknameAvailability } from "../user/api.js";
+import {
+  nickname as checkNicknameAvailability,
+  onboarding as getOnboardingStatus,
+} from "../user/api.js";
 import {
   getMyProfile,
   profile as saveProfile,
@@ -158,7 +162,7 @@ export function MyPage({ navigate }) {
                 />
               </button>
               <div className="my-identity-copy">
-                <span className="my-profile-kicker">MY PLAYER CARD</span>
+                <span className="my-profile-kicker">나의 프로필</span>
                 <h1>{profile.nickname || "닉네임 미등록"}</h1>
                 <p className="my-profile-age">
                   {age > 0 ? `${age}세` : "나이 정보 없음"}
@@ -178,7 +182,7 @@ export function MyPage({ navigate }) {
         )}
         <div className="my-menu">
           <button type="button" onClick={() => navigate("/my/persona")}>
-            <AiAvatar size={30} />내 페르소나 <span>활성　›</span>
+            <AiAvatar size={30} />내 페르소나 <span>›</span>
           </button>
           <button type="button" onClick={notifications.openInbox}>
             <PagerIcon />
@@ -202,13 +206,21 @@ export function Settings({
   isWithdrawingUser = false,
 }) {
   const [confirmingAction, setConfirmingAction] = useState(null);
+  const logoutActionRef = useRef(null);
+  const withdrawalActionRef = useRef(null);
+  function cancelAccountAction() {
+    const trigger =
+      confirmingAction === "logout" ? logoutActionRef : withdrawalActionRef;
+    setConfirmingAction(null);
+    window.requestAnimationFrame(() => trigger.current?.focus());
+  }
   const accountActionPending = isLoggingOut || isWithdrawingUser;
 
   return (
     <>
-      <BrandHeader navigate={navigate} />
       <ScreenHeader
-        className="chat-room-header"
+        notificationAction
+        className="account-header"
         title="설정"
         onBack={() => navigate("/my")}
       />
@@ -247,6 +259,7 @@ export function Settings({
           {confirmingAction !== "logout" ? (
             <button
               type="button"
+              ref={logoutActionRef}
               className="settings-action settings-logout"
               onClick={() => setConfirmingAction("logout")}
               disabled={accountActionPending}
@@ -276,7 +289,7 @@ export function Settings({
                 <button
                   type="button"
                   className="settings-confirm-cancel"
-                  onClick={() => setConfirmingAction(null)}
+                  onClick={cancelAccountAction}
                   disabled={accountActionPending}
                 >
                   취소
@@ -296,6 +309,7 @@ export function Settings({
           {confirmingAction !== "withdrawal" ? (
             <button
               type="button"
+              ref={withdrawalActionRef}
               className="settings-action settings-withdrawal"
               onClick={() => setConfirmingAction("withdrawal")}
               disabled={accountActionPending}
@@ -328,7 +342,7 @@ export function Settings({
                 <button
                   type="button"
                   className="settings-confirm-cancel"
-                  onClick={() => setConfirmingAction(null)}
+                  onClick={cancelAccountAction}
                   disabled={accountActionPending}
                 >
                   취소
@@ -521,9 +535,9 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
   }
   return (
     <>
-      <BrandHeader navigate={navigateWhenIdle} />
       <ScreenHeader
-        className="chat-room-header"
+        notificationAction
+        className="account-header"
         title="프로필 수정"
         onBack={() => navigateWhenIdle(returnTo)}
       />
@@ -696,9 +710,43 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
 }
 
 export function Persona({ navigate }) {
+  const [state, setState] = useState({ status: "loading", complete: null });
+  const [attempt, setAttempt] = useState(0);
+
+  // The public API exposes completion, but does not expose a saved summary.
+  // Never display example traits as the user's confirmed persona.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Retry explicitly reloads the server completion status.
+  useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+    setState({ status: "loading", complete: null });
+    getOnboardingStatus({ signal: controller.signal, cache: "no-store" })
+      .then((response) => {
+        if (!active) return;
+        const complete = response?.requirements?.personaComplete;
+        if (typeof complete !== "boolean") {
+          setState({ status: "error", complete: null });
+          return;
+        }
+        setState({ status: "ready", complete });
+      })
+      .catch(() => {
+        if (active) setState({ status: "error", complete: null });
+      });
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [attempt]);
+
+  function retry() {
+    setAttempt((current) => current + 1);
+  }
+
   return (
     <>
       <ScreenHeader
+        className="account-header"
         notificationAction
         title="내 페르소나"
         onBack={() => navigate("/my")}
@@ -707,27 +755,47 @@ export function Persona({ navigate }) {
         id="main-content"
         tabIndex={-1}
         className="main-scroll persona-main"
+        aria-busy={state.status === "loading"}
       >
         <div className="persona-hero">
-          <AiAvatar size={72} />
-          <h2>나를 닮은 AI가 준비됐어요</h2>
+          <AiAvatar size={64} />
+          <h2>나를 닮은 대화의 시작</h2>
           <p>
-            가치관 문답을 바탕으로 상대와의 AI 연습대화와 시뮬레이션에 참여해요.
+            가치관 문답에서 알아간 나의 생각과 표현을 AI 연습대화와 시뮬레이션에
+            반영해요.
           </p>
         </div>
-        <h2>나의 성향</h2>
-        {[
-          ["관계 속도", "천천히 가까워지는 편"],
-          ["갈등 대응", "차분히 이야기하는 편"],
-          ["여가 성향", "함께하는 시간도, 혼자만의 시간도 소중해요"],
-          ["연락 빈도", "필요할 때 충분히 소통해요"],
-        ].map(([label, value]) => (
-          <div className="persona-trait" key={label}>
-            <span>{label}</span>
-            <strong>{value}</strong>
-          </div>
-        ))}
-        <small>온보딩에서 확정한 가치관이 반영되어 있어요.</small>
+        {state.status === "loading" ? (
+          <p className="persona-status" role="status">
+            가치관 설정 상태를 확인하고 있어요…
+          </p>
+        ) : state.status === "error" ? (
+          <EmptyState
+            icon="!"
+            title="가치관 설정 상태를 확인하지 못했어요"
+            description="잠시 후 다시 확인해 주세요. 저장된 답변은 변경되지 않아요."
+            action={
+              <PixelButton secondary onClick={retry}>
+                다시 확인
+              </PixelButton>
+            }
+          />
+        ) : (
+          <section
+            className="persona-summary-status"
+            aria-labelledby="persona-summary-title"
+          >
+            <span className="persona-completion-label">
+              {state.complete ? "가치관 설정 완료" : "가치관 설정 확인 필요"}
+            </span>
+            <h2 id="persona-summary-title">나의 성향 요약</h2>
+            <p>
+              {state.complete
+                ? "온보딩에서 정리한 성향을 여기서 다시 볼 수 있도록 준비 중이에요."
+                : "가치관 문답을 마친 후 나의 성향을 정리할 수 있어요."}
+            </p>
+          </section>
+        )}
       </main>
     </>
   );

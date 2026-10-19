@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import {
-  BrandHeader,
   EmptyState,
   PixelButton,
+  ScreenHeader,
 } from "../../shared/ui/components.jsx";
 import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import * as preferencesApi from "./api.js";
@@ -234,19 +234,14 @@ export function Preferences({ navigate, toast, onSaved }) {
 
   return (
     <>
-      <BrandHeader navigate={navigate} />
-      <header className="screen-header preferences-header">
-        <button
-          type="button"
-          className="preferences-back"
-          aria-label="선호 설정 뒤로가기"
-          disabled={saving}
-          onClick={() => navigate("/home")}
-        >
-          <PixelIcon name="back" scale={3} />
-        </button>
-        <h1>선호 설정</h1>
-      </header>
+      <ScreenHeader
+        className="preferences-header account-header"
+        title="선호 설정"
+        notificationAction
+        onBack={() => {
+          if (!saving) navigate("/home");
+        }}
+      />
       <main
         id="main-content"
         tabIndex={-1}
@@ -277,6 +272,9 @@ export function Preferences({ navigate, toast, onSaved }) {
           />
         ) : (
           <form onSubmit={save}>
+            <p className="preferences-intro">
+              어떤 사람과 만나고 싶나요? 편안한 만남의 기준을 알려 주세요.
+            </p>
             <fieldset className="preferences-controls" disabled={saving}>
               <RangeField name="age" preference={preference} onChange={set} />
               <RangeField
