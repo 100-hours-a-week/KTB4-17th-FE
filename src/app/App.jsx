@@ -55,7 +55,10 @@ import {
   PixelButton,
 } from "../shared/ui/components.jsx";
 import { useViewportHeight } from "../shared/useViewportHeight.js";
-import { onboardingStepFromStatus } from "../shared/utils.js";
+import {
+  isOnboardingComplete,
+  onboardingStepFromStatus,
+} from "../shared/utils.js";
 
 function profileReturnPath(search) {
   const requested = new URLSearchParams(search).get("returnTo");
@@ -186,6 +189,7 @@ function AppRouter() {
           notifyAuthExpired: false,
         });
         if (!isCurrentCheck()) return;
+        const onboardingComplete = isOnboardingComplete(status);
         const registeredIdentity =
           status?.userStatus === "ACTIVE"
             ? null
@@ -195,7 +199,7 @@ function AppRouter() {
         setData((old) => ({
           ...old,
           session: true,
-          onboarded: status?.userStatus === "ACTIVE",
+          onboarded: onboardingComplete,
           registrationInfoConfirmed: true,
           ...(registeredIdentity
             ? {
@@ -206,16 +210,15 @@ function AppRouter() {
                 },
               }
             : {}),
-          onboardingStep:
-            status?.userStatus === "ACTIVE"
-              ? "complete"
-              : onboardingStepFromStatus(status),
+          onboardingStep: onboardingComplete
+            ? "complete"
+            : onboardingStepFromStatus(status),
         }));
         if (
           registrationPath &&
           window.location.pathname.startsWith("/registration")
         ) {
-          navigate(status?.userStatus === "ACTIVE" ? "/home" : "/onboarding", {
+          navigate(onboardingComplete ? "/home" : "/onboarding", {
             replace: true,
           });
         }

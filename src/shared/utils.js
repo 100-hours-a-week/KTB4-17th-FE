@@ -23,6 +23,10 @@ export function profilePhotoUrls(person) {
   return person?.photo ? [person.photo] : [];
 }
 
+export function isOnboardingComplete(status) {
+  return status?.onboardingNextStep === "COMPLETE";
+}
+
 export function onboardingStepFromStatus(status) {
   const serverSteps = {
     REGION: "region",
