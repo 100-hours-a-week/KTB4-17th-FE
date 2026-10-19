@@ -7,6 +7,7 @@ import {
   PersonAvatar,
   PixelButton,
 } from "../../shared/ui/components.jsx";
+import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import {
   jobCategoryLabel,
   normalizeJobCategory,
@@ -22,9 +23,15 @@ export function mapLikeItem(item, tab) {
     age: user?.age,
     job: normalizeJobCategory(user?.job),
     region: user?.region || "",
+    mbti: user?.mbti || "",
     photo: user?.profileImageUrl || "",
     status: item?.status || "",
   };
+}
+
+function responseTotalCount(response) {
+  const value = response?.totalCount ?? response?.pageInfo?.totalCount;
+  return Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
 
 export function Likes({
@@ -35,6 +42,13 @@ export function Likes({
 }) {
   const [tab, setTab] = useState(initialTab === "sent" ? "sent" : "received");
   const [rejectTarget, setRejectTarget] = useState(null);
+  const rejectDialog = useRef(null);
+  useEffect(() => {
+    const dialog = rejectDialog.current;
+    if (!dialog || !rejectTarget) return undefined;
+    dialog.showModal();
+    return () => dialog.close();
+  }, [rejectTarget]);
   const [actionLikeId, setActionLikeId] = useState(null);
   const actionInFlight = useRef(false);
   const requestInFlight = useRef({ received: false, sent: false });
@@ -46,6 +60,7 @@ export function Likes({
       error: "",
       nextCursor: null,
       hasNext: false,
+      totalCount: null,
     },
     sent: {
       items: [],
@@ -54,6 +69,7 @@ export function Likes({
       error: "",
       nextCursor: null,
       hasNext: false,
+      totalCount: null,
     },
   });
   const load = useCallback(async (targetTab, cursor = null) => {
@@ -81,6 +97,8 @@ export function Likes({
           loading: false,
           nextCursor: response?.pageInfo?.nextCursor || null,
           hasNext: Boolean(response?.pageInfo?.hasNext),
+          totalCount:
+            responseTotalCount(response) ?? current[targetTab].totalCount,
         },
       }));
     } catch (error) {
@@ -113,6 +131,10 @@ export function Likes({
       received: {
         ...current.received,
         items: current.received.items.filter((item) => item.id !== likeId),
+        totalCount:
+          current.received.totalCount == null
+            ? null
+            : Math.max(0, current.received.totalCount - 1),
       },
     }));
   }, []);
@@ -169,6 +191,7 @@ export function Likes({
   return (
     <>
       <BrandHeader navigate={navigate} />
+      <h1 className="likes-page-title">좋아요</h1>
       <fieldset className="segmented-tabs likes-seg">
         <legend className="sr-only">좋아요 목록 종류</legend>
         <button
@@ -178,6 +201,11 @@ export function Likes({
           onClick={() => selectTab("received")}
         >
           받은 좋아요
+          {pages.received.totalCount != null && (
+            <span className="likes-tab-count">
+              ({pages.received.totalCount})
+            </span>
+          )}
         </button>
         <button
           type="button"
@@ -186,10 +214,13 @@ export function Likes({
           onClick={() => selectTab("sent")}
         >
           보낸 좋아요
+          {pages.sent.totalCount != null && (
+            <span className="likes-tab-count">({pages.sent.totalCount})</span>
+          )}
         </button>
       </fieldset>
       <main id="main-content" tabIndex={-1} className="main-scroll likes-main">
-        <h1 className="sr-only">좋아요</h1>
+        <h2 className="sr-only">좋아요 목록</h2>
         {page.loading && !page.loaded ? (
           <EmptyState
             icon="♡"
@@ -223,7 +254,7 @@ export function Likes({
             }
             title={
               tab === "received"
-                ? "아직 도착한 마음이 없어요"
+                ? "아직 받은 좋아요가 없어요"
                 : "아직 보낸 좋아요가 없어요"
             }
             action={
@@ -241,48 +272,68 @@ export function Likes({
         ) : (
           <div className="like-list">
             {page.items.map((person) => (
-              <article className="like-card" key={person.id}>
-                <div className="like-person">
-                  <button
-                    type="button"
-                    className="like-avatar-button"
-                    aria-label={`${person.nickname} 프로필 보기`}
-                    onClick={() => openProfile(person)}
-                    disabled={!person.userId}
-                  >
-                    <PersonAvatar person={person} />
-                  </button>
-                  <span>
+              <article
+                className={`like-card ${person.status === "MATCHED" ? "is-matched" : ""}`}
+                key={person.id}
+              >
+                <button
+                  type="button"
+                  className="like-profile-button"
+                  aria-label={`${person.nickname} 프로필 보기`}
+                  onClick={() => openProfile(person)}
+                  disabled={!person.userId}
+                >
+                  <PersonAvatar person={person} size="large" />
+                  <span className="like-person-copy">
                     <strong>
                       {person.nickname}
-                      {person.age != null && `, ${person.age}`}
+                      {person.age != null && ` ${person.age}`}
                     </strong>
-                    <small>
-                      {[
-                        person.job ? jobCategoryLabel(person.job) : "",
-                        person.region,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </small>
+                    <span className="like-person-facts">
+                      {person.region && (
+                        <span>
+                          <PixelIcon name="pin" scale={1.35} />
+                          {person.region}
+                        </span>
+                      )}
+                      {person.job && (
+                        <span>
+                          <PixelIcon name="briefcase" scale={1.35} />
+                          {jobCategoryLabel(person.job)}
+                        </span>
+                      )}
+                      {person.mbti && (
+                        <span>
+                          <PixelIcon name="heart" scale={1.35} />
+                          {person.mbti}
+                        </span>
+                      )}
+                    </span>
                   </span>
-                </div>
-                {tab === "received" && person.status === "MATCHED" && (
-                  <p className="like-status">서로 좋아요</p>
+                </button>
+                {person.status === "MATCHED" && (
+                  <span className="like-match-badge" role="status">
+                    <PixelIcon name="heart" scale={1.25} />
+                    매칭됐어요!
+                  </span>
                 )}
                 {tab === "received" && person.status !== "MATCHED" && (
                   <div className="like-actions">
                     <PixelButton
                       secondary
+                      className="like-action-reject"
                       onClick={() => setRejectTarget(person)}
                       disabled={actionLikeId != null}
                     >
+                      <PixelIcon name="x" scale={2} />
                       관심없음
                     </PixelButton>
                     <PixelButton
+                      className="like-action-accept"
                       onClick={() => acceptLike(person)}
                       disabled={actionLikeId != null || !person.userId}
                     >
+                      <PixelIcon name="heart" scale={1.7} />
                       {actionLikeId === person.id ? "처리 중…" : "좋아요"}
                     </PixelButton>
                   </div>
@@ -302,34 +353,48 @@ export function Likes({
         )}
       </main>
       {rejectTarget && (
-        <div className="like-confirm-backdrop">
-          <section
-            className="like-confirm-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="like-reject-title"
-          >
-            <h2 id="like-reject-title">정말 관심없음으로 할까요?</h2>
-            <p>거절한 좋아요는 다시 되돌릴 수 없어요.</p>
-            <div>
-              <button
-                type="button"
-                onClick={() => setRejectTarget(null)}
-                disabled={actionLikeId != null}
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                className="is-primary"
-                onClick={() => void rejectLike()}
-                disabled={actionLikeId != null}
-              >
-                {actionLikeId === rejectTarget.id ? "처리 중…" : "관심없음"}
-              </button>
-            </div>
-          </section>
-        </div>
+        <dialog
+          ref={rejectDialog}
+          className="like-confirm-dialog"
+          onKeyDown={(event) => {
+            if (event.key !== "Tab") return;
+            const buttons = [
+              ...event.currentTarget.querySelectorAll("button:not(:disabled)"),
+            ];
+            if (!buttons.length) return;
+            event.preventDefault();
+            const current = buttons.indexOf(document.activeElement);
+            const next = event.shiftKey
+              ? (current - 1 + buttons.length) % buttons.length
+              : (current + 1) % buttons.length;
+            buttons[next].focus();
+          }}
+          onCancel={(event) => {
+            event.preventDefault();
+            if (actionLikeId == null) setRejectTarget(null);
+          }}
+          aria-labelledby="like-reject-title"
+        >
+          <h2 id="like-reject-title">정말 관심없음으로 할까요?</h2>
+          <p>거절한 좋아요는 다시 되돌릴 수 없어요.</p>
+          <div>
+            <button
+              type="button"
+              onClick={() => setRejectTarget(null)}
+              disabled={actionLikeId != null}
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              className="is-primary"
+              onClick={() => void rejectLike()}
+              disabled={actionLikeId != null}
+            >
+              {actionLikeId === rejectTarget.id ? "처리 중…" : "관심없음"}
+            </button>
+          </div>
+        </dialog>
       )}
     </>
   );

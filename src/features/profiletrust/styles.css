@@ -440,6 +440,7 @@
 }
 
 .trust-photo-tile {
+  border-radius: 8px;
   position: relative;
   min-width: 0;
   aspect-ratio: 3 / 4;
@@ -496,6 +497,7 @@
 }
 
 .trust-photo-remove {
+  border-bottom-left-radius: 8px;
   position: absolute;
   top: 0;
   right: 0;
@@ -528,6 +530,9 @@
 }
 
 .trust-photo-add {
+  border-radius: 8px;
+  font-family: var(--font-body);
+  line-height: 1.6;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -568,5 +573,20 @@
   .trust-guide,
   .trust-note {
     padding: 8px;
+  }
+}
+
+.trust-photo-order button:disabled {
+  color: rgb(255 255 255 / 50%);
+}
+
+@media (width <= 350px) {
+  .trust-photo-grid {
+    gap: 8px;
+  }
+
+  .trust-photo-badges {
+    right: 44px;
+    left: 4px;
   }
 }

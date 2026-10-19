@@ -43,6 +43,10 @@ const ONBOARDING_STEPS = [
   "photo-intro",
   "photo",
 ];
+// Photo intro and gallery are two views within the same registration step.
+const ONBOARDING_PROGRESS_STEPS = ONBOARDING_STEPS.filter(
+  (step) => step !== "photo",
+);
 const STEP_LABELS = {
   identity: "기본 정보",
   region: "활동 지역",
@@ -94,7 +98,7 @@ export function splitBirthDate(value) {
   return { year, month, day };
 }
 
-export function BirthDateInput({ value, onChange }) {
+export function BirthDateInput({ value, onChange, autoFocus = false }) {
   const [parts, setParts] = useState(() => splitBirthDate(value));
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarPicker, setCalendarPicker] = useState(null);
@@ -109,6 +113,15 @@ export function BirthDateInput({ value, onChange }) {
   const dayInput = useRef(null);
   const yearList = useRef(null);
   const monthList = useRef(null);
+
+  useEffect(() => {
+    if (!autoFocus) return undefined;
+
+    const frame = window.requestAnimationFrame(() => {
+      yearInput.current?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [autoFocus]);
 
   useEffect(() => {
     const [year = "", month = "", day = ""] = (value || "").split("-");
@@ -452,6 +465,8 @@ export function Onboarding({ navigate, toast }) {
   const personaChatRef = useRef(null);
   const personaAnswerRef = useRef(null);
   const personaSendRef = useRef(null);
+  const regionQueryRef = useRef(null);
+  const nicknameInputRef = useRef(null);
   const restorePersonaFocus = useRef(false);
   const personaAnswerInFlight = useRef(false);
   const [photoState, setPhotoState] = useState({
@@ -492,6 +507,8 @@ export function Onboarding({ navigate, toast }) {
     };
   }, [isPhotoStep, photoLoadFailed]);
   const stepIndex = ONBOARDING_STEPS.indexOf(step);
+  const progressStep = step === "photo" ? "photo-intro" : step;
+  const progressIndex = ONBOARDING_PROGRESS_STEPS.indexOf(progressStep);
   const isPersonaFlowStep = PERSONA_FLOW_STEPS.has(step);
   const canGoBack = stepIndex > (hasRegisteredIdentity ? 1 : 0);
   const updateProfile = (key, value) =>
@@ -670,6 +687,26 @@ export function Onboarding({ navigate, toast }) {
     }
     restorePersonaFocus.current = false;
   }, [personaBusy, step]);
+
+  useEffect(() => {
+    let target = null;
+    if (step === "region") target = regionQueryRef.current;
+    if (step === "profile") target = nicknameInputRef.current;
+    if (
+      step === "questions" &&
+      !personaBusy &&
+      personaConversation &&
+      !personaConversation.done
+    ) {
+      target = personaAnswerRef.current;
+    }
+    if (!target || target.disabled) return undefined;
+
+    const frame = window.requestAnimationFrame(() => {
+      if (target.isConnected) target.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [personaBusy, personaConversation, step]);
 
   function handlePersonaKeyDown(event) {
     if (
@@ -1011,6 +1048,19 @@ export function Onboarding({ navigate, toast }) {
         aria-label="온보딩"
       >
         <header className="brand-header onboarding-brand">
+          {isPersonaFlowStep || !canGoBack ? (
+            <span className="onboarding-back-placeholder" aria-hidden="true" />
+          ) : (
+            <button
+              type="button"
+              className="onboarding-back"
+              onClick={back}
+              aria-label="뒤로가기"
+            >
+              <PixelIcon name="back" />
+            </button>
+          )}
+
           <img
             className="brand-header-logo"
             src={asset("logo-header.png?v=d41514e")}
@@ -1028,42 +1078,36 @@ export function Onboarding({ navigate, toast }) {
         </header>
         <div className="onboarding-top">
           <i className="onboarding-dot left" aria-hidden="true" />
-          {isPersonaFlowStep || !canGoBack ? (
-            <span className="onboarding-back-placeholder" aria-hidden="true" />
-          ) : (
-            <button
-              type="button"
-              className="onboarding-back"
-              onClick={back}
-              aria-label="뒤로가기"
-            >
-              <PixelIcon name="back" />
-            </button>
-          )}
           <div
             className="onboarding-progress"
             role="progressbar"
             aria-label="온보딩 진행도"
-            aria-valuemin={1}
-            aria-valuemax={ONBOARDING_STEPS.length}
-            aria-valuenow={stepIndex + 1}
+            aria-valuemin={0}
+            aria-valuemax={ONBOARDING_PROGRESS_STEPS.length}
+            aria-valuenow={progressIndex + 1}
+            aria-valuetext={`${progressIndex + 1} / ${ONBOARDING_PROGRESS_STEPS.length}단계, ${STEP_LABELS[progressStep] || "약관 동의"}`}
           >
-            {ONBOARDING_STEPS.map((item, index) => (
+            {ONBOARDING_PROGRESS_STEPS.map((item, index) => (
               <i
                 key={item}
                 className={
-                  index < stepIndex ? "on" : index === stepIndex ? "cur" : ""
+                  index < progressIndex
+                    ? "on"
+                    : index === progressIndex
+                      ? "cur"
+                      : ""
                 }
               />
             ))}
           </div>
           <span className="onboarding-count">
-            {pad2(stepIndex + 1)}/{pad2(ONBOARDING_STEPS.length)}
+            {pad2(progressIndex + 1)}/{pad2(ONBOARDING_PROGRESS_STEPS.length)}
           </span>
           <i className="onboarding-dot right" aria-hidden="true" />
         </div>
         <p className="onboarding-eyebrow">
-          ✦ STEP {pad2(stepIndex + 1)} <em>· {STEP_LABELS[step]}</em>
+          ✦ STEP {pad2(progressIndex + 1)}{" "}
+          <em>· {STEP_LABELS[progressStep]}</em>
         </p>
         <div
           className={`onboarding-body${step === "kakao" ? " kakao-step-container" : ""}`}
@@ -1079,10 +1123,15 @@ export function Onboarding({ navigate, toast }) {
           )}
           {step === "terms" && (
             <>
-              <h1>이용약관에 동의해 주세요</h1>
-              <p className="subcopy">
-                안전하고 편안한 만남을 위해 확인해 주세요.
-              </p>
+              <div className="onboarding-prompt">
+                <AiAvatar size={42} />
+                <div>
+                  <h1>이용약관에 동의해 주세요</h1>
+                  <p className="subcopy">
+                    안전하고 편안한 만남을 위해 확인해 주세요.
+                  </p>
+                </div>
+              </div>
               <label className="agreement all">
                 <input
                   type="checkbox"
@@ -1125,7 +1174,6 @@ export function Onboarding({ navigate, toast }) {
                     }
                   />
                   {item}
-                  <span>›</span>
                 </label>
               ))}
               <p className="hint">필수 약관 동의는 가입을 위해 필요해요.</p>
@@ -1133,10 +1181,16 @@ export function Onboarding({ navigate, toast }) {
           )}
           {step === "identity" && (
             <>
-              <h1>기본 정보를 알려 주세요</h1>
-              <p className="subcopy">본인 확인을 위한 정보예요.</p>
+              <div className="onboarding-prompt">
+                <AiAvatar size={42} />
+                <div>
+                  <h1>기본 정보를 알려 주세요</h1>
+                  <p className="subcopy">본인 확인을 위한 정보예요.</p>
+                </div>
+              </div>
               <BirthDateInput
                 value={profile.birthDate}
+                autoFocus
                 onChange={(value) => {
                   updateProfile("birthDate", value);
                   setError("");
@@ -1202,17 +1256,23 @@ export function Onboarding({ navigate, toast }) {
           )}
           {step === "region" && (
             <>
-              <h1>활동 지역을 알려 주세요</h1>
-              <p className="subcopy">
-                가까운 사람들을 추천해드려요. 활동 지역은 시·군·구 단위까지
-                검색할 수 있어요.
-              </p>
+              <div className="onboarding-prompt">
+                <AiAvatar size={42} />
+                <div>
+                  <h1>활동 지역을 알려 주세요</h1>
+                  <p className="subcopy">
+                    가까운 사람들을 추천해드려요. 활동 지역은 시·군·구 단위까지
+                    검색할 수 있어요.
+                  </p>
+                </div>
+              </div>
               <Field label="지역 검색">
                 <div className="input-affix">
                   <span className="input-lead" aria-hidden="true">
                     <PixelIcon name="search" />
                   </span>
                   <input
+                    ref={regionQueryRef}
                     type="text"
                     name="activityRegion"
                     autoComplete="off"
@@ -1288,12 +1348,18 @@ export function Onboarding({ navigate, toast }) {
           )}
           {step === "profile" && (
             <>
-              <h1>프로필을 알려 주세요</h1>
-              <p className="subcopy">
-                나를 표현할 수 있는 정보를 입력해 주세요.
-              </p>
+              <div className="onboarding-prompt">
+                <AiAvatar size={42} />
+                <div>
+                  <h1>프로필을 알려 주세요</h1>
+                  <p className="subcopy">
+                    나를 표현할 수 있는 정보를 입력해 주세요.
+                  </p>
+                </div>
+              </div>
               <Field label="닉네임" hint="한글·영문·숫자 2~10자">
                 <input
+                  ref={nicknameInputRef}
                   type="text"
                   name="nickname"
                   autoComplete="nickname"
@@ -1351,8 +1417,15 @@ export function Onboarding({ navigate, toast }) {
           )}
           {step === "lifestyle" && (
             <>
-              <h1>라이프스타일을 알려 주세요</h1>
-              <p className="subcopy">서로의 일상을 이해하는 데 도움이 돼요.</p>
+              <div className="onboarding-prompt">
+                <AiAvatar size={42} />
+                <div>
+                  <h1>라이프스타일을 알려 주세요</h1>
+                  <p className="subcopy">
+                    서로의 일상을 이해하는 데 도움이 돼요.
+                  </p>
+                </div>
+              </div>
               <Field label="종교">
                 <ChoiceGroup
                   options={religions}
@@ -1379,6 +1452,7 @@ export function Onboarding({ navigate, toast }) {
                   options={mbtis.map((v) => [v, v])}
                   value={profile.mbti}
                   onChange={(v) => updateProfile("mbti", v)}
+                  className="mbti-choice-grid"
                 />
               </Field>
             </>
@@ -1490,10 +1564,15 @@ export function Onboarding({ navigate, toast }) {
           )}
           {step === "persona-summary" && (
             <>
-              <h1>이렇게 이해했어요</h1>
-              <p className="subcopy">
-                답변을 바탕으로 정리한 나의 가치관이에요.
-              </p>
+              <div className="onboarding-prompt">
+                <AiAvatar size={42} />
+                <div>
+                  <h1>이렇게 이해했어요</h1>
+                  <p className="subcopy">
+                    답변을 바탕으로 정리한 나의 가치관이에요.
+                  </p>
+                </div>
+              </div>
               <div className="persona-summary-list">
                 {personaConversation?.personaDraft?.narrative ? (
                   <section className="persona-summary-card holo">

@@ -54,6 +54,17 @@
 .my-main {
   top: 56px;
   padding: 20px 0;
+  background-color: #f7f4fb;
+  background-image:
+    linear-gradient(rgb(247 244 251 / 80%), rgb(247 244 251 / 80%)),
+    url("/assets/ambient-city-v1.webp");
+  background-position:
+    center,
+    center bottom;
+  background-size:
+    100% 100%,
+    100% auto;
+  background-repeat: no-repeat, no-repeat;
 }
 
 .my-identity {
@@ -132,6 +143,8 @@
 
 .my-profile-avatar-button .person-avatar {
   display: block;
+  object-fit: cover;
+  object-position: center 32%;
 }
 
 .my-identity-loading-content {
@@ -669,8 +682,10 @@
 
 /* 플레이어 카드: 사진 + 글자 묶음을 오른쪽으로 4px, 글자는 사진에서 22px 띄움 */
 .my-main .my-identity {
-  gap: 22px;
-  padding-left: 18px;
+  gap: 18px;
+  margin: 2px 18px 24px;
+  padding: 20px 12px;
+  filter: drop-shadow(0 3px 0 rgb(124 92 250 / 8%));
 }
 
 /* 마이 메뉴: AI 아바타(30px)와 다른 아이콘 칸 너비를 같게 해 글자 시작 위치 정렬 */
@@ -732,4 +747,244 @@
   color: var(--purple);
   pointer-events: none;
   transform: translateY(-50%) rotate(90deg);
+}
+
+/* Compact account screens keep profile details within a comfortable reading width. */
+.screen-header.account-header {
+  height: calc(54px + env(safe-area-inset-top, 0px));
+  min-height: calc(54px + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0) 12px 0;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  background: rgb(253 251 255 / 94%);
+}
+
+.screen-header.account-header h1 {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.main-scroll.settings-main,
+.main-scroll.edit-main,
+.main-scroll.persona-main {
+  top: calc(54px + env(safe-area-inset-top, 0px));
+  padding: 22px 20px max(28px, env(safe-area-inset-bottom, 0px));
+  scroll-padding-top: 20px;
+}
+
+.my-main .my-identity::before {
+  display: none;
+}
+
+.my-main .my-identity-copy {
+  padding-right: 22px;
+}
+
+.my-main .my-profile-kicker {
+  height: auto;
+  margin-bottom: 8px;
+  padding: 2px 0;
+  border: 0;
+  border-image: none;
+  background: none;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.my-main .my-identity h1 {
+  font-size: 21px;
+  line-height: 1.4;
+}
+
+.my-main .my-profile-region {
+  height: auto;
+  min-height: 28px;
+  padding: 2px 5px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.my-main .my-menu {
+  margin: 0 18px;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 82%);
+  overflow: hidden;
+}
+
+.my-main .my-menu button {
+  min-height: 64px;
+  padding: 12px 14px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.settings-main .settings-confirm-actions button {
+  min-height: 44px;
+  padding-inline: 14px;
+  font-size: 13px;
+}
+
+.my-main .my-menu button:first-child {
+  border-top: 0;
+}
+
+.my-main .my-menu button:last-child {
+  border-bottom: 0;
+}
+
+.settings-main .settings-intro {
+  margin: 0 0 22px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.settings-main .settings-intro h2 {
+  font-size: 21px;
+  line-height: 1.5;
+}
+
+.settings-main .settings-intro p,
+.settings-main .settings-action-copy small {
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.settings-main .settings-action {
+  min-height: 82px;
+  gap: 12px;
+  padding: 12px 10px;
+  filter: none;
+}
+
+.settings-main .settings-action-copy strong {
+  font-size: 15px;
+}
+
+.settings-main .settings-action-icon {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-image: none;
+  border-radius: 10px;
+  background: var(--soft-lavender);
+  font-size: 21px;
+}
+
+.edit-main .edit-photo-section {
+  margin-bottom: 26px;
+  padding: 14px 10px;
+  filter: none;
+}
+
+.edit-main .edit-photo-section > p {
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.edit-main .field {
+  margin-bottom: 22px;
+}
+
+.edit-main .field-label {
+  font-weight: 700;
+}
+
+.edit-main .edit-actions {
+  margin: 24px 0 0;
+}
+
+.persona-main .persona-hero {
+  padding: 24px 16px;
+  filter: none;
+}
+
+.persona-main .persona-hero h2 {
+  margin-top: 16px;
+  font-size: 20px;
+}
+
+.persona-main .persona-hero p {
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.persona-main .persona-trait {
+  padding-block: 18px;
+}
+
+.persona-main .persona-trait span {
+  font-size: 12px;
+}
+
+.persona-main .persona-trait strong {
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+@media (width <= 350px) {
+  .main-scroll.settings-main,
+  .main-scroll.edit-main,
+  .main-scroll.persona-main {
+    padding-inline: 16px;
+  }
+
+  .my-main .my-identity {
+    gap: 12px;
+    margin-inline: 12px;
+  }
+
+  .my-main .my-profile-avatar-button .person-avatar.large {
+    width: 72px;
+    height: 84px;
+  }
+
+  .my-main .my-menu {
+    margin-inline: 12px;
+  }
+}
+
+.persona-main .persona-status {
+  margin: 28px 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.persona-main .persona-summary-status {
+  margin-top: 24px;
+  padding: 20px 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 80%);
+}
+
+.persona-main .persona-completion-label {
+  color: var(--purple-deep);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.persona-main .persona-summary-status h2 {
+  margin: 10px 0;
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.persona-main .persona-summary-status p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.8;
+  word-break: keep-all;
+}
+
+.persona-main .empty-state {
+  padding-inline: 0;
+}
+
+.persona-main .empty-state h2 {
+  font-size: 17px;
 }

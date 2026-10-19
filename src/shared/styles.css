@@ -57,7 +57,7 @@
 }
 
 :root {
-  font-family: var(--font-pixel);
+  font-family: var(--font-body);
   color: #1f1830;
   background: #ece8f2;
   font-synthesis: none;
@@ -68,6 +68,14 @@
   --font-pixel:
     "Mona12 Text KR", "Galmuri11", "Apple SD Gothic Neo", "Malgun Gothic",
     "Noto Sans KR", sans-serif;
+  --font-body:
+    kakaosmallsans, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  --header-height: calc(54px + env(safe-area-inset-top, 0px));
+  --conversation-header-height: calc(60px + env(safe-area-inset-top, 0px));
+  --nav-height: calc(64px + env(safe-area-inset-bottom, 0px));
+  --space-page: 20px;
+  --radius-control: 10px;
+  --radius-card: 16px;
   --canvas: #f7f5fb;
   --paper: #fff;
   --ink: #1f1830;
@@ -85,13 +93,8 @@
   --night: #1b1430;
   --danger: #c2407e;
   --holo: linear-gradient(115deg, #cbb8ff 0%, #ffc6e7 48%, #bfe4ff 100%);
-  --button-fill: linear-gradient(180deg, #9f84ff 0%, #7c5cfa 52%, #64e 100%);
-  --button-fill-pink: linear-gradient(
-    180deg,
-    #ff93cb 0%,
-    #ee6ab1 55%,
-    #dd4f9e 100%
-  );
+  --button-fill: linear-gradient(135deg, #7853d7, #6844bf);
+  --button-fill-pink: linear-gradient(135deg, #b94b8d, #a63d7d);
   --shadow-pixel: drop-shadow(0 3px 0 rgb(124 92 250 / 16%));
   --shadow-pixel-strong: drop-shadow(0 4px 0 rgb(91 63 214 / 22%));
 
@@ -134,7 +137,6 @@
 
 * {
   box-sizing: border-box;
-  scrollbar-width: none;
 }
 
 html,
@@ -154,6 +156,8 @@ body,
 
 body {
   min-width: 320px;
+  font-size: 15px;
+  line-height: 1.6;
 }
 
 button,
@@ -200,7 +204,7 @@ select:focus-visible {
 
 .app-screen {
   width: 100%;
-  max-width: 390px;
+  max-width: 480px;
   min-height: 0;
   height: var(--app-viewport-height, 100dvh);
   position: relative;
@@ -244,15 +248,15 @@ select:focus-visible {
 .brand-header {
   position: relative;
   z-index: 6;
-  height: 56px;
-  min-height: 56px;
+  height: var(--header-height);
+  min-height: var(--header-height);
   flex-shrink: 0;
-  padding: 0 16px 0 10px;
+  padding: env(safe-area-inset-top, 0) 12px 0 10px;
   display: flex;
   align-items: center;
   gap: 12px;
-  background: linear-gradient(180deg, #fff 0%, #eae0f3 45%, #f7f9fd 100%);
-  border-bottom: 1px solid #d9cce4;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .brand-header-home {
@@ -274,7 +278,7 @@ select:focus-visible {
 
 .main-scroll {
   position: absolute;
-  inset: 0 0 72px;
+  inset: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -321,7 +325,7 @@ small {
 }
 
 .pixel-button {
-  min-height: 52px;
+  min-height: 48px;
   width: 100%;
   border: 0;
   border-radius: 0;
@@ -343,14 +347,8 @@ small {
   inset: 0;
   z-index: -1;
   clip-path: var(--pixel-step-shape);
-  background:
-    linear-gradient(#ffffff8c 0 0) 10px 5px / calc(66% - 10px) 3px no-repeat,
-    repeating-linear-gradient(90deg, #ffffffbf 0 3px, transparent 3px 6px)
-    calc(100% - 14px) 5px / 15px 3px no-repeat,
-    var(--button-fill);
-  box-shadow:
-    inset 0 -3px 0 rgb(40 10 120 / 22%),
-    inset 0 2px 0 rgb(255 255 255 / 35%);
+  background: var(--button-fill);
+  box-shadow: inset 0 -2px 0 rgb(40 10 120 / 12%);
 }
 
 .pixel-button.secondary {
@@ -501,12 +499,13 @@ small {
 }
 
 .screen-header {
-  height: 96px;
-  padding: 44px 16px 0;
+  height: var(--header-height);
+  min-height: var(--header-height);
+  padding: env(safe-area-inset-top, 0) 12px 0;
   background: var(--paper);
   border-bottom: 1px solid var(--line);
   display: grid;
-  grid-template-columns: 44px 1fr 56px;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
   align-items: center;
   text-align: center;
   position: relative;
@@ -517,8 +516,9 @@ small {
   min-width: 0;
   margin: 0;
   overflow: hidden;
-  font-size: 18px;
-  font-weight: 400;
+  font-family: var(--font-pixel);
+  font-size: 17px;
+  font-weight: 700;
   line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -545,7 +545,8 @@ small {
   height: 44px;
   font-size: 28px;
   line-height: 1;
-  text-align: left;
+  display: grid;
+  place-items: center;
 }
 
 .header-right {
@@ -577,7 +578,7 @@ small {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 72px;
+  height: var(--nav-height);
   padding-bottom: env(safe-area-inset-bottom, 0);
   display: flex;
   background: rgb(255 255 255 / 92%);
@@ -599,7 +600,7 @@ small {
   color: var(--subtle);
   font-family: var(--font-pixel);
   font-size: 11px;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   text-decoration: none;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;

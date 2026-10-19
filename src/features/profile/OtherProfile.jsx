@@ -22,7 +22,14 @@ function profileChoiceLabel(options, value) {
   return options.find(([option]) => option === value)?.[1] || value;
 }
 
-export function OtherProfile({ userId, returnTo, navigate, isOwn = false }) {
+export function OtherProfile({
+  userId,
+  returnTo,
+  navigate,
+  isOwn = false,
+  onStartSimulation,
+  simulationStartingFor,
+}) {
   const [profile, setProfile] = useState(null);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -31,6 +38,19 @@ export function OtherProfile({ userId, returnTo, navigate, isOwn = false }) {
   const profileRequestVersion = useRef(0);
   const pointerStart = useRef(null);
   const photos = profile?.photos || [];
+  const [simulationBusy, setSimulationBusy] = useState(false);
+  const showAiActions = !isOwn && returnTo?.split("?")[0] === "/likes";
+  const startingSimulation = simulationBusy || simulationStartingFor != null;
+
+  async function startSimulation() {
+    if (!profile || startingSimulation || !onStartSimulation) return;
+    setSimulationBusy(true);
+    try {
+      await onStartSimulation(profile.id);
+    } finally {
+      setSimulationBusy(false);
+    }
+  }
 
   const loadProfile = useCallback(async () => {
     const requestVersion = ++profileRequestVersion.current;
@@ -170,6 +190,38 @@ export function OtherProfile({ userId, returnTo, navigate, isOwn = false }) {
           />
         </div>
       )}
+      <header className="other-profile-toolbar">
+        <button
+          type="button"
+          className="other-profile-back"
+          aria-label="이전 화면으로"
+          onClick={() => navigate(returnTo, { replace: true })}
+        >
+          <PixelIcon name="back" scale={3} />
+        </button>
+        <NotificationButton className="profile-pager" />
+        {isOwn && (
+          <button
+            type="button"
+            className="other-profile-settings"
+            aria-label="프로필 설정"
+            title="프로필 설정"
+            onClick={() => navigate("/my/profile?returnTo=/my/profile/view")}
+          >
+            <span aria-hidden="true">⚙︎</span>
+          </button>
+        )}
+        {profile && photos.length > 0 && (
+          <span
+            className="other-profile-photo-count"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            <span className="sr-only">사진 </span>
+            {photoIndex + 1}/{photos.length}
+          </span>
+        )}
+      </header>
       <section
         className="other-profile-hero"
         onPointerDown={handlePointerDown}
@@ -199,26 +251,6 @@ export function OtherProfile({ userId, returnTo, navigate, isOwn = false }) {
         ) : (
           <div className="other-profile-hero-placeholder" aria-hidden="true" />
         )}
-        <button
-          type="button"
-          className="other-profile-back"
-          aria-label="이전 화면으로"
-          onClick={() => navigate(returnTo, { replace: true })}
-        >
-          <PixelIcon name="back" scale={3} />
-        </button>
-        <NotificationButton className="profile-pager" />
-        {isOwn && (
-          <button
-            type="button"
-            className="other-profile-settings"
-            aria-label="프로필 설정"
-            title="프로필 설정"
-            onClick={() => navigate("/my/profile?returnTo=/my/profile/view")}
-          >
-            <span aria-hidden="true">⚙︎</span>
-          </button>
-        )}
         {profile && (
           <PhotoSegments
             person={profile}
@@ -236,10 +268,14 @@ export function OtherProfile({ userId, returnTo, navigate, isOwn = false }) {
 
       {profile ? (
         <section className="other-profile-info" aria-label="프로필 정보">
-          <span className="other-profile-kicker">PROFILE</span>
+          <span className="other-profile-kicker">
+            {isOwn ? "MY PROFILE" : "PROFILE"}
+          </span>
           <h1>
             {profileName}
-            {profile.age != null && <span>, {profile.age}</span>}
+            {profile.age != null && (
+              <span className="other-profile-age">, {profile.age}</span>
+            )}
             <span className="other-profile-heart" aria-hidden="true">
               ♡
             </span>
@@ -262,6 +298,43 @@ export function OtherProfile({ userId, returnTo, navigate, isOwn = false }) {
               </p>
             )}
           </div>
+          {showAiActions && (
+            <section
+              className="other-profile-ai-actions"
+              aria-label="대화 시작 전 알아보기"
+            >
+              <button
+                type="button"
+                disabled={startingSimulation || !onStartSimulation}
+                aria-busy={
+                  simulationBusy || simulationStartingFor === profile.id
+                }
+                onClick={() => void startSimulation()}
+              >
+                <PixelIcon name="sim" scale={3} />
+                <span>
+                  <strong>AI 시뮬레이션</strong>
+                  <small>
+                    {simulationBusy || simulationStartingFor === profile.id
+                      ? "대화를 준비하고 있어요…"
+                      : "두 사람의 대화 호흡 알아보기"}
+                  </small>
+                </span>
+                <PixelIcon name="chev" />
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate(`/ai/practice/${profile.id}`)}
+              >
+                <PixelIcon name="chat" scale={3} />
+                <span>
+                  <strong>AI 연습대화</strong>
+                  <small>첫 메시지를 편하게 연습하기</small>
+                </span>
+                <PixelIcon name="chev" />
+              </button>
+            </section>
+          )}
           <section
             className="other-profile-detail-section"
             aria-label="프로필 상세 정보"

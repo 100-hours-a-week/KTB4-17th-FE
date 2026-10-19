@@ -30,7 +30,7 @@
 }
 
 .home-main {
-  top: 56px;
+  top: var(--header-height);
   padding: 16px 16px 8px;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -286,7 +286,7 @@
 }
 
 .detail-main {
-  top: 96px;
+  top: var(--header-height);
   bottom: 0;
 }
 

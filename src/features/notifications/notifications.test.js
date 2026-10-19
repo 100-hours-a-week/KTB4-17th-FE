@@ -190,7 +190,7 @@ test("approved copy preserves sender information without inventing a chat previe
   );
   assert.equal(
     notificationCopy({ type: "MATCH" }).title,
-    "두근두근, 서로 마음이 통했어요!",
+    "두근두근, 서로 좋아요를 주고받았어요!",
   );
   assert.equal(
     notificationCopy({
@@ -216,7 +216,7 @@ test("only supported server targets can navigate, and the profile returns to the
   );
   assert.equal(
     notificationDestination({ targetType: "AI_SIMULATION", targetId: 8 }),
-    "/ai/simulations/8/report",
+    "/ai/simulations/8",
   );
   for (const item of [
     { targetType: "PROFILE", targetId: "../settings" },
@@ -309,14 +309,14 @@ test("live stream preserves split Korean UTF-8, skips malformed data, and aborts
     },
   });
   const bytes = new TextEncoder().encode(
-    'event: connected\ndata: {}\n\nevent: notification\ndata: invalid\n\nevent: notification\ndata: {"notificationId":1,"type":"LIKE","body":"마음이 도착했어요"}\n\n',
+    'event: connected\ndata: {}\n\nevent: notification\ndata: invalid\n\nevent: notification\ndata: {"notificationId":1,"type":"LIKE","body":"좋아요가 도착했어요"}\n\n',
   );
   for (let index = 0; index < bytes.length; index += 2)
     channel.enqueue(bytes.slice(index, index + 2));
   for (let index = 0; index < bytes.length; index += 1) await Promise.resolve();
   assert.equal(connected, 1);
   assert.equal(events.length, 1);
-  assert.equal(events[0].body, "마음이 도착했어요");
+  assert.equal(events[0].body, "좋아요가 도착했어요");
   stop();
   assert.equal(signal.aborted, true);
 });

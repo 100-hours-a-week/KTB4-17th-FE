@@ -1,14 +1,25 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
-import { BrandHeader, ScreenHeader } from "../../shared/ui/components.jsx";
+import { createMessageId } from "../../shared/messageId.js";
+import { ScreenHeader } from "../../shared/ui/components.jsx";
+import { AiAvatar } from "../../shared/ui/pixel.jsx";
 import { MessageBubble } from "../chat/Chat.jsx";
 import { ChatModeMenu } from "../chat/ChatModeMenu.jsx";
+import { useKeyboardViewport } from "../chat/useKeyboardViewport.js";
+import { getUserProfile } from "../profile/api.js";
 import {
   isPracticeAccessUnavailable,
   PRACTICE_UNAVAILABLE_MESSAGE,
 } from "./access.js";
 import * as aiPracticeApi from "./api.js";
 import { connectAiPracticeSocket } from "./socket.js";
+import { usePracticeScroll } from "./usePracticeScroll.js";
 
 export function mergePracticeChats(current, incoming) {
   const chatsById = new Map(current.map((chat) => [chat.id, chat]));
@@ -62,6 +73,9 @@ export function Practice({
   onStartSimulation,
   simulationStartingFor,
 }) {
+  const [partner, setPartner] = useState(null);
+  const rootRef = useRef(null);
+  const endDialogRef = useRef(null);
   const [input, setInput] = useState("");
   const [session, setSession] = useState(null);
   const [chats, setChats] = useState([]);
@@ -88,10 +102,49 @@ export function Practice({
   const refreshRef = useRef(() => Promise.resolve());
   const requestRef = useRef(null);
   const accessUnavailableRef = useRef(false);
-  const messagesEndRef = useRef(null);
   const composerInputRef = useRef(null);
   const focusAfterSendRef = useRef(false);
   chatsRef.current = chats;
+  const scroll = usePracticeScroll(messageScrollKey, session?.id);
+  useKeyboardViewport(rootRef, scroll.preservePosition);
+  const partnerName = partner?.nickname || "상대 회원";
+
+  useEffect(() => {
+    let active = true;
+    setPartner(null);
+    if (Number.isSafeInteger(id) && id > 0) {
+      getUserProfile(id)
+        .then((profile) => {
+          if (active) setPartner(profile);
+        })
+        .catch(() => {});
+    }
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  useLayoutEffect(() => {
+    const inputElement = composerInputRef.current;
+    if (!inputElement) return;
+    inputElement.style.height = "auto";
+    const height = inputElement.scrollHeight;
+    inputElement.style.height = `${Math.min(Math.max(height, 44), 120)}px`;
+    inputElement.style.overflowY = height > 120 ? "auto" : "hidden";
+    if (!input) inputElement.scrollTop = 0;
+    scroll.preservePosition();
+  }, [input, scroll.preservePosition]);
+
+  useEffect(() => {
+    if (!showEndDialog) return undefined;
+    const opener = document.activeElement;
+    endDialogRef.current
+      ?.querySelector("button")
+      ?.focus({ preventScroll: true });
+    return () => {
+      if (opener?.isConnected) opener.focus({ preventScroll: true });
+    };
+  }, [showEndDialog]);
 
   const markAccessUnavailable = useCallback(() => {
     accessUnavailableRef.current = true;
@@ -224,13 +277,6 @@ export function Practice({
     return () => window.clearInterval(timer);
   }, [session?.id, hasGenerating]);
 
-  useEffect(() => {
-    const marker = messagesEndRef.current;
-    if (!marker || marker.dataset.scrollKey === messageScrollKey) return;
-    marker.dataset.scrollKey = messageScrollKey;
-    marker.scrollIntoView({ block: "end", behavior: "smooth" });
-  }, [messageScrollKey]);
-
   async function send() {
     const text = input.trim();
     if (!text) return;
@@ -248,8 +294,9 @@ export function Practice({
     const request =
       requestRef.current?.userMessage === text
         ? requestRef.current
-        : { clientMessageId: crypto.randomUUID(), userMessage: text };
+        : { clientMessageId: createMessageId(), userMessage: text };
     requestRef.current = request;
+    scroll.scrollToLatest();
     setSending(true);
     setSendError("");
     try {
@@ -362,7 +409,15 @@ export function Practice({
     focusAfterSendRef.current = false;
     composerInputRef.current?.focus({ preventScroll: true });
   }, [inputDisabled]);
-  const partnerTitle = "AI 연습대화";
+  const partnerTitle = (
+    <span className="practice-partner">
+      <AiAvatar size={34} />
+      <span className="practice-partner-copy">
+        <span>{partnerName}</span>
+        <small>AI 연습대화</small>
+      </span>
+    </span>
+  );
   const inputPlaceholder = accessUnavailable
     ? "이용할 수 없는 대화예요"
     : count >= dailyLimit
@@ -375,22 +430,25 @@ export function Practice({
             ? "대화를 불러오는 중이에요…"
             : "메시지를 입력해 주세요…";
   return (
-    <main className="ai-conversation-view" aria-label="AI 연습대화">
-      <BrandHeader navigate={navigate}>
-        <ChatModeMenu
-          currentMode="practice"
-          targetUserId={Number.isSafeInteger(id) && id > 0 ? id : null}
-          simulationStartingFor={simulationStartingFor}
-          disabled={accessUnavailable}
-          onSimulation={() => onStartSimulation(id, chatRoomId)}
-        />
-      </BrandHeader>
+    <main
+      ref={rootRef}
+      className="ai-conversation-view practice-view"
+      aria-label="AI 연습대화"
+    >
       <ScreenHeader
         className="chat-room-header conversation-header"
         title={partnerTitle}
         onBack={() => navigate(backPath)}
         right={
           <div className="chat-header-actions">
+            <ChatModeMenu
+              currentMode="practice"
+              targetUserId={Number.isSafeInteger(id) && id > 0 ? id : null}
+              simulationStartingFor={simulationStartingFor}
+              disabled={accessUnavailable}
+              onSimulation={() => onStartSimulation(id, chatRoomId)}
+            />
+
             {session?.status === "ACTIVE" && !accessUnavailable && (
               <button
                 type="button"
@@ -405,90 +463,113 @@ export function Practice({
         }
       />
       <div className="ai-notice">
-        ⓘ　실제 상대가 아닌 AI예요. 대화 내용은 상대에게 전달되지 않아요.
-        <span>
-          일일 횟수 제한 ({count} / {dailyLimit})
-        </span>
+        <AiAvatar size={22} />
+        <div className="practice-ai-notice-copy">
+          <div>
+            실제 상대가 아닌 AI예요. 대화 내용은 상대에게 전달되지 않아요.
+          </div>
+          <span>
+            일일 횟수 제한 ({count} / {dailyLimit})
+          </span>
+        </div>
       </div>
-      <div
-        id="main-content"
-        tabIndex={-1}
-        className="chat-messages practice-messages"
-      >
-        {loading ? (
-          <div className="practice-state" role="status">
-            AI 연습대화를 불러오고 있어요…
-          </div>
-        ) : loadError ? (
-          <div className="practice-state" role="alert">
-            <p>{loadError}</p>
-            <button
-              type="button"
-              className="practice-inline-button"
-              onClick={() =>
-                accessUnavailable
-                  ? navigate(backPath)
-                  : setLoadAttempt((value) => value + 1)
-              }
-            >
-              {accessUnavailable
-                ? chatRoomId
-                  ? "채팅방으로 돌아가기"
-                  : "홈으로 가기"
-                : "다시 불러오기"}
-            </button>
-          </div>
-        ) : chats.length === 0 ? (
-          <div className="practice-state">
-            상대 AI와 편하게 대화를 시작해보세요.
-          </div>
-        ) : (
-          chats.map((chat) => (
-            <div className="practice-turn" key={chat.id}>
-              <MessageBubble
-                message={{
-                  id: `${chat.id}-user`,
-                  mine: true,
-                  text: chat.userMessage,
-                }}
-                ai
-              />
-              {chat.status === "COMPLETED" && chat.aiResponse && (
-                <MessageBubble
-                  message={{
-                    id: `${chat.id}-ai`,
-                    mine: false,
-                    text: chat.aiResponse,
-                  }}
-                  ai
-                />
-              )}
-              {chat.status === "GENERATING" && (
-                <div className="typing-indicator" role="status">
-                  AI가 답변을 생각하고 있어요…
+      <div className="practice-message-area">
+        <section
+          ref={scroll.containerRef}
+          onScroll={scroll.onScroll}
+          aria-label="AI 연습대화 메시지"
+          id="main-content"
+          tabIndex={-1}
+          className="chat-messages practice-messages"
+        >
+          <div className="practice-message-list">
+            {loading ? (
+              <div className="practice-state" role="status">
+                AI 연습대화를 불러오고 있어요…
+              </div>
+            ) : loadError ? (
+              <div className="practice-state" role="alert">
+                <p>{loadError}</p>
+                <button
+                  type="button"
+                  className="practice-inline-button"
+                  onClick={() =>
+                    accessUnavailable
+                      ? navigate(backPath)
+                      : setLoadAttempt((value) => value + 1)
+                  }
+                >
+                  {accessUnavailable
+                    ? chatRoomId
+                      ? "채팅방으로 돌아가기"
+                      : "홈으로 가기"
+                    : "다시 불러오기"}
+                </button>
+              </div>
+            ) : chats.length === 0 ? (
+              <div className="practice-state">
+                상대 AI와 편하게 대화를 시작해보세요.
+              </div>
+            ) : (
+              chats.map((chat) => (
+                <div className="practice-turn" key={chat.id}>
+                  <MessageBubble
+                    message={{
+                      id: `${chat.id}-user`,
+                      mine: true,
+                      text: chat.userMessage,
+                    }}
+                    showTime={false}
+                  />
+                  {chat.status === "COMPLETED" && chat.aiResponse && (
+                    <MessageBubble
+                      message={{
+                        id: `${chat.id}-ai`,
+                        mine: false,
+                        text: chat.aiResponse,
+                      }}
+                      ai
+                      showTime={false}
+                    />
+                  )}
+                  {chat.status === "GENERATING" && (
+                    <div className="typing-indicator" role="status">
+                      AI가 답변을 생각하고 있어요…
+                    </div>
+                  )}
+                  {chat.status === "FAILED" && (
+                    <div className="practice-retry">
+                      <span>
+                        답변을 만들지 못했어요. 다시 시도할 수 있어요.
+                      </span>
+                      <button
+                        type="button"
+                        className="practice-retry-button"
+                        disabled={
+                          retryingChatId === chat.id ||
+                          count >= dailyLimit ||
+                          session?.status !== "ACTIVE"
+                        }
+                        onClick={() => retry(chat)}
+                      >
+                        {retryingChatId === chat.id ? "요청 중…" : "다시 시도"}
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
-              {chat.status === "FAILED" && (
-                <div className="practice-retry">
-                  <span>답변을 만들지 못했어요. 다시 시도할 수 있어요.</span>
-                  <button
-                    type="button"
-                    className="practice-retry-button"
-                    disabled={
-                      retryingChatId === chat.id ||
-                      count >= dailyLimit ||
-                      session?.status !== "ACTIVE"
-                    }
-                    onClick={() => retry(chat)}
-                  >
-                    {retryingChatId === chat.id ? "요청 중…" : "다시 시도"}
-                  </button>
-                </div>
-              )}
-            </div>
-          ))
+              ))
+            )}
+          </div>
+        </section>
+        {!scroll.atBottom && chats.length > 0 && (
+          <button
+            type="button"
+            className="chat-latest-button"
+            onClick={scroll.scrollToLatest}
+          >
+            최신 메시지 ↓
+          </button>
         )}
-        <div ref={messagesEndRef} />
       </div>
       <form
         className="message-composer practice-composer"
@@ -508,7 +589,7 @@ export function Practice({
           </p>
         )}
         <div className="message-composer-controls">
-          <input
+          <textarea
             ref={composerInputRef}
             className="message-text-input"
             name="message"
@@ -518,7 +599,27 @@ export function Practice({
             placeholder={inputPlaceholder}
             aria-label="연습 메시지"
             maxLength={500}
-            disabled={inputDisabled}
+            rows={1}
+            disabled={
+              accessUnavailable ||
+              loading ||
+              !session ||
+              session.status !== "ACTIVE" ||
+              !usage ||
+              count >= dailyLimit
+            }
+            readOnly={sending || hasGenerating}
+            onFocus={scroll.preservePosition}
+            onKeyDown={(event) => {
+              if (
+                event.key !== "Enter" ||
+                event.shiftKey ||
+                event.nativeEvent.isComposing
+              )
+                return;
+              event.preventDefault();
+              void send();
+            }}
           />
           <button
             type="submit"
@@ -532,7 +633,29 @@ export function Practice({
       {showEndDialog && (
         <div className="practice-dialog-backdrop">
           <section
+            ref={endDialogRef}
             className="practice-dialog"
+            onKeyDown={(event) => {
+              if (event.key === "Escape" && !ending) {
+                event.preventDefault();
+                setShowEndDialog(false);
+              }
+              if (event.key !== "Tab") return;
+              const buttons = [
+                ...event.currentTarget.querySelectorAll(
+                  "button:not([disabled])",
+                ),
+              ];
+              const first = buttons[0];
+              const last = buttons.at(-1);
+              if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last?.focus();
+              } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first?.focus();
+              }
+            }}
             role="dialog"
             aria-modal="true"
             aria-labelledby="practice-end-title"

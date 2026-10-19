@@ -148,6 +148,16 @@ section.practice-dialog button.practice-dialog-button,
 }
 
 /* ---------- 발신자 제한 모드 칩 (채팅 · 연습대화 · 시뮬레이션 상단) ---------- */
+.chat-assistance-spark {
+  color: #ee6ab1;
+}
+
+.chat-assistance-caret {
+  color: var(--purple);
+  transform: rotate(90deg) scale(0.8);
+  transition: transform 160ms steps(2);
+}
+
 .brand-header .chat-assistance {
   filter: drop-shadow(0 2px 0 rgb(124 92 250 / 22%));
 }
@@ -169,6 +179,69 @@ section.practice-dialog button.practice-dialog-button,
   clip-path: var(--pixel-step-shape);
 }
 
+:is(.conversation-header, .simulation-screen-header) .chat-assistance {
+  position: relative;
+  width: max-content;
+  max-width: 100%;
+  filter: drop-shadow(0 2px 0 rgb(124 92 250 / 22%));
+}
+
+:is(.conversation-header, .simulation-screen-header) .chat-assistance summary {
+  flex-direction: row;
+  width: auto;
+  height: 32px;
+  min-height: 32px;
+  gap: 5px;
+  padding: 0 9px;
+  border: 0;
+  border-image: none;
+  background: linear-gradient(135deg, #f2edff 0%, #ffe9f5 100%);
+  color: var(--purple-deep);
+  clip-path: var(--pixel-step-shape);
+}
+
+:is(.conversation-header, .simulation-screen-header)
+  .chat-assistance[open]
+  summary {
+  background: linear-gradient(135deg, #e6dcff 0%, #ffd9ee 100%);
+}
+
+:is(.conversation-header, .simulation-screen-header) .chat-assistance-spark {
+  display: none;
+}
+
+:is(.conversation-header, .simulation-screen-header) .chat-assistance-title {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+:is(.conversation-header, .simulation-screen-header) .chat-assistance-caret {
+  display: block;
+}
+
+.chat-assistance[open] .chat-assistance-caret {
+  transform: rotate(-90deg) scale(0.8);
+}
+
+@media (width < 360px) {
+  :is(.conversation-header, .simulation-screen-header)
+    .chat-assistance
+    summary {
+    gap: 0;
+    padding-inline: 6px;
+  }
+
+  :is(.conversation-header, .simulation-screen-header) .chat-assistance-title {
+    font-size: 9px;
+  }
+
+  :is(.conversation-header, .simulation-screen-header) .chat-assistance-caret {
+    display: none;
+  }
+}
+
 .brand-header .chat-assistance[open] summary {
   background: linear-gradient(135deg, #e6dcff 0%, #ffd9ee 100%);
 }
@@ -177,20 +250,6 @@ section.practice-dialog button.practice-dialog-button,
   font-size: 12px;
   font-weight: 700;
   line-height: 1;
-}
-
-.chat-assistance-spark {
-  color: #ee6ab1;
-}
-
-.chat-assistance-caret {
-  color: var(--purple);
-  transform: rotate(90deg) scale(0.8);
-  transition: transform 160ms steps(2);
-}
-
-.chat-assistance[open] .chat-assistance-caret {
-  transform: rotate(-90deg) scale(0.8);
 }
 
 /* ---------- AI 아바타 (하루 · AI 연습대화 · 시뮬레이션 · 페르소나) ---------- */
@@ -213,4 +272,93 @@ section.practice-dialog button.practice-dialog-button,
   inset: 2px;
   background: var(--holo);
   clip-path: var(--pixel-step-shape);
+}
+
+.ai-avatar-image {
+  display: block;
+  width: 86%;
+  height: 86%;
+  object-fit: contain;
+  object-position: center;
+}
+
+/* Calm pixel surfaces: body copy stays readable while headings retain the identity. */
+h1,
+h2,
+h3,
+.pixel-button,
+.brand-header,
+.screen-header,
+.segmented-tabs {
+  font-family: var(--font-pixel);
+}
+
+.pixel-button,
+.like-card,
+.score-card,
+.persona-summary-card,
+.edit-photo-section,
+.preference-choice-row,
+.settings-action,
+.chat-assistance-menu {
+  filter: none;
+}
+
+.pixel-button:not(.secondary, .quiet, :disabled)::before {
+  box-shadow: inset 0 -2px 0 rgb(40 10 120 / 12%);
+}
+
+.brand-header-home {
+  min-height: 44px;
+}
+
+.brand-header-logo {
+  width: 106px;
+  height: 40px;
+  flex-basis: 106px;
+}
+
+.brand-header .home-preference-action,
+.brand-header .pager-button {
+  border: 0;
+  border-image: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  filter: none;
+}
+
+.chat-message-area,
+.practice-message-area {
+  isolation: isolate;
+  background: #f7f4fb;
+}
+
+.chat-message-area::before,
+.practice-message-area::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background:
+    url("/assets/ambient-city-v1.webp") center bottom / 100% auto no-repeat;
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+.chat-room-view .chat-messages,
+.practice-message-area .practice-messages {
+  background: transparent;
+}
+
+.field input,
+.field textarea {
+  font-family: var(--font-body);
+  line-height: 1.6;
+}
+
+.empty-state > p {
+  max-width: 30ch;
+  margin-inline: auto;
+  line-height: 1.7;
 }

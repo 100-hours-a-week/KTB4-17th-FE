@@ -1,3 +1,5 @@
+import { asset } from "../assets.js";
+
 // Pixel icons drawn from character grids (B안 시안과 같은 도트). "." is empty;
 // any other character is a pixel whose colour comes from `colors[char]` or currentColor.
 const ICONS = {
@@ -224,14 +226,20 @@ export function PixelIcon({ name, scale = 2, colors, className = "" }) {
 
 // AI 캐릭터 아바타: 홀로그램 바탕 + 흰 계단 테두리 + 픽셀 로봇 (온보딩 '하루'와 같은 모양)
 export function AiAvatar({ size = 34, className = "" }) {
-  const scale = Math.max(1, Math.round((size * 0.6) / 12));
   return (
     <span
       className={`ai-avatar ${className}`}
       style={{ "--ai-avatar-size": `${size}px` }}
       aria-hidden="true"
     >
-      <PixelIcon name="robot" scale={scale} />
+      <img
+        className="ai-avatar-image"
+        src={asset("ai-companion-v1.webp")}
+        width="1254"
+        height="1254"
+        alt=""
+        draggable="false"
+      />
     </span>
   );
 }

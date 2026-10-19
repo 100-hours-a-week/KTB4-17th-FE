@@ -244,6 +244,11 @@ export function ChatList({ navigate }) {
                     height="56"
                     loading="lazy"
                     alt=""
+                    onError={(event) => {
+                      const fallback = asset("chat-avatar-heart-terminal.svg");
+                      if (event.currentTarget.getAttribute("src") !== fallback)
+                        event.currentTarget.src = fallback;
+                    }}
                   />
                   <span className="chat-room-copy">
                     <span className="chat-room-name">

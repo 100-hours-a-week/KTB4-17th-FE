@@ -89,7 +89,7 @@ export const API_ERROR_MESSAGES = Object.freeze({
   NOT_LIKE_RECEIVER: "내가 받은 좋아요만 처리할 수 있어요.",
   LIKE_NOT_FOUND: "좋아요 정보를 찾을 수 없어요. 목록을 다시 불러와 주세요.",
   DUPLICATE_PENDING_LIKE:
-    "이미 좋아요를 보낸 상대예요. 상대의 응답을 기다려주세요.",
+    "이미 좋아요를 보낸 상대예요. 상대의 응답을 기다려 주세요.",
   MATCH_ALREADY_EXISTS: "이미 매칭된 상대예요. 채팅 목록을 확인해 주세요.",
   LIKE_ALREADY_RESOLVED: "이미 처리된 좋아요예요. 목록을 다시 불러와 주세요.",
   SELF_LIKE_NOT_ALLOWED: "내 프로필에는 좋아요를 보낼 수 없어요.",
