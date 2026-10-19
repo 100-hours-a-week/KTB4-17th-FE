@@ -9,7 +9,10 @@ import {
   PixelButton,
 } from "../../shared/ui/components.jsx";
 import { AiAvatar, PixelIcon } from "../../shared/ui/pixel.jsx";
-import { onboardingStepFromStatus } from "../../shared/utils.js";
+import {
+  isOnboardingComplete,
+  onboardingStepFromStatus,
+} from "../../shared/utils.js";
 import { regions as searchActivityRegions } from "../activity-region/api.js";
 import { beginKakaoLogin } from "../auth/api.js";
 import * as personaApi from "../persona/api.js";
@@ -984,9 +987,10 @@ export function Onboarding({ navigate, toast }) {
     try {
       await profileApi.profileImages(photoState.images);
       const status = await userApi.onboarding();
-      if (status?.userStatus !== "ACTIVE") {
+      if (!isOnboardingComplete(status)) {
         setData((old) => ({
           ...old,
+          onboarded: false,
           onboardingStep: onboardingStepFromStatus(status),
         }));
         setError("온보딩을 완료하지 못했어요. 입력 정보를 다시 확인해 주세요.");

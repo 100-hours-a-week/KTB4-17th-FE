@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { onboardingStepFromStatus } from "../../shared/utils.js";
+import {
+  isOnboardingComplete,
+  onboardingStepFromStatus,
+} from "../../shared/utils.js";
 import {
   openCamera,
   previewCamera,
@@ -674,6 +677,30 @@ test("photo failures and service failures show distinct recovery paths", () => {
     onboardingStepFromStatus({ onboardingNextStep: "FACE_VERIFICATION" }),
     "photo-intro",
   );
+});
+
+test("onboarding completion follows the next step instead of the user status", () => {
+  assert.equal(
+    isOnboardingComplete({
+      userStatus: "ACTIVE",
+      onboardingNextStep: "COMPLETE",
+    }),
+    true,
+  );
+  for (const onboardingNextStep of ["PROFILE_IMAGE", "FACE_VERIFICATION"]) {
+    const status = { userStatus: "ACTIVE", onboardingNextStep };
+    assert.equal(isOnboardingComplete(status), false);
+    assert.equal(onboardingStepFromStatus(status), "photo-intro");
+  }
+  assert.equal(
+    isOnboardingComplete({
+      userStatus: "ONBOARDING",
+      onboardingNextStep: "COMPLETE",
+    }),
+    true,
+  );
+  assert.equal(isOnboardingComplete({ userStatus: "ACTIVE" }), false);
+  assert.equal(isOnboardingComplete(null), false);
 });
 
 test("native DOMException numeric codes cannot break camera error rendering", () => {
