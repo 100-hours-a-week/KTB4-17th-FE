@@ -1,8 +1,37 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { isProfileAccessUnavailable } from "../profile/access.js";
-import { withdrawUser } from "./api.js";
+import { identity, withdrawUser } from "./api.js";
 import { executeUserWithdrawal } from "./withdrawal.js";
+
+test("registration identity sends only the fields accepted by the backend", async () => {
+  const originalFetch = globalThis.fetch;
+  let request;
+  globalThis.fetch = async (url, options) => {
+    request = { url, options };
+    return new Response(
+      JSON.stringify({ accessToken: "access-token", tokenType: "Bearer" }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  };
+
+  try {
+    await identity({
+      name: "Alice",
+      birthDate: "2000-01-01",
+      gender: "FEMALE",
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.equal(request.url, "/api/v1/registration/identity");
+  assert.equal(request.options.method, "PUT");
+  assert.deepEqual(JSON.parse(request.options.body), {
+    birthDate: "2000-01-01",
+    gender: "FEMALE",
+  });
+});
 
 test("user withdrawal sends an empty no-store DELETE request and accepts 204", async () => {
   const originalFetch = globalThis.fetch;

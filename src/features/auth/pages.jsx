@@ -233,16 +233,12 @@ export function RegistrationRestricted({ onConfirm }) {
           <dd>카카오</dd>
         </div>
         <div className="registration-restricted-row">
-          <dt>본명</dt>
-          <dd>{profile.name || "-"}</dd>
-        </div>
-        <div className="registration-restricted-row">
           <dt>생년월일</dt>
           <dd>{birthDate}</dd>
         </div>
       </dl>
       <ul className="registration-restricted-notes">
-        <li>카카오 계정에 등록된 생년월일 기준이에요</li>
+        <li>입력한 생년월일을 기준으로 가입 가능 연령을 확인해요</li>
         <li>입력한 정보는 저장되지 않고 즉시 폐기돼요</li>
         <li>기본 정보가 다르면 수정 후 다시 시도해 주세요</li>
       </ul>

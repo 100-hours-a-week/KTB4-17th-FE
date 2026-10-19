@@ -336,7 +336,6 @@
 }
 
 .registration-info-page .birth-date-part,
-.registration-info-page .pixel-field-frame,
 .registration-info-page .registration-info-fields .choice {
   position: relative;
   isolation: isolate;
@@ -348,8 +347,6 @@
 
 .registration-info-page .birth-date-part::before,
 .registration-info-page .birth-date-part::after,
-.registration-info-page .pixel-field-frame::before,
-.registration-info-page .pixel-field-frame::after,
 .registration-info-page .registration-info-fields .choice::before,
 .registration-info-page .registration-info-fields .choice::after {
   position: absolute;
@@ -360,39 +357,20 @@
 }
 
 .registration-info-page .birth-date-part::before,
-.registration-info-page .pixel-field-frame::before,
 .registration-info-page .registration-info-fields .choice::before {
   inset: 0;
   background: var(--line);
 }
 
 .registration-info-page .birth-date-part::after,
-.registration-info-page .pixel-field-frame::after,
 .registration-info-page .registration-info-fields .choice::after {
   inset: 1px;
   background: var(--paper);
 }
 
-.registration-info-page .birth-date-part > *,
-.registration-info-page .pixel-field-frame > input {
+.registration-info-page .birth-date-part > * {
   position: relative;
   z-index: 1;
-}
-
-.registration-info-page .pixel-field-frame {
-  display: flex;
-  min-height: 48px;
-  align-items: center;
-}
-
-.registration-info-page .pixel-field-frame input {
-  min-height: 46px;
-  padding: 10px 12px;
-  border: 0;
-  border-radius: 0;
-  outline: 0;
-  background: transparent;
-  box-shadow: none;
 }
 
 .registration-info-page .registration-info-fields .choice.selected {
@@ -413,20 +391,15 @@
   background: var(--soft-lavender);
 }
 
-.registration-info-page .birth-date-part:focus-within::before,
-.registration-info-page .pixel-field-frame:focus-within::before {
+.registration-info-page .birth-date-part:focus-within::before {
   background: var(--purple);
-}
-
-.registration-info-page .identity-age-helper,
-.registration-info-page .identity-name-helper {
-  color: var(--danger);
-  font-size: 12px;
-  line-height: 1.5;
 }
 
 .registration-info-page .identity-age-helper {
   margin: 8px 0 0;
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .registration-restricted-page {

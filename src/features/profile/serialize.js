@@ -1,5 +1,11 @@
 import { isJobCategory } from "./jobCategories.js";
 
+export function withoutRegistrationName(profile = {}) {
+  const sanitized = { ...profile };
+  delete sanitized.name;
+  return sanitized;
+}
+
 export function profilePayload(profile) {
   if (!isJobCategory(profile.job)) {
     const error = new Error("직업군을 선택해 주세요.");
