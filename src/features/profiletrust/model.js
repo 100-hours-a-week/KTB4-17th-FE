@@ -1,8 +1,8 @@
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { profilePhotoErrorMessage } from "../profile/photoUpload.js";
 
-export const MAX_ATTEMPTS = 5;
-export const CLIP_DURATION_MS = 5_000;
+export const MAX_ATTEMPTS = 3;
+export const CLIP_DURATION_MS = 7_000;
 export const MAX_VIDEO_BYTES = 5 * 1024 * 1024;
 
 export function trustError(code, extra = {}) {
@@ -24,6 +24,14 @@ export const PHOTO_REASONS = Object.freeze({
 });
 
 const CAMERA_MESSAGES = Object.freeze({
+  CAMERA_ALIGNMENT_TIMEOUT: [
+    "얼굴 중앙을 확인하지 못했어요",
+    "밝은 곳에서 얼굴 전체를 가이드 중앙에 맞추고 다시 시도해 주세요.",
+  ],
+  CAMERA_MODEL_UNAVAILABLE: [
+    "카메라 확인을 준비하지 못했어요",
+    "화면을 새로 열어 다시 시도해 주세요. 계속되면 최신 Safari나 Chrome을 이용해 주세요.",
+  ],
   VIDEO_READ_FAILED: [
     "촬영 영상을 읽지 못했어요",
     "영상을 전달하는 중 문제가 발생했어요. 카메라 인증을 다시 시작해 주세요.",
@@ -160,6 +168,28 @@ const SERVICE_MESSAGES = Object.freeze({
 });
 
 const FACE_REASONS = Object.freeze({
+  FACE_NOT_CENTERED: {
+    kind: "camera",
+    title: "시작 정면을 확인하지 못했어요",
+    message:
+      "얼굴 중앙을 맞춘 뒤, 촬영 첫 안내에서는 카메라를 정면으로 봐 주세요.",
+  },
+  HAND_NOT_DETECTED: {
+    kind: "camera",
+    title: "손 모양을 확인하지 못했어요",
+    message: "손이 잘리지 않도록 얼굴 옆에 두고 촬영 내내 유지해 주세요.",
+  },
+  HAND_GESTURE_MISMATCH: {
+    kind: "camera",
+    title: "안내한 손 자세와 달라요",
+    message: "손 모양과 위·아래 방향을 확인하고 다시 촬영해 주세요.",
+  },
+  HEAD_MOVEMENT_NOT_COMPLETED: {
+    kind: "camera",
+    title: "고개 동작을 확인하지 못했어요",
+    message:
+      "정면에서 안내한 방향으로 살짝 움직였다가 다시 정면으로 돌아와 주세요.",
+  },
   FACE_MISMATCH: {
     kind: "photo",
     title: "사진과 얼굴의 일치를 확인하지 못했어요",

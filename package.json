@@ -19,9 +19,13 @@
     "test:matching": "node --test src/features/matching/matching.test.js",
     "test:recommendation": "node --test src/features/recommendation/recommendation.test.js",
     "test:preferences": "node --test src/features/preferences/preferences.test.js",
-    "test:profiletrust": "node --test src/features/profiletrust/profiletrust.test.js"
+    "test:profiletrust": "node --test src/features/profiletrust/profiletrust.test.js src/features/profiletrust/active.test.js",
+    "prepare:vision": "node scripts/prepare-vision-assets.mjs",
+    "predev": "npm run prepare:vision",
+    "prebuild": "npm run prepare:vision"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "0.10.32",
     "@sentry/react": "^11.1.0",
     "galmuri": "^2.40.3",
     "heic-to": "1.6.5",

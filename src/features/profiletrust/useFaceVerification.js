@@ -2,6 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { preparePrimaryPhoto } from "../profile/photoUpload.js";
 import * as api from "./api.js";
 import { openCamera, previewCamera, recordClip, stopCamera } from "./camera.js";
+import { waitForCenteredFace } from "./centering.js";
+import {
+  challengeInstruction,
+  parseChallenge,
+  recordingHint,
+} from "./challenge.js";
 import {
   latestAttempt,
   MAX_ATTEMPTS,
@@ -34,6 +40,9 @@ export function useFaceVerification() {
   const [progress, setProgress] = useState(initialProgress);
   const [hint, setHint] = useState("");
   const [result, setResult] = useState(null);
+  const [centerReady, setCenterReady] = useState(false);
+  const [challenge, setChallenge] = useState(null);
+  const [cameraAspect, setCameraAspect] = useState("4 / 3");
   const videoRef = useRef(null);
   const photoTask = useRef(null);
   const sessionRef = useRef(null);
@@ -76,6 +85,8 @@ export function useFaceVerification() {
     setActive(true);
     setCameraOn(false);
     setProgress(initialProgress());
+    setCenterReady(false);
+    setChallenge(null);
     setPhase("checking");
     const selected = selection.current;
     const controller = new AbortController();
@@ -270,7 +281,9 @@ export function useFaceVerification() {
         signal,
         getStatus: api.getVerification,
         submit: api.submitVideo,
-        record: async ({ attemptNo, maxAttempts }) => {
+        record: async ({ attemptNo, maxAttempts, challenges }) => {
+          const target = parseChallenge(challenges);
+          if (current()) setChallenge(target);
           if (document.visibilityState === "hidden")
             throw trustError("CAMERA_INTERRUPTED");
           if (!run.stream) {
@@ -310,8 +323,63 @@ export function useFaceVerification() {
               await abortable(new Promise(requestAnimationFrame), signal);
             await previewCamera(videoRef.current, run.stream, signal);
             signal.throwIfAborted();
-            if (current()) setCameraOn(true);
+            if (current()) {
+              setCameraOn(true);
+              setCameraAspect(
+                `${videoRef.current.videoWidth} / ${videoRef.current.videoHeight}`,
+              );
+            }
           }
+          updateStage({
+            stage: "centering",
+            attemptNo,
+            maxAttempts,
+            clipProgress: 0,
+          });
+          if (current()) setCenterReady(false);
+          await waitForCenteredFace(videoRef.current, {
+            signal,
+            onState: (state) => {
+              if (current()) {
+                setCenterReady(state.ready);
+                setHint(state.hint);
+              }
+            },
+            setConfirm: (confirm) => {
+              run.confirmCenter = confirm;
+            },
+          });
+          signal.throwIfAborted();
+          if (current()) setCenterReady(false);
+          updateStage({ stage: "pose", attemptNo, maxAttempts });
+          if (current()) setHint(challengeInstruction(target));
+          await new Promise((resolve, reject) => {
+            const cleanup = () => {
+              clearTimeout(timer);
+              signal.removeEventListener("abort", abort);
+              run.confirmPose = null;
+            };
+            const abort = () => {
+              cleanup();
+              reject(signal.reason);
+            };
+            const remaining =
+              Date.parse(sessionRef.current?.expiresAt) - Date.now();
+            const timer = setTimeout(
+              () => {
+                cleanup();
+                reject(trustError("VERIFICATION_SESSION_EXPIRED"));
+              },
+              Number.isFinite(remaining) ? Math.max(0, remaining) : 60_000,
+            );
+            run.confirmPose = () => {
+              cleanup();
+              resolve();
+            };
+            signal.addEventListener("abort", abort, { once: true });
+            if (signal.aborted) abort();
+          });
+          signal.throwIfAborted();
           updateStage({
             stage: "recording",
             attemptNo,
@@ -321,8 +389,10 @@ export function useFaceVerification() {
           return recordClip(run.stream, {
             signal: run.cameraController.signal,
             onProgress: (clipProgress) => {
-              if (current())
+              if (current()) {
                 setProgress((previous) => ({ ...previous, clipProgress }));
+                setHint(recordingHint(target, clipProgress));
+              }
             },
           });
         },
@@ -385,6 +455,8 @@ export function useFaceVerification() {
     setProgress(initialProgress());
     setIssue(null);
     setResult(null);
+    setChallenge(null);
+    setCenterReady(false);
     setPhase("photo");
   }
 
@@ -410,6 +482,11 @@ export function useFaceVerification() {
     progress,
     hint,
     result,
+    centerReady,
+    challenge,
+    cameraAspect,
+    confirmCenter: () => runRef.current?.confirmCenter?.(),
+    confirmPose: () => runRef.current?.confirmPose?.(),
     videoRef,
     selectPhoto,
     start,

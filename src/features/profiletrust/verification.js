@@ -1,3 +1,4 @@
+import { parseChallenge } from "./challenge.js";
 import {
   captureHint,
   latestAttempt,
@@ -134,6 +135,7 @@ export function assertSession(session, expectedId) {
     }
   }
   const last = latestAttempt(session);
+  if (session.challenges != null) parseChallenge(session.challenges);
   if (
     last?.attemptNo === used &&
     ((session.status === "VERIFIED" && last.decision !== "VERIFIED") ||
@@ -218,7 +220,11 @@ export async function verifySequentially(
     const before = session.attemptsUsed;
     stage("recording", attemptNo);
     onHint(captureHint(session));
-    let video = await record({ attemptNo, maxAttempts: session.maxAttempts });
+    let video = await record({
+      attemptNo,
+      maxAttempts: session.maxAttempts,
+      challenges: session.challenges,
+    });
     signal.throwIfAborted();
     sent++;
     stage("analyzing", attemptNo);
