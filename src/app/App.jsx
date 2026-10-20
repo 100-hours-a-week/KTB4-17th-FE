@@ -17,6 +17,7 @@ import {
 import { useLocalTestLogin } from "../features/auth/useLocalTestLogin.js";
 import { ChatList, ChatRoom } from "../features/chat/Chat.jsx";
 import { useUnreadMessageCount } from "../features/chat/useUnreadMessageCount.js";
+import { LandingPage } from "../features/landing/LandingPage.jsx";
 import { Likes } from "../features/matching/Likes.jsx";
 import { NotificationProvider } from "../features/notifications/NotificationProvider.jsx";
 import { Notifications } from "../features/notifications/Notifications.jsx";
@@ -91,6 +92,9 @@ function AppRouter() {
   const [toastText, setToastText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sessionCheckError, setSessionCheckError] = useState(false);
+  const [handlingOAuthCallback, setHandlingOAuthCallback] = useState(() =>
+    new URLSearchParams(window.location.hash.slice(1)).has("auth_code"),
+  );
   const [logoutPending, setLogoutPending] = useState(false);
   const [userWithdrawalPending, setUserWithdrawalPending] = useState(false);
   const accountActionPendingRef = useRef(false);
@@ -214,6 +218,7 @@ function AppRouter() {
             ? "complete"
             : onboardingStepFromStatus(status),
         }));
+        setHandlingOAuthCallback(false);
         if (
           registrationPath &&
           window.location.pathname.startsWith("/registration")
@@ -238,6 +243,7 @@ function AppRouter() {
             registrationInfoConfirmed: false,
             ...(registrationPath ? { onboardingStep: "identity" } : {}),
           }));
+          setHandlingOAuthCallback(false);
           if (
             resuming &&
             hadAccessToken &&
@@ -377,9 +383,19 @@ function AppRouter() {
   const showNav =
     data.onboarded &&
     ["/", "/home", "/likes", "/chats", "/my", "/notifications"].includes(path);
+  const showLanding = path === "/" && !data.session && !handlingOAuthCallback;
+  const showPublicLogin = path === "/login" && !handlingOAuthCallback;
 
   let page;
-  if (loading) page = <SplashScreen message="잠시만 기다려 주세요…" />;
+  if (showLanding) page = <LandingPage onStart={() => navigate("/login")} />;
+  else if (showPublicLogin)
+    page = (
+      <Login
+        onLocalTestLogin={loginWithLocalTestAccount}
+        onLogin={beginKakaoLogin}
+      />
+    );
+  else if (loading) page = <SplashScreen message="잠시만 기다려 주세요…" />;
   else if (sessionCheckError)
     page = (
       <SplashScreen
@@ -548,9 +564,12 @@ function AppRouter() {
 
   return (
     <SimulationTrackingContext.Provider value={tracking}>
-      <div className="app-shell" ref={viewportRef}>
+      <div
+        className={`app-shell${showLanding ? " app-shell-landing" : ""}`}
+        ref={viewportRef}
+      >
         <div
-          className="app-screen"
+          className={`app-screen${showLanding ? " app-screen-landing" : ""}`}
           data-has-nav={showNav}
           data-view={
             /^\/(chats\/|ai\/practice\/|ai\/simulations\/\d+$)/.test(path)
@@ -560,9 +579,11 @@ function AppRouter() {
                 : "standard"
           }
         >
-          <a className="skip-link" href="#main-content">
-            본문으로 건너뛰기
-          </a>
+          {!showLanding && (
+            <a className="skip-link" href="#main-content">
+              본문으로 건너뛰기
+            </a>
+          )}
           <NotificationProvider
             enabled={
               !loading &&
