@@ -5,6 +5,8 @@ export const API_ERROR_MESSAGES = Object.freeze({
   AUTH_REQUIRED: "로그인이 만료됐어요. 다시 로그인해 주세요.",
   INTERNAL_SERVER_ERROR:
     "서버에서 요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.",
+  SERVER_UNAVAILABLE:
+    "지금 서버에 연결할 수 없어요. 잠시 후 다시 시도해 주세요.",
   AUTH_PROVIDER_UNAVAILABLE:
     "카카오 인증에 연결하지 못했어요. 잠시 후 다시 로그인해 주세요.",
   USER_AGE_REQUIREMENT_NOT_MET:
@@ -190,6 +192,10 @@ const HTTP_ERROR_MESSAGES = Object.freeze({
   415: API_ERROR_MESSAGES.FILE_TYPE_NOT_ALLOWED,
   422: API_ERROR_MESSAGES.INVALID_REQUEST,
   429: "요청이 너무 많아요. 잠시 후 다시 시도해 주세요.",
+  // 게이트웨이 오류는 서버 점검·재시작 중인 경우가 많아 '잠시 후' 안내로 통일한다.
+  502: API_ERROR_MESSAGES.SERVER_UNAVAILABLE,
+  503: API_ERROR_MESSAGES.SERVER_UNAVAILABLE,
+  504: API_ERROR_MESSAGES.SERVER_UNAVAILABLE,
 });
 
 export function apiErrorMessage(
