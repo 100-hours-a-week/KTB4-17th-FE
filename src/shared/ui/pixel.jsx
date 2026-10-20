@@ -192,6 +192,7 @@ const ICONS = {
   ],
   swap: ["..X...X..", ".XX...XX.", "XXXXXXXXX", ".XX...XX.", "..X...X.."],
   dot: [".XXX.", "XXXXX", "XXXXX", "XXXXX", ".XXX."],
+  kebab: ["XX", "XX", "..", "XX", "XX", "..", "XX", "XX"],
   chat: [
     "XXXXXXXX",
     "X......X",

@@ -94,6 +94,26 @@ export function Login({ onLogin, onLocalTestLogin }) {
     useState(localTestAuthEnabled);
   const [testLoginPending, setTestLoginPending] = useState(false);
   const [testLoginError, setTestLoginError] = useState("");
+  const [kakaoPending, setKakaoPending] = useState(false);
+  const [kakaoError, setKakaoError] = useState("");
+
+  async function startKakaoLogin() {
+    if (kakaoPending) return;
+    setKakaoPending(true);
+    setKakaoError("");
+    try {
+      // 성공하면 카카오로 페이지가 넘어가므로 대기 상태를 그대로 둔다.
+      await onLogin();
+    } catch (error) {
+      setKakaoError(
+        apiErrorMessage(
+          error,
+          "지금 서버에 연결할 수 없어요. 잠시 후 다시 시도해 주세요.",
+        ),
+      );
+      setKakaoPending(false);
+    }
+  }
 
   useEffect(() => {
     if (!localTestAuthEnabled) return undefined;
@@ -146,7 +166,13 @@ export function Login({ onLogin, onLocalTestLogin }) {
     >
       <div className="login-top-space" aria-hidden="true" />
       <LoginBrand />
-      <button className="kakao-login-button" type="button" onClick={onLogin}>
+      <button
+        className="kakao-login-button"
+        type="button"
+        onClick={startKakaoLogin}
+        disabled={kakaoPending}
+        aria-busy={kakaoPending}
+      >
         <svg
           className="kakao-login-symbol"
           viewBox="0 0 24 24"
@@ -159,8 +185,13 @@ export function Login({ onLogin, onLocalTestLogin }) {
             d="M12 4C7 4 3 7.1 3 11c0 2.5 1.7 4.7 4.2 6l-.9 3.3c-.1.3.3.6.6.4l3.9-2.6c.4 0 .8.1 1.2.1 5 0 9-3.1 9-7s-4-7.2-9-7.2z"
           />
         </svg>
-        <span>카카오로 시작하기</span>
+        <span>{kakaoPending ? "연결하고 있어요…" : "카카오로 시작하기"}</span>
       </button>
+      {kakaoError && (
+        <p className="login-error" role="alert">
+          {kakaoError}
+        </p>
+      )}
       <p className="login-terms">
         가입 시 이용약관과 개인정보 처리방침에 동의합니다.
       </p>

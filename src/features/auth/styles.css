@@ -167,6 +167,20 @@
   flex: none;
 }
 
+.login-error {
+  margin: 0;
+  color: #c2365f;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+  word-break: keep-all;
+}
+
+.kakao-login-button:disabled {
+  cursor: progress;
+  opacity: 0.75;
+}
+
 .login-terms {
   margin: calc(var(--login-gap) * -0.4) 0 0;
   color: var(--subtle);

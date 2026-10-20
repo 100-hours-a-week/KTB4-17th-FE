@@ -456,7 +456,7 @@ export function Practice({
                 aria-label="AI 연습대화 메뉴"
                 onClick={() => setShowEndDialog(true)}
               >
-                •••
+                <PixelIcon name="kebab" scale={2} />
               </button>
             )}
           </div>
