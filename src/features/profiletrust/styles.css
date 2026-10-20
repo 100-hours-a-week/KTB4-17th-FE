@@ -393,9 +393,13 @@
 
 .trust-face-outline {
   position: absolute;
-  inset: 16% 31% 20%;
+  top: 50%;
+  left: 50%;
+  width: 58%;
+  aspect-ratio: 1;
   border: 2px dashed rgb(233 221 255 / 70%);
-  border-radius: 45%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
   pointer-events: none;
 }
 
