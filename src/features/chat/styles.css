@@ -1444,3 +1444,38 @@
 .chat-list-main .chat-list-items {
   padding-top: 14px;
 }
+
+/* 모바일 반응형 (#218): 화면 크기별 여백·크기만 적용하고 색·그림자 등 현재 디자인은 그대로 둔다 */
+@media (width < 360px) {
+  .chat-room-header.conversation-header {
+    gap: 4px;
+    padding-inline: 6px;
+  }
+
+  .chat-room-partner {
+    gap: 9px;
+  }
+
+  .chat-room-view .chat-messages {
+    padding-inline: 12px;
+  }
+
+  .chat-bubble-content {
+    gap: 4px;
+  }
+
+  .message-bubble {
+    padding: 9px 11px;
+  }
+
+  .chat-list-item {
+    gap: 10px;
+    padding-inline: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-messages {
+    scroll-behavior: auto;
+  }
+}

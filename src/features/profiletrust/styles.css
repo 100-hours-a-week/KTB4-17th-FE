@@ -617,3 +617,15 @@
     padding: 8px;
   }
 }
+
+/* 모바일 반응형 (#218): 화면 크기별 여백·크기만 적용하고 색·그림자 등 현재 디자인은 그대로 둔다 */
+@media (width <= 350px) {
+  .trust-photo-grid {
+    gap: 8px;
+  }
+
+  .trust-photo-badges {
+    right: 44px;
+    left: 4px;
+  }
+}
