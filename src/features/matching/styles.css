@@ -71,7 +71,8 @@
 .person-avatar.large {
   width: 88px;
   height: 88px;
-  border-radius: 50%;
+  border-radius: 0;
+  clip-path: var(--pixel-step-shape);
 }
 
 .person-avatar.generated {
@@ -103,7 +104,7 @@
 }
 
 .like-actions .pixel-button {
-  min-height: 39px;
+  min-height: 44px;
   padding: 7px;
 }
 

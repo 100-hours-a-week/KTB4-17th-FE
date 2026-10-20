@@ -23,6 +23,10 @@ export function profilePhotoUrls(person) {
   return person?.photo ? [person.photo] : [];
 }
 
+export function isOnboardingComplete(status) {
+  return status?.onboardingNextStep === "COMPLETE";
+}
+
 export function onboardingStepFromStatus(status) {
   const serverSteps = {
     REGION: "region",
@@ -30,6 +34,7 @@ export function onboardingStepFromStatus(status) {
     LIFESTYLE: "lifestyle",
     PERSONA: "questions",
     PROFILE_IMAGE: "photo-intro",
+    FACE_VERIFICATION: "photo-intro",
     COMPLETE: "complete",
   };
   return serverSteps[status?.onboardingNextStep] || "identity";

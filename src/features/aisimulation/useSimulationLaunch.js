@@ -1,46 +1,93 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import {
+  AUTH_SESSION_CLEARED_EVENT,
+  getAuthSessionSubject,
+} from "../../shared/api/authToken.js";
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
-import { createAiSimulation } from "./api.js";
+import { aiSimulationPair, createAiSimulation } from "./api.js";
+import { createSimulationLaunchCoordinator } from "./launchCoordinator.js";
+import { positiveId, simulationPath } from "./model.js";
+import { requestSimulation } from "./requestSimulation.js";
 
-export function useSimulationLaunch({ navigate, toast }) {
+export function useSimulationLaunch({ navigate, toast, path, tracking }) {
   const [simulationStartingFor, setSimulationStartingFor] = useState(null);
-  const simulationStartRef = useRef(false);
+  const coordinatorRef = useRef(null);
+  coordinatorRef.current ||= createSimulationLaunchCoordinator({
+    getOwner: getAuthSessionSubject,
+  });
+  const pathRef = useRef(path);
+  pathRef.current = path;
 
-  async function startSimulation(targetMemberId, chatRoomId) {
-    const memberId = Number(targetMemberId);
-    if (!Number.isSafeInteger(memberId) || memberId <= 0) {
+  useEffect(() => {
+    const cancel = () => {
+      coordinatorRef.current.cancel();
+      setSimulationStartingFor(null);
+    };
+    window.addEventListener(AUTH_SESSION_CLEARED_EVENT, cancel);
+    return () => {
+      coordinatorRef.current.cancel();
+      window.removeEventListener(AUTH_SESSION_CLEARED_EVENT, cancel);
+    };
+  }, []);
+
+  useEffect(() => {
+    pathRef.current = path;
+    coordinatorRef.current.cancel();
+    setSimulationStartingFor(null);
+  }, [path]);
+
+  function cancelSimulation(targetUserId) {
+    const userId = positiveId(targetUserId);
+    if (!userId) return false;
+    tracking.removeTarget(userId);
+    const cancelled = coordinatorRef.current.cancel(userId);
+    if (!cancelled) return false;
+    setSimulationStartingFor((current) =>
+      current === cancelled.userId ? null : current,
+    );
+    return true;
+  }
+
+  async function startSimulation(targetUserId, chatRoomId) {
+    const userId = positiveId(targetUserId);
+    if (!userId) {
       toast("시뮬레이션할 상대 정보를 찾을 수 없어요.");
       return false;
     }
-    if (simulationStartRef.current) return false;
-
-    simulationStartRef.current = true;
-    setSimulationStartingFor(memberId);
-    const roomId = Number(chatRoomId);
-    const chatRoomQuery =
-      Number.isSafeInteger(roomId) && roomId > 0 ? `?chatRoomId=${roomId}` : "";
+    const request = coordinatorRef.current.begin(userId);
+    if (!request) return false;
+    const sourcePath = pathRef.current;
+    const isCurrent = () =>
+      coordinatorRef.current.isCurrent(request) &&
+      pathRef.current === sourcePath;
+    setSimulationStartingFor(userId);
     try {
-      const simulation = await createAiSimulation(memberId);
-      if (!simulation?.simulationId) {
-        const error = new Error("SIMULATION_CREATE_FAILED");
-        error.code = "SIMULATION_CREATE_FAILED";
-        throw error;
-      }
-      navigate(`/ai/simulations/${simulation.simulationId}${chatRoomQuery}`);
+      const simulation = await requestSimulation(userId, {
+        getPair: aiSimulationPair,
+        create: createAiSimulation,
+        signal: request.controller.signal,
+      });
+      if (!isCurrent()) return false;
+      tracking.track(simulation, {
+        targetUserId: userId,
+        chatRoomId: positiveId(chatRoomId),
+      });
+      navigate(simulationPath(simulation.simulationId, chatRoomId));
       return true;
     } catch (error) {
+      if (error?.name === "AbortError" || !isCurrent()) return false;
       toast(
         apiErrorMessage(
           error,
-          "시뮬레이션을 만들지 못했어요. 잠시 후 다시 시도해주세요.",
+          "시뮬레이션 요청을 확인하지 못했어요. 연결 상태를 확인해 주세요.",
         ),
       );
       return false;
     } finally {
-      simulationStartRef.current = false;
-      setSimulationStartingFor(null);
+      if (coordinatorRef.current.finish(request))
+        setSimulationStartingFor(null);
     }
   }
 
-  return { startSimulation, simulationStartingFor };
+  return { startSimulation, cancelSimulation, simulationStartingFor };
 }

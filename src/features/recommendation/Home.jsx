@@ -9,8 +9,10 @@ import {
   PixelButton,
   ProfilePhoto,
 } from "../../shared/ui/components.jsx";
+import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import { profilePhotoUrls } from "../../shared/utils.js";
 import * as matchingApi from "../matching/api.js";
+import { jobCategoryLabel } from "../profile/jobCategories.js";
 import { wheelNavigationIntent } from "./wheelNavigation.js";
 
 const NEXT_CARD_DISTANCE = 64;
@@ -37,11 +39,11 @@ export function Home({
   onAdvance,
   onRetreat,
   onDismiss,
+  onPass,
   onLoadMore,
   onStartSimulation,
 }) {
   const [photoIndex, setPhotoIndex] = useState(0);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [actionBusy, setActionBusy] = useState("");
   const actionInFlight = useRef(false);
   const [dragOffset, setDragOffset] = useState(0);
@@ -170,6 +172,8 @@ export function Home({
   function handlePointerDown(event) {
     if (
       isCardSettling ||
+      actionInFlight.current ||
+      recommendationRefreshing ||
       event.isPrimary === false ||
       (event.pointerType === "mouse" && event.button !== 0) ||
       event.target.closest?.("button")
@@ -235,6 +239,7 @@ export function Home({
   }
   function handleWheel(event) {
     if (
+      actionInFlight.current ||
       actionBusy ||
       recommendationRefreshing ||
       Math.abs(event.deltaY) <= Math.abs(event.deltaX)
@@ -319,6 +324,30 @@ export function Home({
     });
   }, []);
 
+  async function pass() {
+    if (
+      !person ||
+      actionInFlight.current ||
+      isCardSettling ||
+      recommendationRefreshing
+    )
+      return;
+    actionInFlight.current = true;
+    setActionBusy("pass");
+    try {
+      if (await onPass(person.id)) toast(`${person.nickname}님을 패스했어요.`);
+    } catch (error) {
+      toast(
+        apiErrorMessage(
+          error,
+          "패스하지 못했어요. 잠시 후 다시 시도해 주세요.",
+        ),
+      );
+    } finally {
+      actionInFlight.current = false;
+      setActionBusy("");
+    }
+  }
   async function like() {
     if (!person || actionInFlight.current) return;
     actionInFlight.current = true;
@@ -326,7 +355,7 @@ export function Home({
     try {
       await matchingApi.sendLike(person.id);
       toast(`${person.nickname}님에게 좋아요를 보냈어요`);
-      onDismiss();
+      onDismiss(person.id);
     } catch (error) {
       toast(apiErrorMessage(error, "좋아요를 보내지 못했어요."));
     } finally {
@@ -352,47 +381,42 @@ export function Home({
   return (
     <>
       <BrandHeader navigate={navigate} className="home-header">
-        <span className="home-header-spacer" />
         <button
-          className="home-menu-button"
+          className="home-preference-action"
           type="button"
-          aria-label="메뉴 열기"
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((open) => !open)}
+          onClick={() => navigate("/preferences")}
+          aria-label="선호 설정"
+          title="선호 설정"
         >
-          ≡
+          <img
+            src={asset("preferences/preference-heart.svg")}
+            width="28"
+            height="28"
+            alt=""
+            aria-hidden="true"
+          />
         </button>
-        {menuOpen && (
-          <nav className="home-menu" aria-label="홈 메뉴">
-            <button
-              type="button"
-              aria-disabled="true"
-              onClick={() => {
-                setMenuOpen(false);
-                toast("선호 설정은 준비 중이에요.");
-              }}
-            >
-              선호 설정
-            </button>
-            <button
-              type="button"
-              aria-disabled="true"
-              onClick={() => {
-                setMenuOpen(false);
-                toast("알림 기능은 준비 중이에요.");
-              }}
-            >
-              알림
-            </button>
-          </nav>
-        )}
       </BrandHeader>
-      <main className="main-scroll home-main">
+      <main id="main-content" tabIndex={-1} className="main-scroll home-main">
+        {!person && <h1 className="sr-only">오늘의 추천</h1>}
         {recommendationStatus === "loading" ? (
           <EmptyState
-            icon="✦"
-            title="추천을 불러오고 있어요"
-            description="잠시만 기다려주세요."
+            icon={
+              <img
+                src={asset("illust/pager.svg")}
+                width="190"
+                height="160"
+                alt=""
+              />
+            }
+            title="추천을 불러오고 있어요…"
+            description="잠시만 기다려 주세요…"
+            role="status"
+            action={
+              <span className="empty-loader" aria-hidden="true">
+                <i />
+              </span>
+            }
           />
         ) : recommendationError ? (
           <EmptyState
@@ -415,7 +439,14 @@ export function Home({
             onPointerCancel={handlePointerCancel}
           >
             <EmptyState
-              icon="✦"
+              icon={
+                <img
+                  src={asset("illust/pager.svg")}
+                  width="190"
+                  height="160"
+                  alt=""
+                />
+              }
               title={
                 recommendationExhausted || recommendations.length > 0
                   ? "추천을 모두 봤어요"
@@ -460,17 +491,35 @@ export function Home({
               <div className="recommendation-gradient" />
               <div className="recommendation-info">
                 {person.activity && (
-                  <span className="online-badge">{person.activity}</span>
+                  <span className="recommendation-keyword recommendation-status">
+                    <i aria-hidden="true" />
+                    {person.activity}
+                  </span>
                 )}
                 <h1>
                   {person.nickname}
-                  {person.age != null && `, ${person.age}`}
-                  {person.verified && <Icon name="detail-shield.svg" />}
+                  {person.age != null && <span>{person.age}</span>}
+                  {person.verified && (
+                    <Icon
+                      name="verified-shield.svg"
+                      className="verified-shield"
+                    />
+                  )}
                 </h1>
-                {person.job && <p>{person.job}</p>}
-                {(person.region || person.mbti) && (
-                  <p>
-                    {[person.region, person.mbti].filter(Boolean).join(" / ")}
+                {(person.region || person.job || person.mbti) && (
+                  <p className="recommendation-meta">
+                    {[
+                      person.region,
+                      person.job ? jobCategoryLabel(person.job) : "",
+                      person.mbti,
+                    ]
+                      .filter(Boolean)
+                      .map((item, index) => (
+                        <span key={item}>
+                          {index > 0 && <i aria-hidden="true" />}
+                          {item}
+                        </span>
+                      ))}
                   </p>
                 )}
                 <button
@@ -482,42 +531,37 @@ export function Home({
                     navigate(`/profiles/${person.id}?returnTo=/home`)
                   }
                 >
-                  프로필 상세 보기 <span aria-hidden="true">›</span>
+                  프로필 상세 보기 <PixelIcon name="chev" />
                 </button>
                 <div className="recommendation-actions">
                   {[
-                    [
-                      "시뮬레이션",
-                      "action-simulation.svg",
-                      startSimulation,
-                      "simulation",
-                    ],
-                    [
-                      "AI 연습대화",
-                      "action-practice.svg",
-                      startPractice,
-                      "practice",
-                    ],
-                    ["좋아요", "action-like.svg", like, "like"],
-                  ].map(([label, icon, action, busyKey]) => (
+                    ["패스", "action-pass.svg", 3, pass, "pass"],
+                    ["시뮬레이션", "sim", 3, startSimulation, "simulation"],
+                    ["연습 대화", "chat", 3, startPractice, "practice"],
+                    ["좋아요", "heart", 3, like, "like"],
+                  ].map(([label, icon, scale, action, busyKey]) => (
                     <button
                       type="button"
                       key={label}
                       className="card-action"
                       onClick={action}
-                      disabled={Boolean(actionBusy)}
+                      disabled={
+                        Boolean(actionBusy) ||
+                        isCardSettling ||
+                        recommendationRefreshing
+                      }
+                      aria-busy={actionBusy === busyKey}
                     >
                       <span
-                        className="action-key"
-                        style={{
-                          backgroundImage: `url(${asset(icon === "action-like.svg" ? "action-pink.svg" : "action-white.svg")})`,
-                        }}
+                        className={`action-key${busyKey === "like" ? " action-key-like" : ""}${busyKey === "pass" ? " action-key-pass" : ""}`}
                       >
-                        <Icon name={icon} />
+                        {busyKey === "pass" ? (
+                          <Icon name={icon} />
+                        ) : (
+                          <PixelIcon name={icon} scale={scale} />
+                        )}
                       </span>
-                      <span>
-                        {actionBusy === busyKey ? "처리 중..." : label}
-                      </span>
+                      <span>{actionBusy === busyKey ? "처리 중…" : label}</span>
                     </button>
                   ))}
                 </div>

@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { PhotoSegments, ProfilePhoto } from "../../shared/ui/components.jsx";
+import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import { dateAge } from "../../shared/utils.js";
-import { getMemberProfile, getMyProfile } from "./api.js";
+import { NotificationButton } from "../notifications/NotificationControls.jsx";
+import { isProfileAccessUnavailable } from "./access.js";
+import { getMyProfile, getUserProfile } from "./api.js";
 import {
   bodyTypes,
   drinkings,
@@ -12,35 +15,56 @@ import {
 } from "./data.js";
 import "./other-profile.css";
 import { profileImageUrls } from "./imageUrls.js";
+import { jobCategoryLabel } from "./jobCategories.js";
 
 function profileChoiceLabel(options, value) {
   if (!value) return "정보 없음";
   return options.find(([option]) => option === value)?.[1] || value;
 }
 
-export function OtherProfile({ memberId, returnTo, navigate, isOwn = false }) {
+export function OtherProfile({
+  userId,
+  returnTo,
+  navigate,
+  isOwn = false,
+  onStartSimulation,
+  simulationStartingFor,
+}) {
   const [profile, setProfile] = useState(null);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [accessUnavailable, setAccessUnavailable] = useState(false);
   const profileRequestVersion = useRef(0);
   const pointerStart = useRef(null);
   const photos = profile?.photos || [];
+  const [simulationBusy, setSimulationBusy] = useState(false);
+  const showAiActions = !isOwn && returnTo?.split("?")[0] === "/likes";
+  const startingSimulation = simulationBusy || simulationStartingFor != null;
+
+  async function startSimulation() {
+    if (!profile || startingSimulation || !onStartSimulation) return;
+    setSimulationBusy(true);
+    try {
+      await onStartSimulation(profile.id);
+    } finally {
+      setSimulationBusy(false);
+    }
+  }
 
   const loadProfile = useCallback(async () => {
     const requestVersion = ++profileRequestVersion.current;
     setLoading(true);
     setError("");
+    setAccessUnavailable(false);
 
     try {
-      const result = await (isOwn
-        ? getMyProfile()
-        : getMemberProfile(memberId));
+      const result = await (isOwn ? getMyProfile() : getUserProfile(userId));
       if (requestVersion !== profileRequestVersion.current) return;
 
       setProfile({
         ...result,
-        id: isOwn ? "me" : Number(result?.memberId || memberId),
+        id: isOwn ? "me" : Number(result?.userId || userId),
         age: isOwn ? dateAge(result?.birthDate) : result?.age,
         region: isOwn ? result?.activityRegionName : result?.region,
         photos: profileImageUrls(result),
@@ -49,18 +73,23 @@ export function OtherProfile({ memberId, returnTo, navigate, isOwn = false }) {
     } catch (requestError) {
       if (requestVersion !== profileRequestVersion.current) return;
       setProfile(null);
-      setError(
-        apiErrorMessage(
-          requestError,
-          "프로필을 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
-        ),
-      );
+      if (!isOwn && isProfileAccessUnavailable(requestError)) {
+        setAccessUnavailable(true);
+        setError("더 이상 확인할 수 없는 프로필이에요.");
+      } else {
+        setError(
+          apiErrorMessage(
+            requestError,
+            "프로필을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
+          ),
+        );
+      }
     } finally {
       if (requestVersion === profileRequestVersion.current) {
         setLoading(false);
       }
     }
-  }, [memberId, isOwn]);
+  }, [userId, isOwn]);
 
   useEffect(() => {
     void loadProfile();
@@ -151,7 +180,50 @@ export function OtherProfile({ memberId, returnTo, navigate, isOwn = false }) {
     : [];
 
   return (
-    <main className="other-profile-page">
+    <main id="main-content" tabIndex={-1} className="other-profile-page">
+      {profile && (
+        <div className="other-profile-backdrop" aria-hidden="true">
+          <ProfilePhoto
+            person={profile}
+            index={photoIndex}
+            className="other-profile-backdrop-photo"
+          />
+        </div>
+      )}
+      <header className="other-profile-toolbar">
+        <button
+          type="button"
+          className="other-profile-back"
+          aria-label="이전 화면으로"
+          onClick={() => navigate(returnTo, { replace: true })}
+        >
+          <PixelIcon name="back" scale={3} />
+        </button>
+        <NotificationButton className="profile-pager" />
+        {isOwn && (
+          <button
+            type="button"
+            className="other-profile-settings"
+            aria-label="프로필 설정"
+            title="프로필 설정"
+            onClick={() => navigate("/my/profile?returnTo=/my/profile/view")}
+          >
+            <span aria-hidden="true">
+              <PixelIcon name="gear" scale={2} />
+            </span>
+          </button>
+        )}
+        {profile && photos.length > 0 && (
+          <span
+            className="other-profile-photo-count"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            <span className="sr-only">사진 </span>
+            {photoIndex + 1}/{photos.length}
+          </span>
+        )}
+      </header>
       <section
         className="other-profile-hero"
         onPointerDown={handlePointerDown}
@@ -181,25 +253,6 @@ export function OtherProfile({ memberId, returnTo, navigate, isOwn = false }) {
         ) : (
           <div className="other-profile-hero-placeholder" aria-hidden="true" />
         )}
-        <button
-          type="button"
-          className="other-profile-back"
-          aria-label="이전 화면으로"
-          onClick={() => navigate(returnTo, { replace: true })}
-        >
-          ‹
-        </button>
-        {isOwn && (
-          <button
-            type="button"
-            className="other-profile-settings"
-            aria-label="프로필 설정"
-            title="프로필 설정"
-            onClick={() => navigate("/my/profile?returnTo=/my/profile/view")}
-          >
-            <span aria-hidden="true">⚙︎</span>
-          </button>
-        )}
         {profile && (
           <PhotoSegments
             person={profile}
@@ -210,35 +263,80 @@ export function OtherProfile({ memberId, returnTo, navigate, isOwn = false }) {
         )}
         {loading && (
           <p className="other-profile-loading" role="status">
-            프로필을 불러오는 중이에요.
+            프로필을 불러오는 중이에요…
           </p>
         )}
       </section>
 
       {profile ? (
         <section className="other-profile-info" aria-label="프로필 정보">
-          <span className="other-profile-kicker">PROFILE</span>
+          <span className="other-profile-kicker">
+            {isOwn ? "MY PROFILE" : "PROFILE"}
+          </span>
           <h1>
             {profileName}
-            {profile.age != null && <span>, {profile.age}</span>}
+            {profile.age != null && (
+              <span className="other-profile-age">, {profile.age}</span>
+            )}
             <span className="other-profile-heart" aria-hidden="true">
-              ♡
+              <PixelIcon name="heartOutline" scale={2} />
             </span>
           </h1>
           <div className="other-profile-facts">
             {profile.job && (
               <p>
-                <span aria-hidden="true">▣</span>
-                {profile.job}
+                <span aria-hidden="true">
+                  <PixelIcon name="briefcase" />
+                </span>
+                {jobCategoryLabel(profile.job)}
               </p>
             )}
             {profile.region && (
               <p>
-                <span aria-hidden="true">⌖</span>
+                <span aria-hidden="true">
+                  <PixelIcon name="pin" />
+                </span>
                 {profile.region}
               </p>
             )}
           </div>
+          {showAiActions && (
+            <section
+              className="other-profile-ai-actions"
+              aria-label="대화 시작 전 알아보기"
+            >
+              <button
+                type="button"
+                disabled={startingSimulation || !onStartSimulation}
+                aria-busy={
+                  simulationBusy || simulationStartingFor === profile.id
+                }
+                onClick={() => void startSimulation()}
+              >
+                <PixelIcon name="sim" scale={3} />
+                <span>
+                  <strong>AI 시뮬레이션</strong>
+                  <small>
+                    {simulationBusy || simulationStartingFor === profile.id
+                      ? "대화를 준비하고 있어요…"
+                      : "두 사람의 대화 호흡 알아보기"}
+                  </small>
+                </span>
+                <PixelIcon name="chev" />
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate(`/ai/practice/${profile.id}`)}
+              >
+                <PixelIcon name="chat" scale={3} />
+                <span>
+                  <strong>AI 연습대화</strong>
+                  <small>첫 메시지를 편하게 연습하기</small>
+                </span>
+                <PixelIcon name="chev" />
+              </button>
+            </section>
+          )}
           <section
             className="other-profile-detail-section"
             aria-label="프로필 상세 정보"
@@ -276,9 +374,18 @@ export function OtherProfile({ memberId, returnTo, navigate, isOwn = false }) {
         !loading && (
           <section className="other-profile-error" role="alert">
             <p>{error}</p>
-            <button type="button" onClick={() => void loadProfile()}>
-              다시 시도
-            </button>
+            {accessUnavailable ? (
+              <button
+                type="button"
+                onClick={() => navigate(returnTo, { replace: true })}
+              >
+                이전 화면으로
+              </button>
+            ) : (
+              <button type="button" onClick={() => void loadProfile()}>
+                다시 시도
+              </button>
+            )}
           </section>
         )
       )}

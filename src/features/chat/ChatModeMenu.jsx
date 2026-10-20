@@ -1,12 +1,14 @@
 import { useEffect, useRef } from "react";
 import { Icon } from "../../shared/ui/components.jsx";
+import { PixelIcon } from "../../shared/ui/pixel.jsx";
 
 export function ChatModeMenu({
   currentMode = "chat",
-  targetMemberId,
+  targetUserId,
   simulationStartingFor,
   onSimulation,
   onPractice,
+  disabled = false,
 }) {
   const menuRef = useRef(null);
   useEffect(() => {
@@ -28,19 +30,31 @@ export function ChatModeMenu({
       document.removeEventListener("keydown", dismissWithEscape);
     };
   }, []);
+  useEffect(() => {
+    if (disabled && menuRef.current) menuRef.current.open = false;
+  }, [disabled]);
   function selectMode(action) {
     if (menuRef.current) menuRef.current.open = false;
     void action?.();
   }
   const generating =
-    simulationStartingFor != null && simulationStartingFor === targetMemberId;
+    simulationStartingFor != null && simulationStartingFor === targetUserId;
   return (
-    <details ref={menuRef} className="chat-assistance">
-      <summary aria-label="AI 대화: 시뮬레이션과 연습대화">
-        <span className="chat-assistance-title">
-          <span aria-hidden="true">✦</span> AI 대화
-        </span>
-        <span className="chat-assistance-subtitle">시뮬레이션 · 연습대화</span>
+    <details
+      ref={menuRef}
+      className="chat-assistance"
+      onToggle={(event) => {
+        if (disabled && event.currentTarget.open)
+          event.currentTarget.open = false;
+      }}
+    >
+      <summary
+        aria-label="발신자 제한 모드: 시뮬레이션과 연습대화"
+        aria-disabled={disabled || undefined}
+      >
+        <PixelIcon name="spark" className="chat-assistance-spark" />
+        <span className="chat-assistance-title">발신자 제한 모드</span>
+        <PixelIcon name="chev" className="chat-assistance-caret" />
       </summary>
       <div className="chat-assistance-menu">
         <button
@@ -48,8 +62,9 @@ export function ChatModeMenu({
           aria-current={currentMode === "simulation" ? "page" : undefined}
           aria-busy={generating}
           disabled={
+            disabled ||
             currentMode === "simulation" ||
-            !targetMemberId ||
+            !targetUserId ||
             simulationStartingFor != null ||
             !onSimulation
           }
@@ -57,16 +72,14 @@ export function ChatModeMenu({
         >
           <Icon name="action-simulation.svg" />
           <span className="chat-assistance-copy">
-            <span>
-              {generating ? "AI 시뮬레이션 생성 중…" : "AI 시뮬레이션"}
-            </span>
+            <span>{generating ? "시뮬레이션 확인 중…" : "AI 시뮬레이션"}</span>
             <small>두 AI가 대화하고 궁합을 분석해요</small>
           </span>
         </button>
         <button
           type="button"
           aria-current={currentMode === "practice" ? "page" : undefined}
-          disabled={currentMode === "practice" || !onPractice}
+          disabled={disabled || currentMode === "practice" || !onPractice}
           onClick={() => selectMode(onPractice)}
         >
           <Icon name="action-practice.svg" />

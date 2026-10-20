@@ -4,6 +4,7 @@ import { createMessageId } from "../../shared/messageId.js";
 import {
   mapChatMessage,
   mergeChatMessages,
+  mergeRefreshedChatRoom,
   messagesAreGrouped,
   messageTimesAreGrouped,
 } from "./model.js";
@@ -18,9 +19,15 @@ window.sessionStorage = {
 const { setAccessToken, clearAccessToken } = await import(
   "../../shared/api/authToken.js"
 );
-const { clearChatSessions, getRoomSession, updateRoomSession } = await import(
-  "./session.js"
-);
+const {
+  canUseAiForRoom,
+  clearChatSessions,
+  discardRoomSession,
+  endRoomAfterBlock,
+  getRoomSession,
+  updateRoomSession,
+} = await import("./session.js");
+const { blockUser, leaveChatRoom } = await import("./api.js");
 const { enqueueMessages, retryMessage } = await import("./outbox.js");
 const { applyMessagePage, fetchMessageGap } = await import("./roomData.js");
 const { loadChatVisit, unreadBoundary } = await import("./unread.js");
@@ -31,7 +38,7 @@ function token(subject, signature = "first") {
 
 beforeEach(() => {
   clearChatSessions();
-  setAccessToken(token("member-1"));
+  setAccessToken(token("user-1"));
 });
 
 function message(id, extras = {}) {
@@ -51,7 +58,7 @@ function page(first, last, hasNext = true) {
     chatRoom: {
       chatRoomId: 7,
       status: "ACTIVE",
-      otherParticipant: { memberId: 2, nickname: "테스트" },
+      otherParticipant: { userId: 2, nickname: "테스트" },
     },
     messages: Array.from({ length: last - first + 1 }, (_, index) => ({
       messageId: first + index,
@@ -67,10 +74,185 @@ function activeEntry() {
   const entry = getRoomSession(7);
   updateRoomSession(entry, {
     loaded: true,
-    room: { id: 7, status: "ACTIVE", name: "테스트" },
+    room: {
+      id: 7,
+      status: "ACTIVE",
+      userId: 2,
+      name: "테스트",
+      image: "https://example.com/profile.jpg",
+    },
   });
   return entry;
 }
+
+test("user block sends PUT and accepts created or existing responses", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, options });
+    const status = calls.length === 1 ? 201 : 200;
+    return new Response(
+      JSON.stringify({
+        data: { targetUserId: 23, blockedAt: "2026-10-10T12:30:00" },
+      }),
+      {
+        status,
+        headers: { "content-type": "application/json" },
+      },
+    );
+  };
+
+  try {
+    assert.equal((await blockUser(23)).targetUserId, 23);
+    assert.equal((await blockUser(23)).targetUserId, 23);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.equal(calls.length, 2);
+  for (const call of calls) {
+    assert.equal(call.url, "/api/v1/users/me/blocks/23");
+    assert.equal(call.options.method, "PUT");
+  }
+});
+
+test("chat end sends an empty no-store POST request and forwards its signal", async () => {
+  const originalFetch = globalThis.fetch;
+  const controller = new AbortController();
+  let request;
+  globalThis.fetch = async (url, options) => {
+    request = { url, options };
+    return new Response(
+      JSON.stringify({
+        data: {
+          chatRoomId: 7,
+          roomStatus: "ENDED",
+          participantStatus: "LEFT",
+          endedAt: "2026-10-17T12:30:00",
+        },
+      }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+  };
+
+  try {
+    const result = await leaveChatRoom(7, { signal: controller.signal });
+    assert.equal(result.chatRoomId, 7);
+    assert.equal(result.roomStatus, "ENDED");
+    assert.equal(result.participantStatus, "LEFT");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.equal(request.url, "/api/v1/chat-rooms/7/leave");
+  assert.equal(request.options.method, "POST");
+  assert.equal(request.options.cache, "no-store");
+  assert.equal(request.options.signal, controller.signal);
+  assert.equal(request.options.body, undefined);
+});
+
+test("successful block ends the room without removing message history", () => {
+  const entry = activeEntry();
+  updateRoomSession(entry, {
+    messages: [message(1), message(2)],
+    draft: "작성 중인 메시지",
+    attachment: { file: new Blob(["photo"]), previewUrl: "" },
+  });
+
+  endRoomAfterBlock(entry);
+
+  assert.equal(entry.snapshot.room.status, "ENDED");
+  assert.equal(entry.snapshot.room.blockedByMe, true);
+  assert.equal(entry.snapshot.room.userId, 2);
+  assert.equal(entry.snapshot.room.name, "테스트");
+  assert.equal(entry.snapshot.room.image, "https://example.com/profile.jpg");
+  assert.equal(canUseAiForRoom(entry.snapshot.room), false);
+  assert.equal(entry.snapshot.attachment, null);
+  assert.equal(entry.snapshot.draft, "작성 중인 메시지");
+  assert.deepEqual(
+    entry.snapshot.messages.map((item) => item.id),
+    [1, 2],
+  );
+});
+
+test("discarding a chat room session releases pending work and creates a fresh session", () => {
+  const entry = activeEntry();
+  const pendingFile = new Blob(["photo"]);
+  const pendingTask = { file: pendingFile };
+  entry.batches.push({ requested: true, tasks: [pendingTask] });
+  updateRoomSession(entry, {
+    draft: "작성 중인 메시지",
+    attachment: { file: pendingFile, previewUrl: "" },
+  });
+
+  discardRoomSession(entry);
+
+  assert.equal(entry.active, false);
+  assert.equal(entry.batches.length, 0);
+  assert.equal(pendingTask.file, null);
+  const fresh = getRoomSession(7);
+  assert.notEqual(fresh, entry);
+  assert.equal(fresh.snapshot.room, null);
+  assert.equal(fresh.snapshot.draft, "");
+  assert.equal(fresh.snapshot.attachment, null);
+});
+
+test("masked room metadata clears cached profile identity and image", () => {
+  const entry = activeEntry();
+  const maskedPage = page(81, 100);
+  maskedPage.chatRoom = {
+    ...maskedPage.chatRoom,
+    status: "ENDED",
+    otherParticipant: {
+      userId: null,
+      nickname: "알 수 없음",
+      profileImageUrl: null,
+    },
+  };
+
+  applyMessagePage(entry, [maskedPage]);
+
+  assert.equal(entry.snapshot.room.userId, null);
+  assert.equal(entry.snapshot.room.name, "알 수 없음");
+  assert.equal(entry.snapshot.room.image, "");
+  assert.equal(canUseAiForRoom(entry.snapshot.room), false);
+});
+
+test("AI modes are available only for active unblocked room users", () => {
+  const room = { userId: 2, status: "ACTIVE", blockedByMe: false };
+  assert.equal(canUseAiForRoom(room), true);
+  assert.equal(canUseAiForRoom(room, true), false);
+  assert.equal(canUseAiForRoom({ ...room, status: "ENDED" }), false);
+  assert.equal(canUseAiForRoom({ ...room, blockedByMe: true }), false);
+  assert.equal(canUseAiForRoom({ ...room, userId: null }), false);
+});
+
+test("server participant masking wins over a newer local room preview", () => {
+  const refreshed = {
+    id: 7,
+    userId: null,
+    name: "알 수 없음",
+    image: "",
+    activityTimestamp: 100,
+    syncedActivityTimestamp: 100,
+  };
+  const local = {
+    ...refreshed,
+    userId: 2,
+    name: "이전 이름",
+    image: "https://example.com/old.jpg",
+    last: "새 메시지",
+    activityTimestamp: 200,
+  };
+
+  assert.deepEqual(mergeRefreshedChatRoom(refreshed, local), {
+    ...local,
+    userId: null,
+    name: "알 수 없음",
+    image: "",
+    syncedActivityTimestamp: 100,
+  });
+});
 
 function apiFixture() {
   let id = 100;
@@ -455,7 +637,7 @@ test("logout clears cache and prevents an upload from sending under another acco
     api,
   );
   clearAccessToken();
-  setAccessToken(token("member-2"));
+  setAccessToken(token("user-2"));
   resolve({ fileId: 25 });
   await settled(entry);
   assert.equal(entry.active, false);
@@ -466,7 +648,7 @@ test("logout clears cache and prevents an upload from sending under another acco
 test("refreshing a token for the same account preserves a draft", () => {
   const entry = activeEntry();
   updateRoomSession(entry, { draft: "보존할 글" });
-  setAccessToken(token("member-1", "refreshed"));
+  setAccessToken(token("user-1", "refreshed"));
   assert.equal(getRoomSession(7).snapshot.draft, "보존할 글");
 });
 
@@ -476,14 +658,14 @@ test("temporarily clearing a token during refresh preserves the session cache", 
   clearAccessToken({ preserveSession: true });
   assert.equal(getRoomSession(7), entry);
   assert.equal(entry.active, true);
-  setAccessToken(token("member-1", "refreshed"));
+  setAccessToken(token("user-1", "refreshed"));
   assert.equal(getRoomSession(7).snapshot.draft, "갱신 중에도 보존");
 });
 
 test("account change clears another account's draft", () => {
   const previous = activeEntry();
   updateRoomSession(previous, { draft: "다른 계정의 글" });
-  setAccessToken(token("member-2"));
+  setAccessToken(token("user-2"));
   assert.equal(previous.active, false);
   assert.equal(getRoomSession(7).snapshot.draft, "");
 });
@@ -730,14 +912,13 @@ test("message metadata permits entry without a room-list lookup", () => {
   applyMessagePage(entry, [page(81, 100)]);
   assert.equal(entry.snapshot.loaded, true);
   assert.equal(entry.snapshot.room.name, "테스트");
-  assert.equal(entry.snapshot.room.memberId, 2);
+  assert.equal(entry.snapshot.room.userId, 2);
 });
 
 test("a late active-room response cannot reopen an ended conversation", () => {
   const entry = activeEntry();
-  updateRoomSession(entry, {
-    room: { ...entry.snapshot.room, status: "ENDED" },
-  });
+  endRoomAfterBlock(entry);
   applyMessagePage(entry, [page(81, 100)]);
   assert.equal(entry.snapshot.room.status, "ENDED");
+  assert.equal(entry.snapshot.room.blockedByMe, true);
 });

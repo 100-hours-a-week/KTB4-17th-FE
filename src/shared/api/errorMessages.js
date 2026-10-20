@@ -1,133 +1,179 @@
 // Keep backend error codes for control flow; show these messages to users.
 export const API_ERROR_MESSAGES = Object.freeze({
-  INVALID_REQUEST: "입력 정보를 다시 확인해주세요.",
-  AUTH_REQUIRED: "로그인이 만료됐어요. 다시 로그인해주세요.",
+  INVALID_REQUEST: "입력 정보를 다시 확인해 주세요.",
+  JOB_CATEGORY_REQUIRED: "직업군을 선택해 주세요.",
+  AUTH_REQUIRED: "로그인이 만료됐어요. 다시 로그인해 주세요.",
   INTERNAL_SERVER_ERROR:
-    "서버에서 요청을 처리하지 못했어요. 잠시 후 다시 시도해주세요.",
+    "서버에서 요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.",
   AUTH_PROVIDER_UNAVAILABLE:
-    "카카오 인증에 연결하지 못했어요. 잠시 후 다시 로그인해주세요.",
+    "카카오 인증에 연결하지 못했어요. 잠시 후 다시 로그인해 주세요.",
   USER_AGE_REQUIREMENT_NOT_MET:
     "만 19세 이상, 만 40세 미만만 가입할 수 있어요.",
-  USER_NOT_FOUND: "회원 정보를 찾을 수 없어요. 다시 로그인해주세요.",
+  USER_NOT_FOUND: "회원 정보를 찾을 수 없어요.",
   ONBOARDING_ACCESS_NOT_ALLOWED:
-    "현재 가입 상태에서는 이 단계를 진행할 수 없어요. 가입 진행 상태를 다시 확인해주세요.",
+    "현재 가입 상태에서는 이 단계를 진행할 수 없어요. 가입 진행 상태를 다시 확인해 주세요.",
   NICKNAME_ALREADY_IN_USE:
-    "이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해주세요.",
+    "이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해 주세요.",
 
   PROFILE_NOT_FOUND: "프로필 정보를 찾을 수 없어요.",
-  PROFILE_NICKNAME_REQUIRED: "닉네임을 입력한 뒤 AI 문답을 시작해주세요.",
-  PROFILE_MBTI_REQUIRED: "MBTI를 선택한 뒤 가치관을 확정해주세요.",
-  SESSION_NOT_FOUND: "대화 정보를 찾을 수 없어요. 대화를 다시 시작해주세요.",
+  PROFILE_NICKNAME_REQUIRED: "닉네임을 입력한 뒤 AI 문답을 시작해 주세요.",
+  PROFILE_MBTI_REQUIRED: "MBTI를 선택한 뒤 가치관을 확정해 주세요.",
+  SESSION_NOT_FOUND: "대화 정보를 찾을 수 없어요. 대화를 다시 시작해 주세요.",
   PERSONA_DRAFT_NOT_FOUND:
-    "가치관 초안을 찾을 수 없어요. AI 문답 결과를 다시 확인해주세요.",
+    "가치관 초안을 찾을 수 없어요. AI 문답 결과를 다시 확인해 주세요.",
   NO_PENDING_QUESTION:
-    "답변할 질문이 없어요. AI 문답 진행 상태를 다시 확인해주세요.",
-  REQUEST_IN_PROGRESS: "이전 요청을 처리하고 있어요. 잠시만 기다려주세요.",
+    "답변할 질문이 없어요. AI 문답 진행 상태를 다시 확인해 주세요.",
+  REQUEST_IN_PROGRESS: "이전 요청을 처리하고 있어요. 잠시만 기다려 주세요.",
   TURN_MISMATCH:
-    "현재 질문과 답변 순서가 달라요. 진행 중인 질문을 다시 확인해주세요.",
+    "현재 질문과 답변 순서가 달라요. 진행 중인 질문을 다시 확인해 주세요.",
   ACTION_NOT_ALLOWED:
-    "아직 이 단계를 진행할 수 없어요. 질문에 더 답변한 뒤 다시 시도해주세요.",
-  ONBOARDING_NOT_FINISHED: "AI 문답을 마친 뒤 가치관 요약을 확인해주세요.",
+    "아직 이 단계를 진행할 수 없어요. 질문에 더 답변한 뒤 다시 시도해 주세요.",
+  ONBOARDING_NOT_FINISHED: "AI 문답을 마친 뒤 가치관 요약을 확인해 주세요.",
   PERSONA_ALREADY_CONFIRMED:
-    "이미 확정된 가치관이에요. 가입 진행 상태를 다시 확인해주세요.",
+    "이미 확정된 가치관이에요. 가입 진행 상태를 다시 확인해 주세요.",
   PERSONA_CONFIRMATION_CONFLICT:
-    "이미 확정된 가치관과 요청한 정보가 달라요. 저장된 정보를 다시 확인해주세요.",
+    "이미 확정된 가치관과 요청한 정보가 달라요. 저장된 정보를 다시 확인해 주세요.",
   AI_REQUEST_REJECTED:
-    "AI가 요청을 처리할 수 없어요. 입력 내용을 확인한 뒤 다시 시도해주세요.",
+    "AI가 요청을 처리할 수 없어요. 입력 내용을 확인한 뒤 다시 시도해 주세요.",
   AI_SERVER_NOT_CONFIGURED:
-    "AI 서비스를 준비하고 있어요. 잠시 후 다시 시도해주세요.",
+    "AI 서비스를 준비하고 있어요. 잠시 후 다시 시도해 주세요.",
   AI_SERVER_UNAVAILABLE:
-    "AI 서버에 연결하지 못했어요. 잠시 후 다시 시도해주세요.",
+    "AI 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.",
   AI_SERVER_RESPONSE_INVALID:
-    "AI 응답을 정상적으로 받지 못했어요. 잠시 후 다시 시도해주세요.",
+    "AI 응답을 정상적으로 받지 못했어요. 잠시 후 다시 시도해 주세요.",
 
-  FRONT_PHOTO_REQUIRED: "정면 사진을 등록해주세요.",
-  FILE_NOT_AVAILABLE: "사용할 수 없는 사진이에요. 사진을 다시 등록해주세요.",
-  FILE_NOT_FOUND: "파일을 찾을 수 없어요. 파일을 다시 선택해주세요.",
+  KAKAO_FILE_TOO_LARGE: "대화 파일은 최대 5MB까지 올릴 수 있어요.",
+  KAKAO_FILE_TYPE_NOT_ALLOWED:
+    "카카오톡에서 내보낸 TXT 또는 CSV 파일을 선택해 주세요.",
+  INVALID_KAKAO_EXPORT:
+    "카카오톡 대화 형식을 확인하지 못했어요. 내보낸 원본 파일을 다시 선택해 주세요.",
+  SPEAKER_SELECTION_REQUIRED: "대화에 표시된 본인의 이름을 선택해 주세요.",
+  SPEAKER_NOT_FOUND:
+    "선택한 이름을 파일에서 찾지 못했어요. 파일을 제거하고 다시 선택해 주세요.",
+  SPEAKER_NAME_NOT_SUPPORTED:
+    "이 이름으로는 분석을 요청할 수 없어요. 다른 대화 파일을 선택하거나 건너뛰어 주세요.",
+  PERSONA_CONFIRMATION_REQUIRED: "가치관을 확정한 뒤 대화를 추가해 주세요.",
+  AI_EXTRACTION_IN_PROGRESS:
+    "이미 대화를 분석하고 있어요. 다음 단계로 진행해도 돼요.",
+  AI_EXTRACTION_REQUEST_REJECTED:
+    "이 대화로는 분석을 요청할 수 없어요. 다른 파일을 선택하거나 건너뛰어 주세요.",
+  AI_SUBMISSION_OUTCOME_UNKNOWN:
+    "전달 결과를 확인하지 못했어요. 이미 접수됐을 수 있으니 다시 보내지 않고 다음 단계로 진행해도 돼요.",
+
+  FRONT_PHOTO_REQUIRED: "정면 사진을 등록해 주세요.",
+  FILE_NOT_AVAILABLE: "사용할 수 없는 사진이에요. 사진을 다시 등록해 주세요.",
+  FILE_NOT_FOUND: "파일을 찾을 수 없어요. 파일을 다시 선택해 주세요.",
   FILE_UPLOAD_INTENT_NOT_FOUND:
-    "업로드 정보를 찾을 수 없어요. 파일을 다시 선택해주세요.",
+    "업로드 정보를 찾을 수 없어요. 파일을 다시 선택해 주세요.",
   FILE_UPLOAD_INTENT_EXPIRED:
-    "업로드 시간이 만료됐어요. 파일을 다시 선택해주세요.",
+    "업로드 시간이 만료됐어요. 파일을 다시 선택해 주세요.",
   FILE_UPLOAD_INTENT_CONFLICT:
-    "업로드 상태가 변경됐어요. 파일을 다시 선택해주세요.",
+    "업로드 상태가 변경됐어요. 파일을 다시 선택해 주세요.",
   FILE_UPLOAD_NOT_COMPLETE:
-    "파일 업로드가 아직 완료되지 않았어요. 업로드를 마친 뒤 다시 시도해주세요.",
+    "파일 업로드가 아직 완료되지 않았어요. 업로드를 마친 뒤 다시 시도해 주세요.",
   FILE_TOO_LARGE:
-    "파일 용량이 업로드 한도를 초과했어요. 더 작은 파일을 선택해주세요.",
+    "파일 용량이 업로드 한도를 초과했어요. 더 작은 파일을 선택해 주세요.",
   FILE_TYPE_NOT_ALLOWED:
-    "지원하지 않는 파일 형식이에요. JPG, PNG, WEBP 사진을 선택해주세요.",
-  FILE_INVALID_CONTENT: "파일을 읽을 수 없어요. 다른 파일을 선택해주세요.",
+    "지원하지 않는 파일 형식이에요. JPG, PNG, WEBP 사진을 선택해 주세요.",
+  FILE_INVALID_CONTENT: "파일을 읽을 수 없어요. 다른 파일을 선택해 주세요.",
   FILE_UPLOAD_FAILED:
-    "파일을 업로드하지 못했어요. 연결을 확인한 뒤 다시 시도해주세요.",
-  FILE_READ_URL_FAILED: "파일을 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
+    "파일을 업로드하지 못했어요. 연결을 확인한 뒤 다시 시도해 주세요.",
+  FILE_READ_URL_FAILED: "파일을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
   FILE_IN_USE: "사용 중인 파일은 삭제할 수 없어요.",
-  FILE_DELETE_FAILED: "파일을 삭제하지 못했어요. 잠시 후 다시 시도해주세요.",
+  FILE_DELETE_FAILED: "파일을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.",
   FILE_INVALID_STATE:
-    "파일 상태를 확인하지 못했어요. 파일을 다시 선택해주세요.",
+    "파일 상태를 확인하지 못했어요. 파일을 다시 선택해 주세요.",
 
-  MEMBER_NOT_FOUND: "상대 회원 정보를 찾을 수 없어요.",
   SENDER_NOT_ACTIVE: "가입을 완료한 뒤 좋아요를 보낼 수 있어요.",
   RECEIVER_NOT_ACTIVE: "현재 이 회원에게 좋아요를 보낼 수 없어요.",
   NOT_LIKE_RECEIVER: "내가 받은 좋아요만 처리할 수 있어요.",
-  LIKE_NOT_FOUND: "좋아요 정보를 찾을 수 없어요. 목록을 다시 불러와주세요.",
+  LIKE_NOT_FOUND: "좋아요 정보를 찾을 수 없어요. 목록을 다시 불러와 주세요.",
   DUPLICATE_PENDING_LIKE:
-    "이미 좋아요를 보낸 상대예요. 상대의 응답을 기다려주세요.",
-  MATCH_ALREADY_EXISTS: "이미 매칭된 상대예요. 채팅 목록을 확인해주세요.",
-  LIKE_ALREADY_RESOLVED: "이미 처리된 좋아요예요. 목록을 다시 불러와주세요.",
+    "이미 좋아요를 보낸 상대예요. 상대의 응답을 기다려 주세요.",
+  MATCH_ALREADY_EXISTS: "이미 매칭된 상대예요. 채팅 목록을 확인해 주세요.",
+  LIKE_ALREADY_RESOLVED: "이미 처리된 좋아요예요. 목록을 다시 불러와 주세요.",
   SELF_LIKE_NOT_ALLOWED: "내 프로필에는 좋아요를 보낼 수 없어요.",
+  SELF_PASS_NOT_ALLOWED: "내 프로필은 패스할 수 없어요.",
+  RECOMMENDATION_TARGET_NOT_AVAILABLE:
+    "현재 이 프로필을 패스할 수 없어요. 추천 목록을 다시 불러와 주세요.",
   REQUESTER_NOT_ACTIVE: "가입을 완료한 뒤 추천을 받을 수 있어요.",
   RESOURCE_NOT_AVAILABLE:
-    "추천 정보를 더 이상 사용할 수 없어요. 추천 목록을 다시 불러와주세요.",
+    "추천 정보를 더 이상 사용할 수 없어요. 추천 목록을 다시 불러와 주세요.",
+  BLOCK_ACCESS_DENIED: "현재 상태에서는 회원을 차단할 수 없어요.",
+  USER_NOT_AVAILABLE: "차단할 회원을 찾을 수 없어요.",
+  SELF_BLOCK_NOT_ALLOWED: "자기 자신은 차단할 수 없어요.",
+
+  PREFERENCE_AGE_OUT_OF_RANGE: "나이는 19~39세로 설정해 주세요.",
+  PREFERENCE_HEIGHT_OUT_OF_RANGE: "키는 130~220cm로 설정해 주세요.",
+  PREFERENCE_AGE_RANGE_INVALID: "최소 나이는 최대 나이보다 클 수 없어요.",
+  PREFERENCE_HEIGHT_RANGE_INVALID: "최소 키는 최대 키보다 클 수 없어요.",
+  PREFERENCE_RELIGION_NULL_ELEMENT: "종교 선택을 다시 확인해 주세요.",
+  PREFERENCE_RELIGION_DUPLICATE_VALUE: "종교 선택을 다시 확인해 주세요.",
+  PREFERENCE_DRINKING_NULL_ELEMENT: "음주 선택을 다시 확인해 주세요.",
+  PREFERENCE_DRINKING_DUPLICATE_VALUE: "음주 선택을 다시 확인해 주세요.",
+  PREFERENCE_SMOKING_NULL_ELEMENT: "흡연 선택을 다시 확인해 주세요.",
+  PREFERENCE_SMOKING_DUPLICATE_VALUE: "흡연 선택을 다시 확인해 주세요.",
 
   INVALID_CHAT_ROOM_CURSOR:
-    "채팅 목록의 조회 위치가 올바르지 않아요. 목록을 다시 불러와주세요.",
+    "채팅 목록의 조회 위치가 올바르지 않아요. 목록을 다시 불러와 주세요.",
   INVALID_CHAT_ROOM_PAGE_SIZE:
-    "채팅 목록을 조회할 수 없어요. 다시 시도해주세요.",
+    "채팅 목록을 조회할 수 없어요. 다시 시도해 주세요.",
   INVALID_CHAT_MESSAGE_CURSOR:
-    "대화의 조회 위치가 올바르지 않아요. 채팅방을 다시 열어주세요.",
+    "대화의 조회 위치가 올바르지 않아요. 채팅방을 다시 열어 주세요.",
   INVALID_CHAT_MESSAGE_PAGE_SIZE:
-    "대화를 조회할 수 없어요. 채팅방을 다시 열어주세요.",
+    "대화를 조회할 수 없어요. 채팅방을 다시 열어 주세요.",
   CHAT_ACCESS_DENIED: "이 채팅방에 접근할 수 없어요.",
   CHAT_ROOM_NOT_FOUND: "채팅방을 찾을 수 없어요.",
   CHAT_IMAGE_NOT_FOUND: "대화에 첨부된 사진을 찾을 수 없어요.",
   CHAT_ROOM_NOT_ACTIVE: "종료된 대화에는 메시지를 보낼 수 없어요.",
   INVALID_CHAT_MESSAGE_READ_CURSOR:
-    "읽음 상태를 갱신할 수 없어요. 채팅방을 다시 열어주세요.",
+    "읽음 상태를 갱신할 수 없어요. 채팅방을 다시 열어 주세요.",
   CLIENT_MESSAGE_ID_CONFLICT:
-    "메시지 전송 정보가 기존 메시지와 달라요. 대화 내역을 다시 확인해주세요.",
+    "메시지 전송 정보가 기존 메시지와 달라요. 대화 내역을 다시 확인해 주세요.",
   TOO_MANY_MESSAGE_REQUESTS:
-    "메시지를 너무 빠르게 보내고 있어요. 잠시 후 다시 보내주세요.",
+    "메시지를 너무 빠르게 보내고 있어요. 잠시 후 다시 보내 주세요.",
 
-  TARGET_MEMBER_NOT_FOUND: "상대 회원 정보를 찾을 수 없어요.",
-  TARGET_MEMBER_UNAVAILABLE: "현재 이 상대와 AI 연습대화를 시작할 수 없어요.",
-  INVALID_TARGET_MEMBER:
-    "선택한 상대와 AI 대화를 진행할 수 없어요. 상대 정보를 다시 확인해주세요.",
+  TARGET_USER_NOT_FOUND: "상대 회원 정보를 찾을 수 없어요.",
+  TARGET_USER_UNAVAILABLE: "현재 이 상대와 AI 연습대화를 시작할 수 없어요.",
+  INVALID_TARGET_USER:
+    "선택한 상대와 AI 대화를 진행할 수 없어요. 상대 정보를 다시 확인해 주세요.",
   CHAT_NOT_FOUND:
-    "AI 연습대화 메시지를 찾을 수 없어요. 대화 내역을 다시 확인해주세요.",
+    "AI 연습대화 메시지를 찾을 수 없어요. 대화 내역을 다시 확인해 주세요.",
   SESSION_ENDED: "종료된 AI 연습대화에는 새 메시지를 보낼 수 없어요.",
   GENERATION_IN_PROGRESS:
-    "AI가 이전 메시지에 답변하고 있어요. 잠시만 기다려주세요.",
+    "AI가 이전 메시지에 답변하고 있어요. 잠시만 기다려 주세요.",
   CHAT_NOT_RETRYABLE: "이 답변은 다시 시도할 수 없어요.",
   DAILY_LIMIT_EXCEEDED:
-    "오늘의 연습 횟수를 모두 사용했어요. 내일 다시 이용해주세요.",
+    "오늘의 연습 횟수를 모두 사용했어요. 내일 다시 이용해 주세요.",
   AI_SESSION_ID_CONFLICT:
-    "AI 대화 연결 정보가 달라요. 연습대화를 다시 시작해주세요.",
+    "AI 대화 연결 정보가 달라요. 연습대화를 다시 시작해 주세요.",
   AI_CALLBACK_UNAUTHORIZED:
-    "AI 답변을 확인하지 못했어요. 잠시 후 다시 시도해주세요.",
+    "AI 답변을 확인하지 못했어요. 잠시 후 다시 시도해 주세요.",
   AI_CALLBACK_INVALID:
-    "AI 답변 정보를 처리하지 못했어요. 잠시 후 다시 시도해주세요.",
-  SIMULATION_NOT_FOUND:
-    "시뮬레이션 결과를 찾을 수 없어요. 시뮬레이션을 다시 시작해주세요.",
+    "AI 답변 정보를 처리하지 못했어요. 잠시 후 다시 시도해 주세요.",
+  SIMULATION_NOT_FOUND: "시뮬레이션을 찾을 수 없거나 접근할 수 없어요.",
   ME_PERSONA_NOT_FOUND:
-    "내 AI 성향 정보가 없어 시뮬레이션을 만들 수 없어요. 가치관 문답을 완료해주세요.",
+    "내 AI 성향 정보가 없어 시뮬레이션을 만들 수 없어요. 가치관 문답을 완료해 주세요.",
   TARGET_PERSONA_NOT_FOUND:
     "상대의 AI 성향 정보가 없어 시뮬레이션을 만들 수 없어요.",
+  SIMULATION_RESULT_NOT_READY:
+    "아직 결과가 준비되지 않았어요. 상태를 다시 확인해 주세요.",
+  SIMULATION_CAPACITY_EXCEEDED:
+    "시뮬레이션 요청을 처리하지 못했어요. 기존 요청 상태를 확인해 주세요.",
+  SIMULATION_RESPONSE_INVALID:
+    "시뮬레이션 응답을 확인하지 못했어요. 상태를 다시 확인해 주세요.",
+  SIMULATION_PARTICIPANT_INVALID:
+    "시뮬레이션 참여자 정보를 확인하지 못했어요. 로그인 상태를 확인해 주세요.",
+  SIMULATION_POLLING_PAUSED:
+    "자동 상태 확인을 멈췄어요. 상태 다시 확인을 눌러 현재 결과를 확인해 주세요.",
+  SIMULATION_STATUS_TIMEOUT:
+    "상태 조회 응답이 늦어지고 있어요. 연결 상태를 확인해 주세요.",
   SIMULATION_ALREADY_RUNNING:
-    "시뮬레이션을 만들고 있어요. 잠시만 기다려주세요.",
+    "시뮬레이션을 만들고 있어요. 잠시만 기다려 주세요.",
   SIMULATION_GENERATION_FAILED:
-    "시뮬레이션을 생성하지 못했어요. 잠시 후 다시 시도해주세요.",
+    "시뮬레이션 생성에 실패했어요. 현재 재생성은 지원하지 않아요.",
 
-  AUTH_TOKEN_MISSING: "로그인 정보를 확인하지 못했어요. 다시 로그인해주세요.",
+  AUTH_TOKEN_MISSING: "로그인 정보를 확인하지 못했어요. 다시 로그인해 주세요.",
   LOCAL_TEST_LOGIN_DISABLED:
     "현재 환경에서는 테스트 로그인을 사용할 수 없어요.",
   TEST_ACCOUNT_ONBOARDING_INCOMPLETE:
@@ -139,16 +185,16 @@ const HTTP_ERROR_MESSAGES = Object.freeze({
   401: API_ERROR_MESSAGES.AUTH_REQUIRED,
   403: "이 요청을 처리할 권한이 없어요.",
   404: "요청한 정보를 찾을 수 없어요.",
-  408: "요청 시간이 초과됐어요. 연결을 확인한 뒤 다시 시도해주세요.",
+  408: "요청 시간이 초과됐어요. 연결을 확인한 뒤 다시 시도해 주세요.",
   413: API_ERROR_MESSAGES.FILE_TOO_LARGE,
   415: API_ERROR_MESSAGES.FILE_TYPE_NOT_ALLOWED,
   422: API_ERROR_MESSAGES.INVALID_REQUEST,
-  429: "요청이 너무 많아요. 잠시 후 다시 시도해주세요.",
+  429: "요청이 너무 많아요. 잠시 후 다시 시도해 주세요.",
 });
 
 export function apiErrorMessage(
   error,
-  fallback = "요청을 처리하지 못했어요. 잠시 후 다시 시도해주세요.",
+  fallback = "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.",
 ) {
   const code = typeof error === "string" ? error : error?.code;
   if (typeof code === "string" && Object.hasOwn(API_ERROR_MESSAGES, code))
@@ -169,5 +215,6 @@ export function createApiError(response, result) {
   error.code = code;
   error.status = response.status;
   error.fields = result?.errors || [];
+  error.details = result && typeof result === "object" ? result : null;
   return error;
 }

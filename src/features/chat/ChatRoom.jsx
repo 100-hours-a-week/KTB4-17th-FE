@@ -6,17 +6,17 @@ import {
   useRef,
   useState,
 } from "react";
+import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { asset } from "../../shared/assets.js";
-import {
-  BrandHeader,
-  EmptyState,
-  ScreenHeader,
-} from "../../shared/ui/components.jsx";
+import { EmptyState, ScreenHeader } from "../../shared/ui/components.jsx";
+import { PixelIcon } from "../../shared/ui/pixel.jsx";
+import { useRoomMatchRead } from "../notifications/useRoomMatchRead.js";
 import {
   prepareProfilePhoto,
   profilePhotoErrorMessage,
 } from "../profile/photoUpload.js";
 import * as chatApi from "./api.js";
+import { ChatDetailMenu } from "./ChatDetailMenu.jsx";
 import { ChatImage } from "./ChatImage.jsx";
 import { ChatModeMenu } from "./ChatModeMenu.jsx";
 import { MessageBubble } from "./MessageBubble.jsx";
@@ -27,12 +27,85 @@ import {
 } from "./model.js";
 import { enqueueMessages, retryMessage } from "./outbox.js";
 import {
+  canUseAiForRoom,
+  discardRoomSession,
+  endRoomAfterBlock,
   isSessionActive,
   releasePreview,
   updateRoomSession,
 } from "./session.js";
+import { CHAT_READ_UPDATED_EVENT } from "./unreadCount.js";
 import { useChatRoom } from "./useChatRoom.js";
 import { useChatScroll } from "./useChatScroll.js";
+import { useComposerAutofocus } from "./useComposerAutofocus.js";
+import { useKeyboardViewport } from "./useKeyboardViewport.js";
+
+function ChatConfirmationDialog({
+  dialogId,
+  dismissLabel,
+  title,
+  description,
+  pending,
+  confirmLabel,
+  pendingLabel,
+  onCancel,
+  onConfirm,
+}) {
+  const cancelRef = useRef(null);
+  const titleId = `chat-${dialogId}-title`;
+  const descriptionId = `chat-${dialogId}-description`;
+
+  useLayoutEffect(() => {
+    cancelRef.current?.focus();
+  }, []);
+
+  return (
+    <div className="chat-confirm-dialog-backdrop">
+      <button
+        type="button"
+        className="chat-confirm-dialog-dismiss"
+        aria-label={dismissLabel}
+        tabIndex={-1}
+        onClick={onCancel}
+        disabled={pending}
+      />
+      <section
+        className="chat-confirm-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        onKeyDown={(event) => {
+          if (event.key !== "Escape" || pending) return;
+          event.preventDefault();
+          onCancel();
+        }}
+      >
+        <h2 id={titleId}>{title}</h2>
+        <p id={descriptionId}>{description}</p>
+        <div>
+          <button
+            ref={cancelRef}
+            type="button"
+            className="chat-confirm-dialog-button"
+            onClick={onCancel}
+            disabled={pending}
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            className="chat-confirm-dialog-button chat-confirm-dialog-primary"
+            onClick={onConfirm}
+            disabled={pending}
+          >
+            {pending ? pendingLabel : confirmLabel}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
 
 function ImageViewer({ message, entry, onClose }) {
   const dialogRef = useRef(null);
@@ -82,70 +155,11 @@ function ImageViewer({ message, entry, onClose }) {
         aria-label="사진 닫기"
         onClick={onClose}
       >
-        ×
+        <PixelIcon name="x" scale={2} />
       </button>
       <ChatImage message={message} entry={entry} viewer />
     </div>
   );
-}
-
-function useKeyboardViewport(rootRef, preservePosition) {
-  useLayoutEffect(() => {
-    const screen = rootRef.current?.closest(".app-screen");
-    const viewport = window.visualViewport;
-    if (!screen) return undefined;
-    const properties = [
-      "height",
-      "minHeight",
-      "position",
-      "top",
-      "left",
-      "transform",
-    ];
-    const originalStyles = Object.fromEntries(
-      properties.map((name) => [name, screen.style[name]]),
-    );
-    screen.classList.add("app-screen-chat");
-    let frame = null;
-    const restoreStyles = () => {
-      for (const name of properties) screen.style[name] = originalStyles[name];
-    };
-    const resize = () => {
-      if (
-        window.matchMedia("(width < 600px)").matches &&
-        (!viewport || viewport.scale === 1)
-      ) {
-        screen.style.height = `${viewport?.height || window.innerHeight}px`;
-        screen.style.minHeight = "0";
-        screen.style.position = "fixed";
-        screen.style.top = `${viewport?.offsetTop || 0}px`;
-        screen.style.left = "50%";
-        screen.style.transform = "translateX(-50%)";
-      } else {
-        restoreStyles();
-      }
-      preservePosition();
-    };
-    const scheduleResize = () => {
-      if (frame != null) window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(() => {
-        frame = null;
-        resize();
-      });
-    };
-    resize();
-    viewport?.addEventListener("resize", scheduleResize);
-    viewport?.addEventListener("scroll", scheduleResize);
-    window.addEventListener("resize", scheduleResize);
-    return () => {
-      if (frame != null) window.cancelAnimationFrame(frame);
-      viewport?.removeEventListener("resize", scheduleResize);
-      viewport?.removeEventListener("scroll", scheduleResize);
-      window.removeEventListener("resize", scheduleResize);
-      screen.classList.remove("app-screen-chat");
-      restoreStyles();
-    };
-  }, [rootRef, preservePosition]);
 }
 
 export function ChatRoom(props) {
@@ -158,6 +172,7 @@ function ChatRoomContent({
   navigate,
   toast,
   onStartSimulation,
+  onCancelSimulation,
   simulationStartingFor,
 }) {
   const room = useChatRoom(roomId);
@@ -175,15 +190,35 @@ function ChatRoomContent({
   } = room;
   const [viewingImage, setViewingImage] = useState(null);
   const [preparingImage, setPreparingImage] = useState(false);
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  const [endChatDialogOpen, setEndChatDialogOpen] = useState(false);
+  const [blocking, setBlocking] = useState(false);
+  const [endingChat, setEndingChat] = useState(false);
   const imageSelectionVersion = useRef(0);
   const imagePreparationPending = useRef(false);
+  const blockRequestRef = useRef(null);
+  const endChatRequestRef = useRef(null);
   const rootRef = useRef(null);
   const inputRef = useRef(null);
   const imageInputRef = useRef(null);
   const viewerOpenerRef = useRef(null);
   const scroll = useChatScroll({ ...room, viewingImage });
   const canSend = Boolean(visit) && state.room?.status === "ACTIVE";
-  const targetMemberId = state.room?.memberId;
+  useRoomMatchRead(roomId, Boolean(visit && state.room && !error));
+  useComposerAutofocus(
+    inputRef,
+    roomId,
+    canSend,
+    Boolean(viewingImage || blockDialogOpen || endChatDialogOpen),
+  );
+  const targetUserId = state.room?.userId;
+  const parsedTargetUserId = Number(targetUserId);
+  const canBlockUser =
+    !state.room?.blockedByMe &&
+    Number.isSafeInteger(parsedTargetUserId) &&
+    parsedTargetUserId > 0;
+  const canEndChat = Boolean(visit && state.room);
+  const aiDisabled = !canUseAiForRoom(state.room, blocking || endingChat);
   const closeViewer = useCallback(() => setViewingImage(null), []);
   const openViewer = useCallback((message, opener) => {
     viewerOpenerRef.current = opener;
@@ -194,6 +229,12 @@ function ChatRoomContent({
   useEffect(
     () => () => {
       imageSelectionVersion.current += 1;
+      const blockRequest = blockRequestRef.current;
+      blockRequestRef.current = null;
+      blockRequest?.abort();
+      const endChatRequest = endChatRequestRef.current;
+      endChatRequestRef.current = null;
+      endChatRequest?.abort();
     },
     [],
   );
@@ -262,19 +303,98 @@ function ChatRoomContent({
   }
 
   function navigateToProfile() {
-    if (targetMemberId)
+    if (targetUserId)
       navigate(
-        `/profiles/${targetMemberId}?returnTo=${encodeURIComponent(`/chats/${roomId}`)}`,
+        `/profiles/${targetUserId}?returnTo=${encodeURIComponent(`/chats/${roomId}`)}`,
       );
+  }
+
+  async function blockUser() {
+    if (!canBlockUser || blocking || endingChat) return;
+
+    const controller = new AbortController();
+    blockRequestRef.current = controller;
+    setBlocking(true);
+    try {
+      await chatApi.blockUser(parsedTargetUserId, {
+        signal: controller.signal,
+      });
+      if (blockRequestRef.current !== controller || !isSessionActive(entry))
+        return;
+
+      imageSelectionVersion.current += 1;
+      imagePreparationPending.current = false;
+      setPreparingImage(false);
+      onCancelSimulation?.(parsedTargetUserId);
+      endRoomAfterBlock(entry);
+      setBlockDialogOpen(false);
+      toast("회원을 차단했어요.");
+    } catch (requestError) {
+      if (
+        requestError.name !== "AbortError" &&
+        blockRequestRef.current === controller
+      )
+        toast(
+          apiErrorMessage(
+            requestError,
+            "회원을 차단하지 못했어요. 잠시 후 다시 시도해 주세요.",
+          ),
+        );
+    } finally {
+      if (blockRequestRef.current === controller) {
+        blockRequestRef.current = null;
+        setBlocking(false);
+      }
+    }
+  }
+
+  async function endChat() {
+    if (!canEndChat || blocking || endingChat) return;
+
+    const controller = new AbortController();
+    endChatRequestRef.current = controller;
+    setEndingChat(true);
+    try {
+      await chatApi.leaveChatRoom(roomId, { signal: controller.signal });
+      if (endChatRequestRef.current !== controller || !isSessionActive(entry))
+        return;
+
+      imageSelectionVersion.current += 1;
+      imagePreparationPending.current = false;
+      setPreparingImage(false);
+      if (Number.isSafeInteger(parsedTargetUserId) && parsedTargetUserId > 0)
+        onCancelSimulation?.(parsedTargetUserId);
+      setEndChatDialogOpen(false);
+      discardRoomSession(entry);
+      window.dispatchEvent(new Event(CHAT_READ_UPDATED_EVENT));
+      toast("채팅을 종료했어요.");
+      navigate("/chats");
+    } catch (requestError) {
+      if (
+        requestError.name !== "AbortError" &&
+        endChatRequestRef.current === controller
+      )
+        toast(
+          apiErrorMessage(
+            requestError,
+            "채팅을 종료하지 못했어요. 잠시 후 다시 시도해 주세요.",
+          ),
+        );
+    } finally {
+      if (endChatRequestRef.current === controller) {
+        endChatRequestRef.current = null;
+        setEndingChat(false);
+      }
+    }
   }
 
   const connectionMessage =
     connection === "offline"
-      ? "인터넷 연결이 끊겼어요. 연결 후 다시 시도해주세요."
+      ? "인터넷 연결이 끊겼어요. 연결 후 다시 시도해 주세요."
       : connection === "unauthenticated"
-        ? "다시 로그인해주세요."
+        ? "다시 로그인해 주세요."
         : ["error", "reconnecting"].includes(connection)
-          ? "실시간 연결을 복구하고 있어요."
+          ? "실시간 연결을 복구하고 있어요…"
           : "";
   const viewerMessage =
     viewingImage &&
@@ -284,23 +404,11 @@ function ChatRoomContent({
       viewingImage.message);
 
   return (
-    <section ref={rootRef} className="chat-room-view" aria-label="채팅방">
-      <div className="chat-room-content" inert={Boolean(viewingImage)}>
-        <BrandHeader navigate={navigate}>
-          <ChatModeMenu
-            targetMemberId={targetMemberId}
-            simulationStartingFor={simulationStartingFor}
-            onSimulation={() => onStartSimulation?.(targetMemberId, roomId)}
-            onPractice={
-              targetMemberId
-                ? () =>
-                    navigate(
-                      `/ai/practice/${targetMemberId}?chatRoomId=${roomId}`,
-                    )
-                : undefined
-            }
-          />
-        </BrandHeader>
+    <main ref={rootRef} className="chat-room-view" aria-label="채팅방">
+      <div
+        className="chat-room-content"
+        inert={Boolean(viewingImage || blockDialogOpen || endChatDialogOpen)}
+      >
         <ScreenHeader
           className="chat-room-header conversation-header chat-room-partner-header"
           title={
@@ -309,7 +417,7 @@ function ChatRoomContent({
                 type="button"
                 className="chat-room-partner-profile"
                 aria-label={`${state.room?.name || "상대 회원"} 프로필 보기`}
-                disabled={!targetMemberId}
+                disabled={!targetUserId}
                 onClick={navigateToProfile}
               >
                 <img
@@ -317,6 +425,8 @@ function ChatRoomContent({
                   src={
                     state.room?.image || asset("chat-avatar-heart-terminal.svg")
                   }
+                  width="56"
+                  height="56"
                   alt=""
                   onError={(event) => {
                     const fallback = asset("chat-avatar-heart-terminal.svg");
@@ -333,14 +443,31 @@ function ChatRoomContent({
           onBack={() => navigate("/chats")}
           right={
             <div className="chat-header-actions">
-              <button
-                type="button"
-                className="more-button"
-                aria-label="채팅방 더보기"
-                onClick={() => toast("채팅방 설정은 준비 중이에요.")}
-              >
-                •••
-              </button>
+              <ChatModeMenu
+                targetUserId={targetUserId}
+                simulationStartingFor={simulationStartingFor}
+                disabled={aiDisabled}
+                onSimulation={() => onStartSimulation?.(targetUserId, roomId)}
+                onPractice={
+                  targetUserId
+                    ? () =>
+                        navigate(
+                          `/ai/practice/${targetUserId}?chatRoomId=${roomId}`,
+                        )
+                    : undefined
+                }
+              />
+
+              <ChatDetailMenu
+                canBlock={canBlockUser && !endingChat}
+                canEndChat={canEndChat}
+                canEndWithAi={state.room?.status === "ACTIVE"}
+                blocking={blocking}
+                endingChat={endingChat}
+                onBlock={() => setBlockDialogOpen(true)}
+                onEndChat={() => setEndChatDialogOpen(true)}
+                toast={toast}
+              />
             </div>
           }
         />
@@ -369,7 +496,7 @@ function ChatRoomContent({
             </button>
           </div>
         )}
-        <div className="chat-message-area">
+        <div id="main-content" tabIndex={-1} className="chat-message-area">
           <section
             ref={scroll.containerRef}
             className="chat-messages chat-room-messages"
@@ -468,7 +595,7 @@ function ChatRoomContent({
                             onViewImage={openViewer}
                             onImageLoaded={scroll.preservePosition}
                             onViewProfile={
-                              targetMemberId ? navigateToProfile : undefined
+                              targetUserId ? navigateToProfile : undefined
                             }
                             canRetry={canSend}
                             onRetry={(clientMessageId) =>
@@ -495,8 +622,9 @@ function ChatRoomContent({
               onClick={scroll.scrollToLatest}
             >
               {scroll.newCount
-                ? `새 메시지 ${scroll.newCount}개 ↓`
-                : "최신 메시지 ↓"}
+                ? `새 메시지 ${scroll.newCount}개`
+                : "최신 메시지"}{" "}
+              <PixelIcon name="arrowDown" scale={1.5} />
             </button>
           )}
         </div>
@@ -530,6 +658,8 @@ function ChatRoomContent({
             <div className="image-attachment-preview">
               <img
                 src={state.attachment.previewUrl}
+                width="38"
+                height="38"
                 alt="첨부할 사진 미리보기"
               />
               <div className="image-attachment-file-info">
@@ -542,7 +672,7 @@ function ChatRoomContent({
                 aria-label="첨부 사진 삭제"
                 onClick={clearAttachment}
               >
-                ×
+                <PixelIcon name="x" scale={1.5} />
               </button>
             </div>
           )}
@@ -565,6 +695,7 @@ function ChatRoomContent({
               ref={imageInputRef}
               className="image-file-input"
               type="file"
+              name="chatImage"
               accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif"
               aria-label="첨부할 사진 선택"
               onChange={selectImage}
@@ -572,6 +703,8 @@ function ChatRoomContent({
             <textarea
               ref={inputRef}
               className="message-text-input"
+              name="message"
+              autoComplete="off"
               value={state.draft}
               onChange={(event) =>
                 updateRoomSession(entry, { draft: event.currentTarget.value })
@@ -594,7 +727,7 @@ function ChatRoomContent({
               placeholder={
                 state.loaded && !canSend
                   ? "종료된 대화예요"
-                  : "메시지를 입력하세요"
+                  : "메시지를 입력해 주세요…"
               }
               aria-label="메시지"
               aria-describedby={
@@ -621,7 +754,7 @@ function ChatRoomContent({
                 if (event.pointerType === "mouse") event.preventDefault();
               }}
             >
-              ➤
+              <PixelIcon name="send" scale={2} />
             </button>
           </div>
           {state.draft.length >= 900 && (
@@ -631,6 +764,39 @@ function ChatRoomContent({
           )}
         </form>
       </div>
+      {blockDialogOpen && (
+        <ChatConfirmationDialog
+          dialogId="block"
+          dismissLabel="회원 차단 취소"
+          title={`${state.room?.name || "상대 회원"}님을 차단할까요?`}
+          description="차단하면 더 이상 메시지를 주고받을 수 없으며, 차단은 되돌릴 수 없어요."
+          pending={blocking}
+          confirmLabel="차단하기"
+          pendingLabel="차단 중…"
+          onCancel={() => setBlockDialogOpen(false)}
+          onConfirm={() => void blockUser()}
+        />
+      )}
+      {endChatDialogOpen && (
+        <ChatConfirmationDialog
+          dialogId="end"
+          dismissLabel="채팅 종료 취소"
+          title="채팅을 종료할까요?"
+          description={
+            <>
+              채팅을 종료하면 목록에서 사라지고 더 이상 상대방과 메시지를
+              주고받을 수 없어요.
+              <br />
+              종료 후에는 되돌릴 수 없어요.
+            </>
+          }
+          pending={endingChat}
+          confirmLabel="종료하기"
+          pendingLabel="종료 중…"
+          onCancel={() => setEndChatDialogOpen(false)}
+          onConfirm={() => void endChat()}
+        />
+      )}
       {viewingImage && (
         <ImageViewer
           message={viewerMessage}
@@ -638,6 +804,6 @@ function ChatRoomContent({
           onClose={closeViewer}
         />
       )}
-    </section>
+    </main>
   );
 }

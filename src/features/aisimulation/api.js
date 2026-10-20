@@ -1,13 +1,32 @@
 import { apiRequest } from "../../shared/api/client.js";
 
-export const createAiSimulation = (targetMemberId) =>
-  apiRequest("/api/v1/ai-simulations", {
+export const attemptAiSimulation = (simulationId, { signal } = {}) =>
+  apiRequest(`/api/v1/ai-simulations/${simulationId}/attempts`, {
     method: "POST",
-    body: { targetMemberId },
+    signal,
   });
 
-export const aiSimulation = (simulationId) =>
-  apiRequest(`/api/v1/ai-simulations/${simulationId}`);
+export const createAiSimulation = (targetUserId, { signal } = {}) =>
+  apiRequest("/api/v1/ai-simulations", {
+    method: "POST",
+    body: { targetUserId },
+    signal,
+  });
 
-export const aiSimulationReport = (simulationId) =>
-  apiRequest(`/api/v1/ai-simulations/${simulationId}/report`);
+export const aiSimulationPair = (targetUserId, { signal } = {}) =>
+  apiRequest(`/api/v1/ai-simulations/targets/${targetUserId}`, {
+    signal,
+    cache: "no-store",
+  });
+
+export const aiSimulationState = (simulationId, { signal } = {}) =>
+  apiRequest(`/api/v1/ai-simulations/${simulationId}/status`, {
+    signal,
+    cache: "no-store",
+  });
+
+export const aiSimulation = (simulationId, { signal } = {}) =>
+  apiRequest(`/api/v1/ai-simulations/${simulationId}`, {
+    signal,
+    cache: "no-store",
+  });

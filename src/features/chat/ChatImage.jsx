@@ -73,7 +73,7 @@ export function ChatImage({
                 : error?.code === "CHAT_IMAGE_NOT_FOUND"
                   ? "사진을 찾을 수 없어요."
                   : error?.code === "AUTH_REQUIRED"
-                    ? "다시 로그인한 뒤 사진을 확인해주세요."
+                    ? "다시 로그인한 뒤 사진을 확인해 주세요."
                     : "사진을 불러오지 못했어요.",
             retryable: !terminal,
           });
@@ -98,7 +98,10 @@ export function ChatImage({
     source && status !== "failed" ? (
       <img
         src={source}
+        width="230"
+        height="176"
         alt={viewer ? "채팅 첨부 사진 크게 보기" : "채팅 첨부 사진"}
+        loading="lazy"
         onLoad={(event) => {
           onImageLoaded?.(event);
           if (entry && message.previewUrl && source !== message.previewUrl) {

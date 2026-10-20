@@ -6,10 +6,11 @@ import {
   applyRoomMessageEvent,
   chatListErrorMessage,
   mapChatRoom,
+  mergeRefreshedChatRoom,
   parseChatDate,
   sortChatRooms,
 } from "./model.js";
-import { rememberRoom } from "./session.js";
+import { reuserRoom } from "./session.js";
 import { connectChatSocket } from "./socket.js";
 
 export { ChatRoom } from "./ChatRoom.jsx";
@@ -80,17 +81,7 @@ export function ChatList({ navigate }) {
         );
         const merged = refreshedRooms.map((room) => {
           const localRoom = currentById.get(String(room.id));
-          if (
-            localRoom &&
-            localRoom.activityTimestamp > room.activityTimestamp
-          ) {
-            return {
-              ...room,
-              ...localRoom,
-              syncedActivityTimestamp: room.syncedActivityTimestamp,
-            };
-          }
-          return room;
+          return mergeRefreshedChatRoom(room, localRoom);
         });
         if (silent) {
           const refreshedIds = new Set(
@@ -206,17 +197,23 @@ export function ChatList({ navigate }) {
   }, [hasNext, loadNextPage, loadingMore, pageError]);
 
   function openRoom(room) {
-    rememberRoom(room);
+    reuserRoom(room);
     navigate(`/chats/${room.id}`);
   }
 
   return (
     <>
       <BrandHeader navigate={navigate} />
-      <main ref={mainRef} className="main-scroll chat-list-main">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        ref={mainRef}
+        className="main-scroll chat-list-main"
+      >
+        <h1 className="sr-only">채팅</h1>
         {loading ? (
           <div className="chat-list-loading" role="status">
-            채팅 목록을 불러오고 있어요.
+            채팅 목록을 불러오고 있어요…
           </div>
         ) : error ? (
           <div className="chat-list-error" role="alert">
@@ -243,7 +240,15 @@ export function ChatList({ navigate }) {
                   <img
                     className={`chat-room-avatar ${room.image ? "has-photo" : ""}`}
                     src={room.image || asset("chat-avatar-heart-terminal.svg")}
+                    width="56"
+                    height="56"
+                    loading="lazy"
                     alt=""
+                    onError={(event) => {
+                      const fallback = asset("chat-avatar-heart-terminal.svg");
+                      if (event.currentTarget.getAttribute("src") !== fallback)
+                        event.currentTarget.src = fallback;
+                    }}
                   />
                   <span className="chat-room-copy">
                     <span className="chat-room-name">
@@ -252,6 +257,8 @@ export function ChatList({ navigate }) {
                         <img
                           className="chat-notification-muted"
                           src={asset("chat-notification-muted.svg")}
+                          width="13"
+                          height="15"
                           alt="알림 끔"
                         />
                       )}
@@ -289,11 +296,20 @@ export function ChatList({ navigate }) {
           <div className="chat-empty-state">
             <img
               className="chat-empty-illustration"
-              src={asset("chat-empty-illustration.svg")}
+              src={asset("illust/chat.svg")}
+              width="190"
+              height="160"
               alt=""
             />
-            <strong>좋아요를 수락하면 여기서 대화할 수 있어요</strong>
-            <PixelButton onClick={() => navigate("/likes")}>
+            <strong>
+              좋아요를 수락하면
+              <br />
+              여기서 대화할 수 있어요
+            </strong>
+            <PixelButton
+              className="empty-action pink"
+              onClick={() => navigate("/likes")}
+            >
               받은 좋아요 보기
             </PixelButton>
           </div>

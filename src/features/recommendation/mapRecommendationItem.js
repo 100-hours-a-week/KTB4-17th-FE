@@ -1,6 +1,8 @@
+import { normalizeJobCategory } from "../profile/jobCategories.js";
+
 export function mapRecommendationItem(item, receivedAt = Date.now()) {
   const candidate = item?.candidate;
-  const id = candidate?.memberId;
+  const id = candidate?.userId;
   if (id == null) return null;
   const images = (Array.isArray(candidate.images) ? candidate.images : [])
     .filter((image) => typeof image?.imageUrl === "string" && image.imageUrl)
@@ -17,7 +19,7 @@ export function mapRecommendationItem(item, receivedAt = Date.now()) {
     id,
     nickname: candidate.nickname || "닉네임 정보 없음",
     age: Number.isFinite(candidate.age) ? candidate.age : null,
-    job: candidate.job || "",
+    job: normalizeJobCategory(candidate.job),
     region: candidate.region || "",
     mbti: candidate.mbti || "",
     verified: candidate.verified === true,

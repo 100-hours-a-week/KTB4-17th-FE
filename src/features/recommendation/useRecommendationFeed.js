@@ -17,11 +17,11 @@ const emptyPage = () => ({
   hasNext: false,
 });
 
-function mapItems(result) {
+function mapItems(result, excludedUserIds) {
   const receivedAt = Date.now();
   return (Array.isArray(result?.items) ? result.items : [])
     .map((item) => mapRecommendationItem(item, receivedAt))
-    .filter(Boolean);
+    .filter((item) => item && !excludedUserIds?.has(item.id));
 }
 
 function pageFromResult(batchId, result) {
@@ -44,25 +44,35 @@ export function useRecommendationFeed({ enabled, isHome }) {
   const [refreshing, setRefreshing] = useState(false);
   const [revalidationRetryAt, setRevalidationRetryAt] = useState(null);
   const requestRef = useRef(0);
-  const moreRequestRef = useRef(false);
+  const moreRequestRef = useRef(null);
   const revalidationRequestRef = useRef(null);
   const feedStateRef = useRef(feedState);
   const enabledRef = useRef(enabled);
   const wasHomeRef = useRef(isHome);
+  const passedUserIdsRef = useRef(new Set());
+  const sessionRef = useRef(0);
   feedStateRef.current = feedState;
   enabledRef.current = enabled;
 
-  const load = useCallback(async () => {
+  const load = useCallback(async ({ createIfMissing = true } = {}) => {
     const requestId = requestRef.current + 1;
     requestRef.current = requestId;
+    revalidationRequestRef.current = null;
+    moreRequestRef.current = null;
+    dispatch({ type: "replace", items: [] });
+    setPage(emptyPage());
+    setRefreshing(false);
+    setRevalidationRetryAt(null);
     setStatus("loading");
     setError("");
     try {
       let batch = await recommendationApi.activeBatch();
       let batchId = batch?.batchId;
-      if (!batchId) {
+      if (requestId !== requestRef.current || !enabledRef.current) return;
+      if (!batchId && createIfMissing) {
         const created = await recommendationApi.createRecommendationBatch();
         batchId = created?.batchId;
+        if (requestId !== requestRef.current || !enabledRef.current) return;
         if (!batchId) {
           batch = await recommendationApi.activeBatch();
           batchId = batch?.batchId;
@@ -77,7 +87,7 @@ export function useRecommendationFeed({ enabled, isHome }) {
         return;
       }
       const result = await recommendationApi.recommendationItems(batchId);
-      const items = mapItems(result);
+      const items = mapItems(result, passedUserIdsRef.current);
       if (requestId === requestRef.current) {
         dispatch({ type: "replace", items });
         setPage(pageFromResult(batchId, result));
@@ -88,7 +98,7 @@ export function useRecommendationFeed({ enabled, isHome }) {
         setError(
           apiErrorMessage(
             requestError,
-            "추천 목록을 불러오지 못했어요. 연결을 확인한 뒤 다시 시도해주세요.",
+            "추천 목록을 불러오지 못했어요. 연결을 확인한 뒤 다시 시도해 주세요.",
           ),
         );
     } finally {
@@ -96,44 +106,50 @@ export function useRecommendationFeed({ enabled, isHome }) {
     }
   }, []);
 
+  const reloadAfterPreferences = useCallback(
+    () => load({ createIfMissing: false }),
+    [load],
+  );
+
   const loadMore = useCallback(async () => {
     if (
-      moreRequestRef.current ||
+      moreRequestRef.current !== null ||
       !page.batchId ||
       !page.hasNext ||
       !page.nextCursor
     )
       return false;
     const requestId = requestRef.current;
-    moreRequestRef.current = true;
+    moreRequestRef.current = requestId;
     try {
       const result = await recommendationApi.recommendationItems(
         page.batchId,
         page.nextCursor,
       );
-      const items = mapItems(result);
-      if (requestId === requestRef.current) {
-        dispatch({ type: "append", items });
-        setPage(pageFromResult(page.batchId, result));
-      }
+      if (requestId !== requestRef.current || !enabledRef.current) return false;
+      const items = mapItems(result, passedUserIdsRef.current);
+      dispatch({ type: "append", items });
+      setPage(pageFromResult(page.batchId, result));
       return items.length > 0;
     } catch (requestError) {
       if (requestId === requestRef.current)
         setError(
           apiErrorMessage(
             requestError,
-            "추천 목록을 불러오지 못했어요. 연결을 확인한 뒤 다시 시도해주세요.",
+            "추천 목록을 불러오지 못했어요. 연결을 확인한 뒤 다시 시도해 주세요.",
           ),
         );
       return false;
     } finally {
-      moreRequestRef.current = false;
+      if (moreRequestRef.current === requestId) moreRequestRef.current = null;
     }
   }, [page]);
 
   const refresh = useCallback(async () => {
     const requestId = requestRef.current + 1;
     requestRef.current = requestId;
+    revalidationRequestRef.current = null;
+    moreRequestRef.current = null;
     setRefreshing(true);
     setError("");
     try {
@@ -149,7 +165,7 @@ export function useRecommendationFeed({ enabled, isHome }) {
       }
 
       const result = await recommendationApi.recommendationItems(batchId);
-      const items = mapItems(result);
+      const items = mapItems(result, passedUserIdsRef.current);
       if (requestId === requestRef.current) {
         dispatch({ type: "replace", items });
         setPage(pageFromResult(batchId, result));
@@ -172,7 +188,14 @@ export function useRecommendationFeed({ enabled, isHome }) {
       );
       const batch = await recommendationApi.activeBatch();
       const batchId = batch?.batchId;
-      if (!batchId) return false;
+      if (requestId !== requestRef.current || !enabledRef.current) return false;
+      if (!batchId) {
+        dispatch({ type: "replace", items: [] });
+        setPage(emptyPage());
+        setError("");
+        setRevalidationRetryAt(null);
+        return true;
+      }
 
       const items = [];
       const seenCursors = new Set();
@@ -180,7 +203,7 @@ export function useRecommendationFeed({ enabled, isHome }) {
       let result = null;
       while (items.length < targetCount) {
         result = await recommendationApi.recommendationItems(batchId, cursor);
-        items.push(...mapItems(result));
+        items.push(...mapItems(result, passedUserIdsRef.current));
         const nextCursor = result?.pageInfo?.nextCursor || null;
         if (!result?.pageInfo?.hasNext) break;
         if (!nextCursor || seenCursors.has(nextCursor))
@@ -190,7 +213,10 @@ export function useRecommendationFeed({ enabled, isHome }) {
       }
 
       if (requestId !== requestRef.current || !enabledRef.current) return false;
-      dispatch({ type: "revalidate", items });
+      dispatch({
+        type: "revalidate",
+        items: items.filter((item) => !passedUserIdsRef.current.has(item.id)),
+      });
       setPage(pageFromResult(batchId, result));
       setError("");
       setRevalidationRetryAt(null);
@@ -211,6 +237,7 @@ export function useRecommendationFeed({ enabled, isHome }) {
 
   useEffect(() => {
     if (!enabled) {
+      passedUserIdsRef.current.clear();
       dispatch({ type: "replace", items: [] });
       setPage(emptyPage());
       setError("");
@@ -221,6 +248,7 @@ export function useRecommendationFeed({ enabled, isHome }) {
     void load();
     return () => {
       requestRef.current += 1;
+      sessionRef.current += 1;
     };
   }, [enabled, load]);
 
@@ -281,8 +309,17 @@ export function useRecommendationFeed({ enabled, isHome }) {
     dispatch({ type: "retreat" });
   }, []);
 
-  const dismiss = useCallback(() => {
-    dispatch({ type: "dismiss" });
+  const dismiss = useCallback((userId) => {
+    dispatch({ type: "dismiss", userId });
+  }, []);
+
+  const pass = useCallback(async (userId) => {
+    const session = sessionRef.current;
+    await recommendationApi.saveRecommendationPass(userId);
+    if (!enabledRef.current || session !== sessionRef.current) return false;
+    passedUserIdsRef.current.add(userId);
+    dispatch({ type: "dismiss", userId });
+    return true;
   }, []);
 
   return {
@@ -294,11 +331,13 @@ export function useRecommendationFeed({ enabled, isHome }) {
     error,
     refreshing,
     load,
+    reloadAfterPreferences,
     loadMore,
     refresh,
     revalidate,
     advance,
     retreat,
     dismiss,
+    pass,
   };
 }

@@ -1,0 +1,160 @@
+/* B안 선호 설정: 픽셀 카드 · 보라→분홍 범위 막대 · 픽셀 손잡이 */
+
+.preferences-back,
+.preference-sheet-close {
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+}
+
+.preferences-main {
+  padding-top: 16px;
+}
+
+/* 나이 · 키 카드 */
+.preference-range-field {
+  position: relative;
+  margin: 0 0 12px;
+  padding: 14px 16px 18px;
+  background: var(--paper);
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    inset 0 -3px 0 rgb(124 92 250 / 8%);
+  clip-path: var(--pixel-step-shape);
+}
+
+.preference-range-label {
+  float: left;
+  align-items: center;
+  margin-bottom: 14px;
+  padding: 0;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 22px;
+}
+
+.preference-range-label + * {
+  clear: both;
+}
+
+.preference-range-value {
+  padding: 3px 8px;
+  background: var(--soft-lavender);
+  color: var(--purple-deep);
+  font-size: 13px;
+  font-weight: 700;
+  clip-path: var(--pixel-step-shape);
+}
+
+.preference-range-track {
+  inset: 19px 10px auto;
+  height: 6px;
+  border-radius: 0;
+  background: linear-gradient(
+    to right,
+    #ece6f6 var(--range-start),
+    #9c80ff var(--range-start),
+    #ee6ab1 var(--range-end),
+    #ece6f6 var(--range-end)
+  );
+}
+
+.preference-range input:focus-visible {
+  outline: none;
+}
+
+.preference-range input::-webkit-slider-thumb {
+  width: 24px;
+  height: 24px;
+  margin-top: 10px;
+  border: 3px solid #ee6ab1;
+  border-radius: 0;
+  background: var(--paper);
+  box-shadow: 0 2px 0 rgb(91 63 214 / 28%);
+}
+
+.preference-range input::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 3px solid #ee6ab1;
+  border-radius: 0;
+  background: var(--paper);
+  box-shadow: 0 2px 0 rgb(91 63 214 / 28%);
+}
+
+.preference-range input.preference-range-lower::-webkit-slider-thumb {
+  border-color: #7c5cfa;
+}
+
+.preference-range input.preference-range-lower::-moz-range-thumb {
+  border-color: #7c5cfa;
+}
+
+.preference-range input:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--purple-deep);
+  outline-offset: 2px;
+  border-radius: 0;
+}
+
+.preference-range input:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--purple-deep);
+  outline-offset: 2px;
+  border-radius: 0;
+}
+
+/* 종교 · 음주 · 흡연 줄 */
+.preference-choice-rows {
+  gap: 10px;
+  margin: 0 0 24px;
+}
+
+.preferences-controls .preference-choice-row {
+  min-height: 52px;
+  gap: 10px;
+  padding: 6px 8px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 22px;
+}
+
+.preference-choice-row .preference-choice-summary {
+  flex: 1;
+  color: var(--purple-deep);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.preference-choice-chev {
+  color: var(--purple);
+}
+
+/* The brand navigation owns the safe area; this second row owns only its title. */
+.screen-header.preferences-header {
+  height: 52px;
+  min-height: 52px;
+  padding-top: 0;
+  justify-content: flex-start;
+}
+
+.main-scroll.preferences-main {
+  top: calc(108px + env(safe-area-inset-top, 0px));
+  padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
+}
+
+/* #218에서 새로 추가된 요소 스타일 (최신 버전 유지) */
+.screen-header.preferences-header.account-header {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  height: calc(54px + env(safe-area-inset-top, 0px));
+  min-height: calc(54px + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0) 12px 0;
+  text-align: center;
+}
+
+.preferences-main .preferences-intro {
+  margin: 0 2px 24px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.75;
+  word-break: keep-all;
+}

@@ -125,16 +125,16 @@ export function chatDateKey(date) {
 
 export function chatListErrorMessage(error) {
   if (error?.code === "AUTH_REQUIRED")
-    return "로그인이 만료됐어요. 다시 로그인한 뒤 이용해주세요.";
+    return "로그인이 만료됐어요. 다시 로그인한 뒤 이용해 주세요.";
   return apiErrorMessage(
     error,
-    "채팅 목록을 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
+    "채팅 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
   );
 }
 
 export function chatSendErrorMessage(error) {
   if (error?.code === "AUTH_REQUIRED")
-    return "로그인이 만료됐어요. 다시 로그인한 뒤 이용해주세요.";
+    return "로그인이 만료됐어요. 다시 로그인한 뒤 이용해 주세요.";
   if (error?.code === "CHAT_ROOM_NOT_ACTIVE")
     return "종료된 대화에는 메시지를 보낼 수 없어요.";
   if (error?.code === "CHAT_ACCESS_DENIED")
@@ -150,10 +150,10 @@ export function chatSendErrorMessage(error) {
       "FILE_INVALID_CONTENT",
     ].includes(error?.code)
   )
-    return "사진 업로드에 실패했어요. 잠시 후 다시 시도해주세요.";
+    return "사진 업로드에 실패했어요. 잠시 후 다시 시도해 주세요.";
   return apiErrorMessage(
     error,
-    "메시지를 보내지 못했어요. 잠시 후 다시 시도해주세요.",
+    "메시지를 보내지 못했어요. 잠시 후 다시 시도해 주세요.",
   );
 }
 
@@ -173,7 +173,7 @@ export function mapChatRoom(item) {
   return {
     id: item.chatRoomId,
     status: item.status || "ACTIVE",
-    memberId: item.otherParticipant?.memberId || null,
+    userId: item.otherParticipant?.userId || null,
     name: item.otherParticipant?.nickname || "상대 회원",
     image: item.otherParticipant?.profileImageUrl || "",
     last: previewText,
@@ -203,6 +203,19 @@ export function applyRoomMessageEvent(room, event) {
     activityAt: isNewerPreview ? event.createdAt : room.activityAt,
     activityTimestamp: Math.max(room.activityTimestamp, eventTimestamp),
     unread: room.unread + (!event.mine && isBeyondServerSnapshot ? 1 : 0),
+  };
+}
+
+export function mergeRefreshedChatRoom(room, localRoom) {
+  if (!localRoom || localRoom.activityTimestamp <= room.activityTimestamp)
+    return room;
+  return {
+    ...room,
+    ...localRoom,
+    userId: room.userId,
+    name: room.name,
+    image: room.image,
+    syncedActivityTimestamp: room.syncedActivityTimestamp,
   };
 }
 
@@ -323,13 +336,13 @@ export function messageTimesAreGrouped(previous, message) {
 
 export function chatRoomErrorMessage(error) {
   if (error?.code === "AUTH_REQUIRED")
-    return "로그인이 만료됐어요. 다시 로그인해주세요.";
+    return "로그인이 만료됐어요. 다시 로그인해 주세요.";
   if (error?.code === "CHAT_ACCESS_DENIED")
     return "이 채팅방에 접근할 수 없어요.";
   if (error?.code === "CHAT_ROOM_NOT_FOUND") return "채팅방을 찾을 수 없어요.";
   return apiErrorMessage(
     error,
-    "대화를 불러오지 못했어요. 연결을 확인하고 다시 시도해주세요.",
+    "대화를 불러오지 못했어요. 연결을 확인하고 다시 시도해 주세요.",
   );
 }
 

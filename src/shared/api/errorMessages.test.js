@@ -8,6 +8,26 @@ import {
 import { profilePhotoErrorMessage } from "../../features/profile/photoUpload.js";
 import { apiErrorMessage, createApiError } from "./errorMessages.js";
 
+test("pass errors have messages specific to the failed action", () => {
+  assert.match(
+    apiErrorMessage({ code: "SELF_PASS_NOT_ALLOWED", status: 422 }),
+    /내 프로필.*패스/,
+  );
+  assert.match(
+    apiErrorMessage({
+      code: "RECOMMENDATION_TARGET_NOT_AVAILABLE",
+      status: 404,
+    }),
+    /프로필.*패스.*추천 목록/,
+  );
+});
+
+test("user block errors have safe action-specific messages", () => {
+  assert.match(apiErrorMessage("BLOCK_ACCESS_DENIED"), /차단할 수 없어요/);
+  assert.match(apiErrorMessage("USER_NOT_AVAILABLE"), /회원을 찾을 수 없어요/);
+  assert.match(apiErrorMessage("SELF_BLOCK_NOT_ALLOWED"), /자기 자신/);
+});
+
 test("API errors show a translated message and preserve control flow metadata", () => {
   const fields = [{ field: "nickname", message: "must not be blank" }];
   const error = createApiError(
@@ -32,8 +52,21 @@ test("missing error bodies still translate authentication and HTTP failures", ()
   assert.match(apiErrorMessage("HTTP_429"), /요청이 너무 많아요/);
 });
 
+test("structured submission failures retain the new session without displaying raw details", () => {
+  const details = {
+    errorCode: "SIMULATION_CAPACITY_EXCEEDED",
+    simulationId: 33,
+    status: "FAILED",
+    message: "internal detail",
+  };
+  const error = createApiError({ status: 503 }, details);
+  assert.deepEqual(error.details, details);
+  assert.equal(error.status, 503);
+  assert.equal(error.message.includes("internal detail"), false);
+});
+
 test("unknown codes and untrusted messages never appear in user messages", () => {
-  const fallback = "목록을 다시 불러와주세요.";
+  const fallback = "목록을 다시 불러와 주세요.";
   for (const code of [
     "NEW_BACKEND_CODE",
     "toString",

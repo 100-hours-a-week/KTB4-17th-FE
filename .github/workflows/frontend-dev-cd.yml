@@ -97,6 +97,11 @@ jobs:
             "cd /home/ubuntu/app && \
              aws ecr get-login-password --region '$AWS_REGION' | \
              docker login --username AWS --password-stdin '$ECR_REGISTRY' && \
+             df -h /var/lib/containerd && \
+             docker system df && \
+             docker image prune -af && \
+             df -h /var/lib/containerd && \
+             FRONTEND_IMAGE='$IMAGE_URL' docker compose pull nginx && \
              sed -i 's|^FRONTEND_IMAGE=.*|FRONTEND_IMAGE=$IMAGE_URL|' .env && \
-             docker compose pull nginx && \
-             docker compose up -d --no-deps nginx"
+             docker compose up -d --no-deps nginx && \
+             docker compose ps nginx"

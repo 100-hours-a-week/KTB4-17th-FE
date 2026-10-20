@@ -6,7 +6,7 @@ import {
 } from "./authToken.js";
 import { createApiError } from "./errorMessages.js";
 
-const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+const baseUrl = (import.meta.env?.VITE_API_BASE_URL || "").replace(/\/$/, "");
 const AUTH_REFRESH_PATH = "/api/v1/auth/token/refresh";
 const AUTH_LOGOUT_PATH = "/api/v1/auth/logout";
 
@@ -95,6 +95,7 @@ export async function apiRequest(path, options = {}) {
   const {
     skipAuth = false,
     notifyAuthExpired = true,
+    responseType = "json",
     ...requestOptions
   } = options;
   let response = await sendRequest(path, requestOptions, { skipAuth });
@@ -118,6 +119,7 @@ export async function apiRequest(path, options = {}) {
   }
 
   if (response.status === 204) return null;
+  if (response.ok && responseType === "stream") return response;
 
   const result = await readJson(response);
   if (!response.ok) {

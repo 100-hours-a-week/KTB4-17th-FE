@@ -5,19 +5,27 @@ import { asset } from "../../shared/assets.js";
 import {
   BrandHeader,
   ChoiceGroup,
+  EmptyState,
   Field,
-  Icon,
   PersonAvatar,
   PixelButton,
   ScreenHeader,
 } from "../../shared/ui/components.jsx";
+import { AiAvatar, PixelIcon } from "../../shared/ui/pixel.jsx";
 import { dateAge } from "../../shared/utils.js";
 import { ActivityRegionPicker } from "../activity-region/ActivityRegionPicker.jsx";
+import { useNotifications } from "../notifications/context.jsx";
+import { PagerIcon } from "../notifications/NotificationControls.jsx";
+import { savedPhotoItems } from "../profiletrust/model.js";
+import { ProfilePhotoEditor } from "../profiletrust/ProfilePhotoEditor.jsx";
+import {
+  nickname as checkNicknameAvailability,
+  onboarding as getOnboardingStatus,
+} from "../user/api.js";
 import {
   getMyProfile,
   profile as saveProfile,
   profileImages as saveProfileImages,
-  uploadProfileImage,
 } from "./api.js";
 import {
   bodyTypes,
@@ -26,37 +34,52 @@ import {
   religions,
   smokings,
 } from "./data.js";
-import {
-  createPhotoId,
-  prepareProfilePhoto,
-  profilePhotoErrorMessage,
-} from "./photoUpload.js";
+import { JobCategorySelect } from "./JobCategorySelect.jsx";
+import { isJobCategory, normalizeJobCategory } from "./jobCategories.js";
 import { profilePayload } from "./serialize.js";
 
-function profilePhotoItems(serverProfile) {
-  return (Array.isArray(serverProfile?.images) ? serverProfile.images : [])
-    .slice()
-    .sort(
-      (first, second) =>
-        Number(first?.displayOrder || 0) - Number(second?.displayOrder || 0),
+const NICKNAME_PATTERN = /^[가-힣A-Za-z0-9]{2,10}$/;
+const NICKNAME_FORMAT_ERROR = "닉네임은 한글·영문·숫자 2~10자로 입력해 주세요.";
+const PROFILE_SAVE_ERROR =
+  "프로필을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.";
+const PROFILE_AI_ERROR_CODES = new Set([
+  "PROFILE_NOT_FOUND",
+  "PROFILE_NICKNAME_REQUIRED",
+  "PROFILE_MBTI_REQUIRED",
+  "SESSION_NOT_FOUND",
+  "PERSONA_DRAFT_NOT_FOUND",
+  "NO_PENDING_QUESTION",
+  "REQUEST_IN_PROGRESS",
+  "TURN_MISMATCH",
+  "ACTION_NOT_ALLOWED",
+  "ONBOARDING_NOT_FINISHED",
+  "PERSONA_ALREADY_CONFIRMED",
+  "PERSONA_CONFIRMATION_CONFLICT",
+  "AI_REQUEST_REJECTED",
+  "AI_SERVER_NOT_CONFIGURED",
+  "AI_SERVER_UNAVAILABLE",
+  "AI_SERVER_RESPONSE_INVALID",
+]);
+
+function samePhotoItems(left = [], right = []) {
+  return (
+    left.length === right.length &&
+    left.every(
+      (item, index) =>
+        item.fileId === right[index]?.fileId &&
+        Boolean(item.isFrontal) === Boolean(right[index]?.isFrontal),
     )
-    .filter(
-      (image) =>
-        image?.fileId != null &&
-        typeof image?.imageUrl === "string" &&
-        image.imageUrl,
-    )
-    .map((image) => ({
-      localId: `saved-${image.fileId}`,
-      previewUrl: image.imageUrl,
-      fileId: image.fileId,
-      isFrontal: image.isFrontal === true,
-      uploading: false,
-    }));
+  );
 }
 
-export function MyPage({ navigate, toast }) {
+function profileSaveErrorMessage(error) {
+  if (PROFILE_AI_ERROR_CODES.has(error?.code)) return PROFILE_SAVE_ERROR;
+  return apiErrorMessage(error, PROFILE_SAVE_ERROR);
+}
+
+export function MyPage({ navigate }) {
   const { data } = useAppState();
+  const notifications = useNotifications();
   const [serverProfile, setServerProfile] = useState(null);
   const [isProfileLoading, setIsProfileLoading] = useState(true);
   const [profileLoadFailed, setProfileLoadFailed] = useState(false);
@@ -93,20 +116,8 @@ export function MyPage({ navigate, toast }) {
   const age = dateAge(profile.birthDate);
   return (
     <>
-      <BrandHeader navigate={navigate} className="my-topbar">
-        <div className="my-header-actions">
-          <button
-            type="button"
-            aria-disabled="true"
-            onClick={() => toast("알림 기능은 준비 중이에요.")}
-            aria-label="알림"
-          >
-            <Icon name="bell.svg" />
-            {data.notifications.some((item) => !item.read) && <i />}
-          </button>
-        </div>
-      </BrandHeader>
-      <main className="main-scroll my-main">
+      <BrandHeader navigate={navigate} className="my-topbar" />
+      <main id="main-content" tabIndex={-1} className="main-scroll my-main">
         <div
           className={`my-identity${isProfileLoading ? " my-identity-loading" : ""}`}
         >
@@ -116,7 +127,9 @@ export function MyPage({ navigate, toast }) {
             onClick={() => navigate("/settings")}
             aria-label="설정"
           >
-            <span aria-hidden="true">⚙︎</span>
+            <span aria-hidden="true">
+              <PixelIcon name="gear" scale={2} />
+            </span>
           </button>
           {isProfileLoading ? (
             <div
@@ -150,13 +163,13 @@ export function MyPage({ navigate, toast }) {
                 />
               </button>
               <div className="my-identity-copy">
-                <span className="my-profile-kicker">MY PLAYER CARD</span>
+                <span className="my-profile-kicker">나의 프로필</span>
                 <h1>{profile.nickname || "닉네임 미등록"}</h1>
                 <p className="my-profile-age">
                   {age > 0 ? `${age}세` : "나이 정보 없음"}
                 </p>
                 <p className="my-profile-region">
-                  <Icon name="detail-location.svg" />
+                  <PixelIcon name="pin" scale={2} />
                   {profile.regionName || "활동 지역 미설정"}
                 </p>
               </div>
@@ -170,25 +183,39 @@ export function MyPage({ navigate, toast }) {
         )}
         <div className="my-menu">
           <button type="button" onClick={() => navigate("/my/persona")}>
-            <Icon name="ai-avatar.svg" />내 페르소나 <span>활성　›</span>
-          </button>
-          <button
-            type="button"
-            aria-disabled="true"
-            onClick={() => toast("알림 기능은 준비 중이에요.")}
-          >
-            <Icon name="bell.svg" />
-            알림{" "}
+            <img
+              className="icon persona-menu-icon"
+              src={asset("persona-tamagotchi.svg")}
+              width="32"
+              height="32"
+              alt=""
+              aria-hidden="true"
+            />
+            내 페르소나{" "}
             <span>
-              {data.notifications.filter((item) => !item.read).length || ""}　›
+              <PixelIcon name="chev" scale={1.5} />
             </span>
           </button>
-          <button
-            type="button"
-            aria-disabled="true"
-            onClick={() => toast("선호 설정은 준비 중이에요.")}
-          >
-            <span className="menu-glyph">⚙</span>선호 설정 <span>›</span>
+          <button type="button" onClick={notifications.openInbox}>
+            <PagerIcon />
+            알림{" "}
+            <span>
+              {notifications.count || ""}　<PixelIcon name="chev" scale={1.5} />
+            </span>
+          </button>
+          <button type="button" onClick={() => navigate("/preferences")}>
+            <img
+              className="icon persona-menu-icon"
+              src={asset("preferences-menu.svg")}
+              width="32"
+              height="32"
+              alt=""
+              aria-hidden="true"
+            />
+            선호 설정{" "}
+            <span>
+              <PixelIcon name="chev" scale={1.5} />
+            </span>
           </button>
         </div>
         <p className="my-footer">*23# · LITTLE PIXELS, REAL CONNECTIONS.</p>
@@ -197,21 +224,40 @@ export function MyPage({ navigate, toast }) {
   );
 }
 
-export function Settings({ navigate, onLogout, isLoggingOut = false }) {
-  const [confirmingLogout, setConfirmingLogout] = useState(false);
+export function Settings({
+  navigate,
+  onLogout,
+  onWithdrawUser,
+  isLoggingOut = false,
+  isWithdrawingUser = false,
+}) {
+  const [confirmingAction, setConfirmingAction] = useState(null);
+  const logoutActionRef = useRef(null);
+  const withdrawalActionRef = useRef(null);
+  function cancelAccountAction() {
+    const trigger =
+      confirmingAction === "logout" ? logoutActionRef : withdrawalActionRef;
+    setConfirmingAction(null);
+    window.requestAnimationFrame(() => trigger.current?.focus());
+  }
+  const accountActionPending = isLoggingOut || isWithdrawingUser;
 
   return (
     <>
-      <BrandHeader navigate={navigate} />
       <ScreenHeader
-        className="chat-room-header"
+        notificationAction
+        className="account-header"
         title="설정"
         onBack={() => navigate("/my")}
       />
-      <main className="main-scroll settings-main">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="main-scroll settings-main"
+      >
         <div className="settings-intro">
           <span className="settings-kicker">내 설정 노트</span>
-          <h1>계정 설정</h1>
+          <h2>계정 설정</h2>
           <p>프로필과 로그인 상태를 관리해요.</p>
         </div>
         <section className="settings-action-list" aria-label="계정 설정">
@@ -219,40 +265,43 @@ export function Settings({ navigate, onLogout, isLoggingOut = false }) {
             type="button"
             className="settings-action"
             onClick={() => navigate("/my/profile")}
+            disabled={accountActionPending}
           >
             <span
               className="settings-action-icon profile-action-icon"
               aria-hidden="true"
             >
-              ✎
+              <PixelIcon name="pencil" scale={2} />
             </span>
             <span className="settings-action-copy">
               <strong>프로필 수정</strong>
               <small>닉네임과 활동 정보를 관리해요.</small>
             </span>
             <span className="settings-action-chevron" aria-hidden="true">
-              ›
+              <PixelIcon name="chev" scale={1.5} />
             </span>
           </button>
 
-          {!confirmingLogout ? (
+          {confirmingAction !== "logout" ? (
             <button
               type="button"
+              ref={logoutActionRef}
               className="settings-action settings-logout"
-              onClick={() => setConfirmingLogout(true)}
+              onClick={() => setConfirmingAction("logout")}
+              disabled={accountActionPending}
             >
               <span
                 className="settings-action-icon logout-action-icon"
                 aria-hidden="true"
               >
-                ↗
+                <PixelIcon name="arrowUpRight" scale={2} />
               </span>
               <span className="settings-action-copy">
                 <strong>로그아웃</strong>
                 <small>계정에서 안전하게 나가요.</small>
               </span>
               <span className="settings-action-chevron" aria-hidden="true">
-                ›
+                <PixelIcon name="chev" scale={1.5} />
               </span>
             </button>
           ) : (
@@ -266,8 +315,8 @@ export function Settings({ navigate, onLogout, isLoggingOut = false }) {
                 <button
                   type="button"
                   className="settings-confirm-cancel"
-                  onClick={() => setConfirmingLogout(false)}
-                  disabled={isLoggingOut}
+                  onClick={cancelAccountAction}
+                  disabled={accountActionPending}
                 >
                   취소
                 </button>
@@ -275,9 +324,62 @@ export function Settings({ navigate, onLogout, isLoggingOut = false }) {
                   type="button"
                   className="settings-confirm-submit"
                   onClick={onLogout}
-                  disabled={isLoggingOut}
+                  disabled={accountActionPending}
                 >
                   {isLoggingOut ? "로그아웃 중…" : "로그아웃"}
+                </button>
+              </div>
+            </fieldset>
+          )}
+
+          {confirmingAction !== "withdrawal" ? (
+            <button
+              type="button"
+              ref={withdrawalActionRef}
+              className="settings-action settings-withdrawal"
+              onClick={() => setConfirmingAction("withdrawal")}
+              disabled={accountActionPending}
+            >
+              <span
+                className="settings-action-icon withdrawal-action-icon"
+                aria-hidden="true"
+              >
+                <PixelIcon name="x" scale={2} />
+              </span>
+              <span className="settings-action-copy">
+                <strong>계정 탈퇴</strong>
+                <small>계정과 프로필을 삭제하고 서비스를 떠나요.</small>
+              </span>
+              <span className="settings-action-chevron" aria-hidden="true">
+                <PixelIcon name="chev" scale={1.5} />
+              </span>
+            </button>
+          ) : (
+            <fieldset
+              className="settings-withdrawal-confirm"
+              aria-label="계정 탈퇴 확인"
+            >
+              <legend>정말 계정을 탈퇴할까요?</legend>
+              <p>
+                탈퇴하면 모든 서비스 이용이 종료되며, 탈퇴 후에는 되돌릴 수
+                없어요.
+              </p>
+              <div className="settings-confirm-actions">
+                <button
+                  type="button"
+                  className="settings-confirm-cancel"
+                  onClick={cancelAccountAction}
+                  disabled={accountActionPending}
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  className="settings-confirm-submit settings-withdrawal-submit"
+                  onClick={onWithdrawUser}
+                  disabled={accountActionPending}
+                >
+                  {isWithdrawingUser ? "탈퇴 처리 중…" : "탈퇴하기"}
                 </button>
               </div>
             </fieldset>
@@ -293,24 +395,19 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
   const profile = data.profile;
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [profileLoadFailed, setProfileLoadFailed] = useState(false);
-  const [photoItems, setPhotoItems] = useState([]);
-  const [existingProfilePhoto, setExistingProfilePhoto] = useState("");
-  const [isReplacingPhotos, setIsReplacingPhotos] = useState(false);
-  const [photoError, setPhotoError] = useState("");
-  const [photoSaving, setPhotoSaving] = useState(false);
-  const draggedPhotoId = useRef(null);
-  const localPhotoUrls = useRef(new Set());
-  const removedPhotoIds = useRef(new Set());
-  const mounted = useRef(false);
-
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-      for (const url of localPhotoUrls.current) URL.revokeObjectURL(url);
-      localPhotoUrls.current.clear();
-    };
-  }, []);
+  const [initialPhotos, setInitialPhotos] = useState([]);
+  const [legacyPhoto, setLegacyPhoto] = useState("");
+  const [replacingLegacyPhoto, setReplacingLegacyPhoto] = useState(false);
+  const [photoState, setPhotoState] = useState({
+    images: [],
+    ready: false,
+    busy: false,
+  });
+  const [jobError, setJobError] = useState("");
+  const [nicknameError, setNicknameError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const initialNickname = useRef("");
+  const saveInFlight = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -320,19 +417,18 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
     getMyProfile()
       .then((serverProfile) => {
         if (!active) return;
-        const savedPhotos = profilePhotoItems(serverProfile);
-        setPhotoItems(savedPhotos);
-        setExistingProfilePhoto(
+        const savedPhotos = savedPhotoItems(serverProfile);
+        const savedNickname = serverProfile.nickname ?? "";
+        setInitialPhotos(savedPhotos);
+        initialNickname.current = savedNickname;
+        setLegacyPhoto(
           savedPhotos.length ? "" : serverProfile.profileImageUrl || "",
-        );
-        setIsReplacingPhotos(
-          savedPhotos.length > 0 || !serverProfile.profileImageUrl,
         );
         setData((old) => ({
           ...old,
           profile: {
             ...old.profile,
-            nickname: serverProfile.nickname ?? "",
+            nickname: savedNickname,
             birthDate: serverProfile.birthDate ?? old.profile.birthDate,
             activityRegionId: serverProfile.activityRegionId ?? null,
             regionName: serverProfile.activityRegionName ?? "",
@@ -340,7 +436,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
               serverProfile.height == null ? "" : String(serverProfile.height),
             bodyType: serverProfile.bodyType ?? "",
             educationLevel: serverProfile.educationLevel ?? "",
-            job: serverProfile.job ?? "",
+            job: normalizeJobCategory(serverProfile.job),
             religion: serverProfile.religion ?? "",
             drinking: serverProfile.drinking ?? "",
             smoking: serverProfile.smoking ?? "",
@@ -361,375 +457,202 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
     };
   }, [setData]);
 
-  const set = (key, value) =>
+  const set = (key, value) => {
+    if (key === "nickname") setNicknameError("");
     setData((old) => ({ ...old, profile: { ...old.profile, [key]: value } }));
+  };
 
-  function addPhotoItem(file, isFrontal) {
-    if (!file || photoSaving) return;
-    if (photoItems.length >= 6) {
-      setPhotoError("사진은 최대 6장까지 등록할 수 있어요.");
-      return;
-    }
-
-    const localId = createPhotoId();
-    const previewUrl = URL.createObjectURL(file);
-    localPhotoUrls.current.add(previewUrl);
-    setPhotoItems((current) => [
-      ...current,
-      { localId, previewUrl, fileId: null, isFrontal, uploading: true },
-    ]);
-    setPhotoError("");
-
-    const upload = async () => {
-      let currentPreview = previewUrl;
-      try {
-        const prepared = await prepareProfilePhoto(file);
-        if (!mounted.current || removedPhotoIds.current.has(localId)) return;
-        const convertedPreview = URL.createObjectURL(prepared);
-        currentPreview = convertedPreview;
-        localPhotoUrls.current.add(convertedPreview);
-        URL.revokeObjectURL(previewUrl);
-        localPhotoUrls.current.delete(previewUrl);
-        setPhotoItems((current) =>
-          current.map((item) =>
-            item.localId === localId
-              ? { ...item, previewUrl: convertedPreview }
-              : item,
-          ),
-        );
-        const metadata = await uploadProfileImage(prepared);
-        if (!mounted.current || removedPhotoIds.current.has(localId)) return;
-        setPhotoItems((current) =>
-          current.map((item) =>
-            item.localId === localId
-              ? { ...item, fileId: metadata.fileId, uploading: false }
-              : item,
-          ),
-        );
-      } catch (error) {
-        URL.revokeObjectURL(currentPreview);
-        localPhotoUrls.current.delete(currentPreview);
-        if (!mounted.current || removedPhotoIds.current.has(localId)) return;
-        setPhotoItems((current) =>
-          current.filter((item) => item.localId !== localId),
-        );
-        setPhotoError(profilePhotoErrorMessage(error));
-      }
-    };
-    void upload();
-  }
-
-  function reorderPhotos(sourceId, targetId) {
-    if (photoSaving || !sourceId || sourceId === targetId) return;
-    setPhotoItems((current) => {
-      const sourceIndex = current.findIndex(
-        (item) => item.localId === sourceId,
-      );
-      const targetIndex = current.findIndex(
-        (item) => item.localId === targetId,
-      );
-      if (sourceIndex < 0 || targetIndex < 0) return current;
-
-      const next = [...current];
-      const [moved] = next.splice(sourceIndex, 1);
-      const targetIndexAfterRemoval = next.findIndex(
-        (item) => item.localId === targetId,
-      );
-      const insertIndex =
-        targetIndexAfterRemoval + (sourceIndex < targetIndex ? 1 : 0);
-      next.splice(insertIndex, 0, moved);
-      return next;
-    });
-  }
-
-  function removePhoto(localId) {
-    if (photoSaving) return;
-    removedPhotoIds.current.add(localId);
-    setPhotoItems((current) => {
-      const item = current.find((photo) => photo.localId === localId);
-      if (item?.previewUrl && localPhotoUrls.current.has(item.previewUrl)) {
-        URL.revokeObjectURL(item.previewUrl);
-        localPhotoUrls.current.delete(item.previewUrl);
-      }
-      return current.filter((photo) => photo.localId !== localId);
-    });
-    setPhotoError("");
-  }
+  const keepLegacyPhoto = Boolean(legacyPhoto) && !replacingLegacyPhoto;
+  const photosReady =
+    keepLegacyPhoto ||
+    photoState.ready ||
+    samePhotoItems(initialPhotos, photoState.images);
+  const navigateWhenIdle = (path) => {
+    if (!saveInFlight.current) navigate(path);
+  };
 
   async function save() {
+    if (
+      isLoadingProfile ||
+      profileLoadFailed ||
+      saveInFlight.current ||
+      !photosReady
+    )
+      return;
+    if (!isJobCategory(profile.job)) {
+      setJobError("직업군을 선택해 주세요.");
+      return;
+    }
+    setJobError("");
+    const nickname = String(profile.nickname ?? "");
+    if (!NICKNAME_PATTERN.test(nickname)) {
+      setNicknameError(NICKNAME_FORMAT_ERROR);
+      return;
+    }
     if (!profile.activityRegionId) {
-      toast("검색 결과에서 활동 지역을 선택해주세요.");
+      toast("검색 결과에서 활동 지역을 선택해 주세요.");
       return;
     }
-    if (isReplacingPhotos && !photoItems.length) {
-      setPhotoError("프로필 사진을 한 장 이상 등록해주세요.");
-      return;
-    }
-    if (
-      isReplacingPhotos &&
-      !photoItems.some((item) => item.isFrontal && item.fileId)
-    ) {
-      setPhotoError("정면 사진을 등록해주세요.");
-      return;
-    }
-    if (
-      isReplacingPhotos &&
-      photoItems.some((item) => item.uploading || !item.fileId)
-    ) {
-      setPhotoError("사진 업로드가 끝난 뒤 저장해주세요.");
-      return;
-    }
-    if (photoSaving) return;
-
-    setPhotoSaving(true);
-    setPhotoError("");
+    const nicknameChanged = nickname !== initialNickname.current;
+    const photosChanged =
+      !keepLegacyPhoto && !samePhotoItems(initialPhotos, photoState.images);
+    saveInFlight.current = true;
+    setIsSaving(true);
+    let saveSucceeded = false;
     try {
-      await saveProfile(profilePayload(profile));
-      if (isReplacingPhotos) {
-        await saveProfileImages(
-          photoItems.map((item) => ({
-            fileId: item.fileId,
-            isFrontal: item.isFrontal,
-          })),
-        );
+      if (nicknameChanged) {
+        let nicknameAvailability;
+        try {
+          nicknameAvailability = await checkNicknameAvailability(nickname);
+        } catch (e) {
+          toast(
+            apiErrorMessage(
+              e,
+              "닉네임 사용 가능 여부를 확인하지 못했어요. 잠시 후 다시 시도해 주세요.",
+            ),
+          );
+          return;
+        }
+        if (!nicknameAvailability?.available) {
+          setNicknameError("이미 사용 중인 닉네임이에요.");
+          return;
+        }
       }
+
+      await saveProfile(profilePayload(profile));
+      initialNickname.current = nickname;
+      if (photosChanged) {
+        try {
+          await saveProfileImages(photoState.images);
+        } catch {
+          toast(
+            "프로필 정보는 저장했지만 사진을 저장하지 못했어요. 사진을 확인하고 다시 시도해 주세요.",
+          );
+          return;
+        }
+      }
+
+      const refreshedProfile = await getMyProfile().catch(() => null);
+      setData((old) => ({
+        ...old,
+        profile: {
+          ...old.profile,
+          photo: refreshedProfile?.profileImageUrl || old.profile.photo,
+        },
+      }));
+      saveSucceeded = true;
     } catch (e) {
-      toast(apiErrorMessage(e, "프로필을 저장하지 못했어요."));
-      setPhotoSaving(false);
+      if (e?.code === "NICKNAME_ALREADY_IN_USE") {
+        setNicknameError(
+          "이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해 주세요.",
+        );
+      } else {
+        toast(profileSaveErrorMessage(e));
+      }
       return;
+    } finally {
+      saveInFlight.current = false;
+      setIsSaving(false);
     }
-    const refreshedProfile = await getMyProfile().catch(() => null);
-    setData((old) => ({
-      ...old,
-      profile: {
-        ...old.profile,
-        photo: refreshedProfile?.profileImageUrl || old.profile.photo,
-      },
-    }));
-    toast("프로필을 저장했어요.");
-    navigate(returnTo);
+    if (saveSucceeded) {
+      toast("프로필을 저장했어요.");
+      navigate(returnTo);
+    }
   }
   return (
     <>
-      <BrandHeader navigate={navigate} />
       <ScreenHeader
-        className="chat-room-header"
+        notificationAction
+        className="account-header"
         title="프로필 수정"
-        onBack={() => navigate(returnTo)}
+        onBack={() => navigateWhenIdle(returnTo)}
       />
       <main
+        id="main-content"
+        tabIndex={-1}
         className="main-scroll edit-main"
-        aria-busy={isLoadingProfile || photoSaving}
+        aria-busy={isLoadingProfile || isSaving}
       >
         {isLoadingProfile ? (
           <p className="profile-load-state" role="status">
-            저장된 프로필을 불러오는 중이에요.
+            저장된 프로필을 불러오는 중이에요…
           </p>
         ) : profileLoadFailed ? (
           <div className="profile-load-error" role="alert">
             <p>
-              프로필을 불러오지 못했어요. 이전 화면으로 돌아갔다가 다시
-              시도해주세요.
+              프로필을 불러오지 못했어요. 이전 화면으로 돌아갔다가 다시 시도해
+              주세요.
             </p>
           </div>
         ) : (
           <>
-            <section
-              className="edit-photo-section"
-              aria-labelledby="edit-photo-title"
-            >
-              <div className="edit-photo-heading">
-                <strong className="edit-photo-title" id="edit-photo-title">
-                  프로필 사진
-                </strong>
-                <span>
-                  {isReplacingPhotos ? `${photoItems.length}/6` : "기존 사진"}
-                </span>
-              </div>
-              {!isReplacingPhotos && existingProfilePhoto ? (
+            <section className="edit-photo-section">
+              {keepLegacyPhoto ? (
                 <>
-                  <p>
-                    저장된 대표 사진이에요. 다른 프로필 정보를 저장해도 기존
-                    사진은 유지돼요.
-                  </p>
-                  <div className="onboarding-photo-grid edit-photo-grid">
-                    <article className="onboarding-photo-tile edit-photo-current">
-                      <img src={existingProfilePhoto} alt="저장된 대표 사진" />
-                      <b>기존 사진</b>
+                  <h2>프로필 사진</h2>
+                  <div className="trust-photo-grid">
+                    <article className="trust-photo-tile">
+                      <img
+                        src={legacyPhoto}
+                        width="300"
+                        height="400"
+                        alt="저장된 대표사진"
+                      />
+                      <span className="trust-photo-badge">기존 대표사진</span>
                     </article>
-                  </div>
-                  <div className="info-panel edit-photo-help">
-                    사진을 바꾸면 기존 사진 전체가 새 사진으로 교체돼요.
                   </div>
                   <button
                     type="button"
-                    className="edit-photo-replace-button"
-                    onClick={() => {
-                      setIsReplacingPhotos(true);
-                      setPhotoError("");
-                    }}
+                    className="trust-replace"
+                    disabled={isSaving}
+                    onClick={() => setReplacingLegacyPhoto(true)}
                   >
-                    사진 전체 교체
+                    프로필 사진 수정
                   </button>
+                  <p>
+                    최대 6장의 사진을 추가하고 순서를 정할 수 있어요. 정면
+                    사진을 등록하거나 바꿀 때만 얼굴 인증을 진행해요.
+                  </p>
                 </>
               ) : (
-                <>
-                  <p>정면 사진이 대표 사진으로 표시돼요.</p>
-                  {existingProfilePhoto && (
-                    <button
-                      type="button"
-                      className="edit-photo-replace-button"
-                      onClick={() => {
-                        for (const item of photoItems) {
-                          removedPhotoIds.current.add(item.localId);
-                          if (localPhotoUrls.current.has(item.previewUrl)) {
-                            URL.revokeObjectURL(item.previewUrl);
-                            localPhotoUrls.current.delete(item.previewUrl);
-                          }
-                        }
-                        setPhotoItems([]);
-                        setIsReplacingPhotos(false);
-                        setPhotoError("");
-                      }}
-                    >
-                      사진 교체 취소
-                    </button>
-                  )}
-                  {!photoItems.some((item) => item.isFrontal) && (
-                    <label className="photo-front-upload edit-photo-front-upload">
-                      <strong>정면 사진 등록</strong>
-                      <span>얼굴이 잘 보이는 정면 사진을 선택해주세요.</span>
-                      <small>JPG · PNG · WEBP · HEIC</small>
-                      <input
-                        type="file"
-                        disabled={photoSaving}
-                        accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif"
-                        onChange={(event) => {
-                          addPhotoItem(event.target.files?.[0], true);
-                          event.target.value = "";
-                        }}
-                      />
-                    </label>
-                  )}
-                  <section
-                    className="onboarding-photo-grid edit-photo-grid"
-                    aria-label="등록한 사진"
-                  >
-                    {photoItems.map((item) => (
-                      <article
-                        className="onboarding-photo-tile"
-                        data-photo-id={item.localId}
-                        draggable={!item.uploading && !photoSaving}
-                        key={item.localId}
-                        onDragStart={(event) => {
-                          draggedPhotoId.current = item.localId;
-                          event.dataTransfer.effectAllowed = "move";
-                          event.dataTransfer.setData(
-                            "text/plain",
-                            item.localId,
-                          );
-                        }}
-                        onDragEnd={() => {
-                          draggedPhotoId.current = null;
-                        }}
-                        onDragOver={(event) => event.preventDefault()}
-                        onDrop={(event) => {
-                          event.preventDefault();
-                          const sourceId =
-                            draggedPhotoId.current ||
-                            event.dataTransfer.getData("text/plain");
-                          reorderPhotos(sourceId, item.localId);
-                          draggedPhotoId.current = null;
-                        }}
-                        onPointerDown={(event) => {
-                          if (
-                            event.pointerType === "mouse" ||
-                            photoSaving ||
-                            item.uploading ||
-                            event.target.closest("button")
-                          )
-                            return;
-                          draggedPhotoId.current = item.localId;
-                          event.currentTarget.setPointerCapture(
-                            event.pointerId,
-                          );
-                        }}
-                        onPointerUp={(event) => {
-                          if (event.pointerType === "mouse") return;
-                          const target = document
-                            .elementFromPoint(event.clientX, event.clientY)
-                            ?.closest("[data-photo-id]");
-                          reorderPhotos(
-                            draggedPhotoId.current,
-                            target?.dataset.photoId,
-                          );
-                          draggedPhotoId.current = null;
-                          if (
-                            event.currentTarget.hasPointerCapture(
-                              event.pointerId,
-                            )
-                          )
-                            event.currentTarget.releasePointerCapture(
-                              event.pointerId,
-                            );
-                        }}
-                        onPointerCancel={() => {
-                          draggedPhotoId.current = null;
-                        }}
-                      >
-                        <img src={item.previewUrl} alt="등록한 프로필 사진" />
-                        <div className="profile-photo-labels">
-                          {item.isFrontal && <b>대표 · 정면 사진</b>}
-                        </div>
-                        {item.uploading && (
-                          <span className="photo-uploading">업로드 중</span>
-                        )}
-                        <button
-                          type="button"
-                          disabled={photoSaving}
-                          onClick={() => removePhoto(item.localId)}
-                          aria-label="사진 삭제"
-                        >
-                          ×
-                        </button>
-                      </article>
-                    ))}
-                    {photoItems.length < 6 &&
-                      photoItems.some((item) => item.isFrontal) && (
-                        <label className="onboarding-photo-add">
-                          <span>＋</span>
-                          <small>추가 사진</small>
-                          <input
-                            type="file"
-                            disabled={photoSaving}
-                            accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif"
-                            onChange={(event) => {
-                              addPhotoItem(event.target.files?.[0], false);
-                              event.target.value = "";
-                            }}
-                          />
-                        </label>
-                      )}
-                  </section>
-                  <div className="info-panel edit-photo-help">
-                    사진을 드래그하면 순서를 바꿀 수 있어요. 정면 사진 라벨은
-                    순서를 바꿔도 해당 사진에 유지돼요.
-                  </div>
-                </>
+                <ProfilePhotoEditor
+                  initialPhotos={initialPhotos}
+                  disabled={isSaving}
+                  onChange={setPhotoState}
+                />
               )}
-              {photoError && (
-                <p className="field-error edit-photo-error" role="alert">
-                  {photoError}
-                </p>
+              {legacyPhoto && replacingLegacyPhoto && (
+                <button
+                  type="button"
+                  className="trust-text-button"
+                  disabled={isSaving}
+                  onClick={() => setReplacingLegacyPhoto(false)}
+                >
+                  사진 수정 취소 · 기존 사진 유지
+                </button>
               )}
             </section>
-            <Field label="닉네임">
-              <input value={profile.nickname} disabled />
+            <Field
+              label="닉네임"
+              hint="한글·영문·숫자 2~10자"
+              error={nicknameError}
+            >
+              <input
+                type="text"
+                name="nickname"
+                autoComplete="nickname"
+                value={profile.nickname}
+                onChange={(e) => set("nickname", e.target.value)}
+                disabled={isSaving}
+                maxLength={10}
+                placeholder="예: 발신자표시제한번호"
+                aria-invalid={Boolean(nicknameError)}
+              />
             </Field>
             <ActivityRegionPicker
               selectedId={profile.activityRegionId}
               selectedName={profile.regionName}
-              disabled={photoSaving}
+              disabled={isSaving}
               onSelect={(region) =>
                 setData((old) => ({
                   ...old,
@@ -740,10 +663,15 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
             <Field label="키 (cm)">
               <input
                 type="number"
+                name="height"
+                autoComplete="off"
+                inputMode="numeric"
                 value={profile.height}
                 onChange={(e) => set("height", e.target.value)}
+                disabled={isSaving}
                 min="130"
                 max="220"
+                placeholder="예: 175"
               />
             </Field>
             <Field label="체형">
@@ -751,6 +679,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                 options={bodyTypes}
                 value={profile.bodyType}
                 onChange={(v) => set("bodyType", v)}
+                disabled={isSaving}
               />
             </Field>
             <Field label="학력">
@@ -758,20 +687,24 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                 options={educationLevels}
                 value={profile.educationLevel}
                 onChange={(v) => set("educationLevel", v)}
+                disabled={isSaving}
               />
             </Field>
-            <Field label="직업">
-              <input
-                value={profile.job}
-                onChange={(e) => set("job", e.target.value)}
-                maxLength={50}
-              />
-            </Field>
+            <JobCategorySelect
+              value={profile.job}
+              onChange={(value) => {
+                set("job", value);
+                setJobError("");
+              }}
+              disabled={isSaving}
+              error={jobError}
+            />
             <Field label="종교">
               <ChoiceGroup
                 options={religions}
                 value={profile.religion}
                 onChange={(v) => set("religion", v)}
+                disabled={isSaving}
               />
             </Field>
             <Field label="음주">
@@ -779,6 +712,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                 options={drinkings}
                 value={profile.drinking}
                 onChange={(v) => set("drinking", v)}
+                disabled={isSaving}
               />
             </Field>
             <Field label="흡연">
@@ -786,11 +720,12 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                 options={smokings}
                 value={profile.smoking}
                 onChange={(v) => set("smoking", v)}
+                disabled={isSaving}
               />
             </Field>
             <div className="edit-actions">
-              <PixelButton onClick={save} disabled={photoSaving}>
-                {photoSaving ? "저장 중…" : "저장하기"}
+              <PixelButton onClick={save} disabled={isSaving || !photosReady}>
+                {isSaving ? "저장 중…" : "저장하기"}
               </PixelButton>
             </div>
           </>
@@ -801,30 +736,92 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
 }
 
 export function Persona({ navigate }) {
+  const [state, setState] = useState({ status: "loading", complete: null });
+  const [attempt, setAttempt] = useState(0);
+
+  // The public API exposes completion, but does not expose a saved summary.
+  // Never display example traits as the user's confirmed persona.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Retry explicitly reloads the server completion status.
+  useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+    setState({ status: "loading", complete: null });
+    getOnboardingStatus({ signal: controller.signal, cache: "no-store" })
+      .then((response) => {
+        if (!active) return;
+        const complete = response?.requirements?.personaComplete;
+        if (typeof complete !== "boolean") {
+          setState({ status: "error", complete: null });
+          return;
+        }
+        setState({ status: "ready", complete });
+      })
+      .catch(() => {
+        if (active) setState({ status: "error", complete: null });
+      });
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [attempt]);
+
+  function retry() {
+    setAttempt((current) => current + 1);
+  }
+
   return (
     <>
-      <ScreenHeader title="내 페르소나" onBack={() => navigate("/my")} />
-      <main className="main-scroll persona-main">
+      <ScreenHeader
+        className="account-header"
+        notificationAction
+        title="내 페르소나"
+        onBack={() => navigate("/my")}
+      />
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="main-scroll persona-main"
+        aria-busy={state.status === "loading"}
+      >
         <div className="persona-hero">
-          <Icon name="ai-avatar.svg" />
-          <h1>나를 닮은 AI가 준비됐어요</h1>
+          <AiAvatar size={64} />
+          <h2>나를 닮은 대화의 시작</h2>
           <p>
-            가치관 문답을 바탕으로 상대와의 AI 연습대화와 시뮬레이션에 참여해요.
+            가치관 문답에서 알아간 나의 생각과 표현을 AI 연습대화와 시뮬레이션에
+            반영해요.
           </p>
         </div>
-        <h2>나의 성향</h2>
-        {[
-          ["관계 속도", "천천히 가까워지는 편"],
-          ["갈등 대응", "차분히 이야기하는 편"],
-          ["여가 성향", "함께하는 시간도, 혼자만의 시간도 소중해요"],
-          ["연락 빈도", "필요할 때 충분히 소통해요"],
-        ].map(([label, value]) => (
-          <div className="persona-trait" key={label}>
-            <span>{label}</span>
-            <strong>{value}</strong>
-          </div>
-        ))}
-        <small>온보딩에서 확정한 가치관이 반영되어 있어요.</small>
+        {state.status === "loading" ? (
+          <p className="persona-status" role="status">
+            가치관 설정 상태를 확인하고 있어요…
+          </p>
+        ) : state.status === "error" ? (
+          <EmptyState
+            icon="!"
+            title="가치관 설정 상태를 확인하지 못했어요"
+            description="잠시 후 다시 확인해 주세요. 저장된 답변은 변경되지 않아요."
+            action={
+              <PixelButton secondary onClick={retry}>
+                다시 확인
+              </PixelButton>
+            }
+          />
+        ) : (
+          <section
+            className="persona-summary-status"
+            aria-labelledby="persona-summary-title"
+          >
+            <span className="persona-completion-label">
+              {state.complete ? "가치관 설정 완료" : "가치관 설정 확인 필요"}
+            </span>
+            <h2 id="persona-summary-title">나의 성향 요약</h2>
+            <p>
+              {state.complete
+                ? "온보딩에서 정리한 성향을 여기서 다시 볼 수 있도록 준비 중이에요."
+                : "가치관 문답을 마친 후 나의 성향을 정리할 수 있어요."}
+            </p>
+          </section>
+        )}
       </main>
     </>
   );

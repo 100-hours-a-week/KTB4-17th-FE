@@ -12,13 +12,14 @@ import {
   mapChatMessage,
   mergeChatMessages,
 } from "./model.js";
+import { watchChatPresence } from "./presence.js";
 import { applyMessagePage, fetchMessageGap } from "./roomData.js";
 import {
   getRoomSession,
   isSessionActive,
   updateRoomSession,
 } from "./session.js";
-import { connectChatSocket } from "./socket.js";
+import { connectChatSocket, sendChatPresence } from "./socket.js";
 import { loadChatVisit } from "./unread.js";
 
 export function useChatRoom(roomId) {
@@ -45,6 +46,16 @@ export function useChatRoom(roomId) {
   const syncAgainRef = useRef(false);
   const olderRef = useRef(false);
   const abortRef = useRef(null);
+
+  const canSendPresence =
+    state.loaded &&
+    state.room?.status === "ACTIVE" &&
+    !error &&
+    connection === "connected";
+  useEffect(() => {
+    if (!canSendPresence) return undefined;
+    return watchChatPresence({ roomId, send: sendChatPresence });
+  }, [roomId, canSendPresence]);
 
   const sync = useCallback(() => {
     if (!aliveRef.current || !isSessionActive(entry)) return Promise.resolve();

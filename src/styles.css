@@ -8,8 +8,13 @@
 @import url("./features/aisimulation/styles.css");
 @import url("./features/profile/styles.css");
 @import url("./features/preferences/styles.css");
-@import url("./features/notifications/styles.css");
-@import url("./shared/responsive.css");
 @import url("./features/onboarding/overrides.css");
 @import url("./features/auth/overrides.css");
 @import url("./app/overrides.css");
+@import url("./shared/theme-b.css");
+@import url("./features/onboarding/theme-b.css");
+@import url("./features/recommendation/theme-b.css");
+@import url("./features/preferences/theme-b.css");
+@import url("./shared/responsive.css");
+@import url("./features/profiletrust/styles.css");
+@import url("./features/notifications/styles.css");

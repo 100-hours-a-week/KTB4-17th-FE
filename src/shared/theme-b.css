@@ -1,0 +1,301 @@
+/*
+ * B안 · Refined Pixel Y2K — container layer.
+ * Loaded last. Turns the A-style boxes (1–2px dark outline + soft offset shadow)
+ * into stepped pixel frames: a 1px soft line drawn by border-image (see --px-* in
+ * shared/styles.css) and a hard pixel drop-shadow that follows the stepped corners.
+ * Selectors repeat the originals' specificity so this file only needs to come last.
+ */
+
+/* ---------- Cards: 6px stair, white ---------- */
+.like-card,
+.report-metric,
+.score-card,
+.persona-summary-card,
+.photo-guide,
+.persona-hero,
+.other-profile-info,
+.other-profile-error,
+.edit-photo-section,
+.preference-choice-row,
+.settings-action,
+.practice-dialog,
+.like-confirm-dialog,
+.local-test-login-card,
+.chat-assistance-menu {
+  border: 8px solid transparent;
+  border-image: var(--px-card) 8 fill / 8px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  filter: var(--shadow-pixel);
+}
+
+/* ---------- Tinted cards ---------- */
+.report-intro,
+.simulation-participants > div,
+.info-panel,
+.selected-region {
+  border: 8px solid transparent;
+  border-image: var(--px-card-tint) 8 fill / 8px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  filter: none;
+}
+
+.my-identity {
+  border: 8px solid transparent;
+  border-image: var(--px-card-cream) 8 fill / 8px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  filter: var(--shadow-pixel);
+}
+
+/* ---------- Small framed controls ---------- */
+.persona-actions button,
+.persona-retry,
+div.practice-state button.practice-inline-button,
+div.practice-retry button.practice-retry-button,
+section.practice-dialog button.practice-dialog-button,
+.like-confirm-dialog button,
+.settings-confirm-actions button,
+.other-profile-error button,
+.other-profile-detail-tile,
+.home-preferences-button,
+.chat-assistance summary,
+.agreement.all,
+.chat-latest-button {
+  border: 6px solid transparent;
+  border-image: var(--px-frame) 6 fill / 6px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.settings-action-icon {
+  border: 6px solid transparent;
+  border-image: var(--px-frame-tint) 6 fill / 6px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.settings-confirm-actions .settings-withdrawal-submit {
+  border-image: var(--px-frame-danger) 6 fill / 6px;
+  color: #7f305b;
+}
+
+/* ---------- Tags & badges ---------- */
+.persona-traits span,
+.my-profile-kicker,
+.other-profile-section-title > span {
+  border: 6px solid transparent;
+  border-image: var(--px-frame-tint) 6 fill / 6px;
+  border-radius: 0;
+  background: none;
+  color: var(--purple-deep);
+}
+
+.online-badge,
+.my-profile-region {
+  border: 6px solid transparent;
+  border-image: var(--px-frame-pink) 6 fill / 6px;
+  border-radius: 0;
+  background: none;
+  color: var(--ink);
+}
+
+/* ---------- Photos & avatars: clip to the stepped shape (content fills the box) ---------- */
+.recommendation-card,
+.onboarding-photo-tile,
+.person-avatar,
+.my-profile-skeleton-avatar {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  clip-path: var(--pixel-step-shape);
+}
+
+.onboarding-photo-add,
+.photo-front-upload {
+  border: 6px solid transparent;
+  border-image: var(--px-frame-tint) 6 fill / 6px;
+  border-radius: 0;
+  background: none;
+}
+
+/* ---------- Tab strips (likes / notifications / preferences) ---------- */
+.segmented-tabs {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+/* ---------- Danger cards (logout / withdrawal) ---------- */
+.settings-action.settings-logout,
+.settings-action.settings-withdrawal,
+.settings-logout-confirm,
+.settings-withdrawal-confirm {
+  border: 8px solid transparent;
+  border-image: var(--px-frame-danger) 6 fill / 8px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  filter: drop-shadow(0 3px 0 rgb(194 64 126 / 14%));
+}
+
+/* ---------- 발신자 제한 모드 칩 (채팅 · 연습대화 · 시뮬레이션 상단) ---------- */
+.brand-header .chat-assistance {
+  filter: drop-shadow(0 2px 0 rgb(124 92 250 / 22%));
+}
+
+.brand-header .chat-assistance summary {
+  flex-direction: row;
+  width: auto;
+  height: 32px;
+  min-height: 32px;
+  gap: 6px;
+  padding: 0 10px 0 11px;
+  border: 0;
+  border-image: none;
+  background: linear-gradient(135deg, #f2edff 0%, #ffe9f5 100%);
+  box-shadow:
+    inset 0 -2px 0 rgb(124 92 250 / 18%),
+    inset 0 1px 0 #fff;
+  color: var(--purple-deep);
+  clip-path: var(--pixel-step-shape);
+}
+
+.brand-header .chat-assistance[open] summary {
+  background: linear-gradient(135deg, #e6dcff 0%, #ffd9ee 100%);
+}
+
+.brand-header .chat-assistance .chat-assistance-title {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.chat-assistance-spark {
+  color: #ee6ab1;
+}
+
+.chat-assistance-caret {
+  color: var(--purple);
+  transform: rotate(90deg) scale(0.8);
+  transition: transform 160ms steps(2);
+}
+
+.chat-assistance[open] .chat-assistance-caret {
+  transform: rotate(-90deg) scale(0.8);
+}
+
+/* stylelint-disable no-descending-specificity -- 대화 헤더 전용 규칙(#218)은 기존 brand-header 규칙과 별개 요소다 */
+:is(.conversation-header, .simulation-screen-header) .chat-assistance {
+  position: relative;
+  width: max-content;
+  max-width: 100%;
+  filter: drop-shadow(0 2px 0 rgb(124 92 250 / 22%));
+}
+
+:is(.conversation-header, .simulation-screen-header) .chat-assistance summary {
+  flex-direction: row;
+  width: auto;
+  height: 32px;
+  min-height: 32px;
+  gap: 5px;
+  padding: 0 9px;
+  border: 0;
+  border-image: none;
+  background: linear-gradient(135deg, #f2edff 0%, #ffe9f5 100%);
+  color: var(--purple-deep);
+  clip-path: var(--pixel-step-shape);
+}
+
+:is(.conversation-header, .simulation-screen-header)
+  .chat-assistance[open]
+  summary {
+  background: linear-gradient(135deg, #e6dcff 0%, #ffd9ee 100%);
+}
+
+:is(.conversation-header, .simulation-screen-header) .chat-assistance-spark {
+  display: none;
+}
+
+:is(.conversation-header, .simulation-screen-header) .chat-assistance-title {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+:is(.conversation-header, .simulation-screen-header) .chat-assistance-caret {
+  display: block;
+}
+
+@media (width < 360px) {
+  :is(.conversation-header, .simulation-screen-header)
+    .chat-assistance
+    summary {
+    gap: 0;
+    padding-inline: 6px;
+  }
+
+  :is(.conversation-header, .simulation-screen-header) .chat-assistance-title {
+    font-size: 9px;
+  }
+
+  :is(.conversation-header, .simulation-screen-header) .chat-assistance-caret {
+    display: none;
+  }
+}
+/* stylelint-enable no-descending-specificity */
+
+/* ---------- AI 아바타 (하루 · AI 연습대화 · 시뮬레이션 · 페르소나) ---------- */
+.ai-avatar {
+  position: relative;
+  isolation: isolate;
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: var(--ai-avatar-size);
+  height: var(--ai-avatar-size);
+  background: #fff;
+  clip-path: var(--pixel-step-shape);
+}
+
+.ai-avatar::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 2px;
+  background: var(--holo);
+  clip-path: var(--pixel-step-shape);
+}
+
+/* #218에서 새로 추가된 요소 스타일 (최신 버전 유지) */
+.chat-message-area,
+.practice-message-area {
+  isolation: isolate;
+  background: #f7f4fb;
+}
+
+.chat-message-area::before,
+.practice-message-area::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background:
+    url("/assets/ambient-city-v1.webp") center bottom / 100% auto no-repeat;
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+.chat-room-view .chat-messages,
+.practice-message-area .practice-messages {
+  background: transparent;
+}

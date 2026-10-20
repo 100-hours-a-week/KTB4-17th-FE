@@ -107,19 +107,25 @@ export async function prepareProfilePhoto(file) {
 
 export function profilePhotoErrorMessage(error) {
   const messages = {
-    FILE_TOO_LARGE: "사진 용량이 너무 커요. 30MB 이하의 사진을 선택해주세요.",
-    FILE_TYPE_NOT_ALLOWED: "JPG, PNG, WEBP, HEIC 형식의 사진을 선택해주세요.",
-    FILE_INVALID_CONTENT: "사진을 읽을 수 없어요. 다른 사진을 선택해주세요.",
+    FILE_TOO_LARGE: "사진 용량이 너무 커요. 30MB 이하의 사진을 선택해 주세요.",
+    FILE_TYPE_NOT_ALLOWED: "JPG, PNG, WEBP, HEIC 형식의 사진을 선택해 주세요.",
+    FILE_INVALID_CONTENT: "사진을 읽을 수 없어요. 다른 사진을 선택해 주세요.",
     PHOTO_CONVERSION_FAILED:
-      "사진을 변환하지 못했어요. JPG 또는 PNG 사진으로 다시 시도해주세요.",
+      "사진을 변환하지 못했어요. JPG 또는 PNG 사진으로 다시 시도해 주세요.",
     FILE_UPLOAD_INTENT_EXPIRED:
-      "사진 업로드 시간이 만료됐어요. 사진을 다시 선택해주세요.",
+      "사진 업로드 시간이 만료됐어요. 사진을 다시 선택해 주세요.",
   };
   return (
     (Object.hasOwn(messages, error?.code) && messages[error.code]) ||
     apiErrorMessage(
       error,
-      "사진을 업로드하지 못했어요. 연결을 확인한 뒤 다시 선택해주세요.",
+      "사진을 업로드하지 못했어요. 연결을 확인한 뒤 다시 선택해 주세요.",
     )
   );
+}
+
+// The face verification API accepts JPEG/PNG, unlike ordinary profile uploads.
+export async function preparePrimaryPhoto(file) {
+  const prepared = await prepareProfilePhoto(file);
+  return prepared.type === "image/webp" ? compressPhoto(prepared) : prepared;
 }

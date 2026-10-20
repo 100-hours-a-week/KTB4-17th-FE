@@ -5,9 +5,91 @@ import { asset } from "../../shared/assets.js";
 import { getRegistrationAgeRestriction } from "../user/registrationAge.js";
 import { localTestAccounts, localTestAuthEnabled } from "./api.js";
 
+function LoginBrand() {
+  return (
+    <>
+      <div className="login-illustration">
+        <img
+          src={asset("logo.png?v=d41514e")}
+          width="256"
+          height="256"
+          alt="*23#"
+        />
+      </div>
+      <section className="login-signal">
+        <span className="login-signal-status" aria-hidden="true">
+          SIGNAL · ONLINE
+        </span>
+        <h1>
+          좋아하는 사람 앞에서는,
+          <br />
+          누구나 <em>연습</em>이 필요하니까.
+        </h1>
+      </section>
+      <p className="login-tagline">
+        가볍게 시작하는
+        <br />
+        새로운 관계의 신호.
+      </p>
+    </>
+  );
+}
+
+const SPLASH_BLOCKS = Array.from({ length: 12 }, (_, index) => index);
+
+// 앱 실행 직후 로그인 상태를 확인하는 동안 보여주는 Y2K 로딩 화면
+export function SplashScreen({ message, action }) {
+  return (
+    <main id="main-content" tabIndex={-1} className="splash-page">
+      <div className="splash-hero">
+        <img
+          className="splash-logo"
+          src={asset("logo.png?v=d41514e")}
+          width="256"
+          height="256"
+          alt="*23#"
+        />
+        <p className="splash-copy">
+          좋아하는 사람 앞에서
+          <br />
+          누구나 <em className="splash-accent">연습</em>이 필요하니까
+        </p>
+      </div>
+      <div className="splash-status" role="status">
+        {action ? (
+          <>
+            <p className="splash-message">{message}</p>
+            {action}
+          </>
+        ) : (
+          <>
+            <div className="splash-bar" aria-hidden="true">
+              {SPLASH_BLOCKS.map((index) => (
+                <i key={index} style={{ "--i": index }} />
+              ))}
+            </div>
+            <p className="splash-label">
+              <span>SIGNAL CONNECTING</span>
+              <span className="splash-dots" aria-hidden="true">
+                <i>.</i>
+                <i>.</i>
+                <i>.</i>
+              </span>
+            </p>
+            <span className="visually-hidden">{message}</span>
+          </>
+        )}
+      </div>
+      <p className="splash-footer" aria-hidden="true">
+        ✦ *23# · LITTLE PIXELS, REAL CONNECTIONS ✦
+      </p>
+    </main>
+  );
+}
+
 export function Login({ onLogin, onLocalTestLogin }) {
   const [testAccounts, setTestAccounts] = useState([]);
-  const [testTargetMemberId, setTestTargetMemberId] = useState(null);
+  const [testTargetUserId, setTestTargetUserId] = useState(null);
   const [testAccountsLoading, setTestAccountsLoading] =
     useState(localTestAuthEnabled);
   const [testLoginPending, setTestLoginPending] = useState(false);
@@ -20,14 +102,14 @@ export function Login({ onLogin, onLocalTestLogin }) {
       .then((result) => {
         if (!active) return;
         setTestAccounts(Array.isArray(result?.accounts) ? result.accounts : []);
-        setTestTargetMemberId(result?.practiceTargetMemberId || null);
+        setTestTargetUserId(result?.practiceTargetUserId || null);
       })
       .catch((error) => {
         if (active)
           setTestLoginError(
             apiErrorMessage(
               error,
-              "테스트 계정을 불러오지 못했어요. 잠시 후 다시 시도해주세요.",
+              "테스트 계정을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
             ),
           );
       })
@@ -43,12 +125,12 @@ export function Login({ onLogin, onLocalTestLogin }) {
     setTestLoginPending(true);
     setTestLoginError("");
     try {
-      await onLocalTestLogin(account.memberId, testTargetMemberId);
+      await onLocalTestLogin(account.userId, testTargetUserId);
     } catch (error) {
       setTestLoginError(
         apiErrorMessage(
           error,
-          "테스트 로그인을 처리하지 못했어요. 잠시 후 다시 시도해주세요.",
+          "테스트 로그인을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.",
         ),
       );
     } finally {
@@ -57,30 +139,31 @@ export function Login({ onLogin, onLocalTestLogin }) {
   }
 
   return (
-    <div
+    <main
+      id="main-content"
+      tabIndex={-1}
       className={`login-page${localTestAuthEnabled ? " local-test-login-page" : ""}`}
     >
       <div className="login-top-space" aria-hidden="true" />
-      <div className="login-illustration">
-        <img src={asset("logo-login.png")} alt="*23#" />
-      </div>
-      <h1>
-        좋아하는 사람 앞에서는,
-        <br />
-        누구나 연습이 필요하니까.
-      </h1>
-      <button
-        className="kakao-login-button"
-        type="button"
-        aria-label="카카오 로그인"
-        onClick={onLogin}
-      >
-        <img
-          src={asset("kakao_login_kr_large.svg")}
-          alt=""
+      <LoginBrand />
+      <button className="kakao-login-button" type="button" onClick={onLogin}>
+        <svg
+          className="kakao-login-symbol"
+          viewBox="0 0 24 24"
+          width="20"
+          height="20"
           aria-hidden="true"
-        />
+        >
+          <path
+            fill="currentColor"
+            d="M12 4C7 4 3 7.1 3 11c0 2.5 1.7 4.7 4.2 6l-.9 3.3c-.1.3.3.6.6.4l3.9-2.6c.4 0 .8.1 1.2.1 5 0 9-3.1 9-7s-4-7.2-9-7.2z"
+          />
+        </svg>
+        <span>카카오로 시작하기</span>
       </button>
+      <p className="login-terms">
+        가입 시 이용약관과 개인정보 처리방침에 동의합니다.
+      </p>
       {localTestAuthEnabled && (
         <section
           className="local-test-login-card"
@@ -96,9 +179,9 @@ export function Login({ onLogin, onLocalTestLogin }) {
             testAccounts.map((account) => (
               <button
                 className="local-test-login-button"
-                key={account.memberId}
+                key={account.userId}
                 type="button"
-                disabled={testLoginPending || !testTargetMemberId}
+                disabled={testLoginPending || !testTargetUserId}
                 onClick={() => startPractice(account)}
               >
                 {testLoginPending ? "로그인 중…" : "테스트 계정으로 연습 시작"}
@@ -106,7 +189,7 @@ export function Login({ onLogin, onLocalTestLogin }) {
             ))
           ) : (
             <div className="local-test-login-status" role="status">
-              활성 테스트 계정이 없어요. 테스트 사용자 900001을 준비해주세요.
+              활성 테스트 계정이 없어요. 테스트 사용자 900001을 준비해 주세요.
             </div>
           )}
           {testLoginError && (
@@ -116,7 +199,7 @@ export function Login({ onLogin, onLocalTestLogin }) {
           )}
         </section>
       )}
-    </div>
+    </main>
   );
 }
 
@@ -129,12 +212,16 @@ export function RegistrationRestricted({ onConfirm }) {
     : "-";
 
   return (
-    <main className="registration-restricted-page">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="registration-restricted-page"
+    >
       <div className="registration-restricted-top-space" aria-hidden="true" />
       <h1>
-        {ageRestriction?.heading || "가입 연령을 확인해주세요"}
+        {ageRestriction?.heading || "가입 연령을 확인해 주세요"}
         <br />
-        {ageRestriction ? "이용할 수 있어요" : "다시 입력해주세요"}
+        {ageRestriction ? "이용할 수 있어요" : "다시 입력해 주세요"}
       </h1>
       <p className="registration-restricted-subtitle">
         {ageRestriction?.description ||
@@ -146,18 +233,14 @@ export function RegistrationRestricted({ onConfirm }) {
           <dd>카카오</dd>
         </div>
         <div className="registration-restricted-row">
-          <dt>본명</dt>
-          <dd>{profile.name || "-"}</dd>
-        </div>
-        <div className="registration-restricted-row">
           <dt>생년월일</dt>
           <dd>{birthDate}</dd>
         </div>
       </dl>
       <ul className="registration-restricted-notes">
-        <li>카카오 계정에 등록된 생년월일 기준이에요</li>
+        <li>입력한 생년월일을 기준으로 가입 가능 연령을 확인해요</li>
         <li>입력한 정보는 저장되지 않고 즉시 폐기돼요</li>
-        <li>기본 정보가 다르면 수정 후 다시 시도해주세요</li>
+        <li>기본 정보가 다르면 수정 후 다시 시도해 주세요</li>
       </ul>
       <button
         className="registration-restricted-confirm"

@@ -1,18 +1,25 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Practice } from "../features/aipractice/Practice.jsx";
+import { SimulationTrackingContext } from "../features/aisimulation/context.jsx";
 import { Report, Simulation } from "../features/aisimulation/pages.jsx";
 import { useSimulationLaunch } from "../features/aisimulation/useSimulationLaunch.js";
+import { useSimulationTracking } from "../features/aisimulation/useSimulationTracking.js";
 import {
   beginKakaoLogin,
   completeOAuthCallback,
   logout as logoutAuth,
 } from "../features/auth/api.js";
-import { Login, RegistrationRestricted } from "../features/auth/pages.jsx";
+import {
+  Login,
+  RegistrationRestricted,
+  SplashScreen,
+} from "../features/auth/pages.jsx";
 import { useLocalTestLogin } from "../features/auth/useLocalTestLogin.js";
 import { ChatList, ChatRoom } from "../features/chat/Chat.jsx";
 import { useUnreadMessageCount } from "../features/chat/useUnreadMessageCount.js";
 import { LandingPage } from "../features/landing/LandingPage.jsx";
 import { Likes } from "../features/matching/Likes.jsx";
+import { NotificationProvider } from "../features/notifications/NotificationProvider.jsx";
 import { Notifications } from "../features/notifications/Notifications.jsx";
 import { Onboarding } from "../features/onboarding/Onboarding.jsx";
 import { Preferences } from "../features/preferences/Preferences.jsx";
@@ -30,24 +37,29 @@ import {
 import { isHomePath } from "../features/recommendation/recommendationRefresh.js";
 import { useRecommendationFeed } from "../features/recommendation/useRecommendationFeed.js";
 import * as userApi from "../features/user/api.js";
+import { executeUserWithdrawal } from "../features/user/withdrawal.js";
 import {
   AUTH_EXPIRED_EVENT,
   clearAccessToken,
   getAccessToken,
 } from "../shared/api/authToken.js";
 import { refreshAuthSession } from "../shared/api/client.js";
+import { apiErrorMessage } from "../shared/api/errorMessages.js";
 import {
   AppStateProvider,
   makeInitialState,
   useAppState,
 } from "../shared/appState.jsx";
-import { asset } from "../shared/assets.js";
 import {
   BottomNav,
   EmptyState,
   PixelButton,
 } from "../shared/ui/components.jsx";
-import { onboardingStepFromStatus } from "../shared/utils.js";
+import { useViewportHeight } from "../shared/useViewportHeight.js";
+import {
+  isOnboardingComplete,
+  onboardingStepFromStatus,
+} from "../shared/utils.js";
 
 function profileReturnPath(search) {
   const requested = new URLSearchParams(search).get("returnTo");
@@ -56,6 +68,7 @@ function profileReturnPath(search) {
   try {
     const destination = new URL(requested, window.location.origin);
     if (destination.origin !== window.location.origin) return "/home";
+    if (destination.pathname === "/notifications") return "/notifications";
     if (destination.pathname === "/likes") {
       const tab = destination.searchParams.get("tab");
       return tab === "sent" || tab === "received"
@@ -71,6 +84,8 @@ function profileReturnPath(search) {
 }
 
 function AppRouter() {
+  const viewportRef = useRef(null);
+  useViewportHeight(viewportRef);
   const { data, setData } = useAppState();
   const [path, setPath] = useState(window.location.pathname);
   const [search, setSearch] = useState(window.location.search);
@@ -81,6 +96,8 @@ function AppRouter() {
     new URLSearchParams(window.location.hash.slice(1)).has("auth_code"),
   );
   const [logoutPending, setLogoutPending] = useState(false);
+  const [userWithdrawalPending, setUserWithdrawalPending] = useState(false);
+  const accountActionPendingRef = useRef(false);
   const unreadMessageCount = useUnreadMessageCount({
     enabled: !loading && !sessionCheckError && data.session && data.onboarded,
     path,
@@ -97,10 +114,21 @@ function AppRouter() {
     setSearch(destination.search);
     window.scrollTo(0, 0);
   }, []);
-  const { startSimulation, simulationStartingFor } = useSimulationLaunch({
-    navigate: (to) => navigate(to),
-    toast: (message) => toast(message),
+  const tracking = useSimulationTracking({
+    enabled: !loading && !sessionCheckError && data.session && data.onboarded,
   });
+  const completion = tracking.snapshot.completions[0];
+  useEffect(() => {
+    // Persistent server notifications now own the global completion banner.
+    if (completion) tracking.manager.acknowledge(completion.simulationId);
+  }, [completion, tracking.manager]);
+  const { startSimulation, cancelSimulation, simulationStartingFor } =
+    useSimulationLaunch({
+      path,
+      tracking: tracking.manager,
+      navigate: (to) => navigate(to),
+      toast: (message) => toast(message),
+    });
   const loginWithLocalTestAccount = useLocalTestLogin({
     navigate: (to) => navigate(to),
   });
@@ -117,11 +145,13 @@ function AppRouter() {
     error: recommendationError,
     refreshing: recommendationRefreshing,
     load: loadRecommendations,
+    reloadAfterPreferences: reloadRecommendationsAfterPreferences,
     loadMore: loadMoreRecommendations,
     refresh: refreshRecommendations,
     advance: advanceRecommendation,
     retreat: retreatRecommendation,
     dismiss: dismissRecommendation,
+    pass: passRecommendation,
   } = feed;
 
   useEffect(() => {
@@ -163,6 +193,7 @@ function AppRouter() {
           notifyAuthExpired: false,
         });
         if (!isCurrentCheck()) return;
+        const onboardingComplete = isOnboardingComplete(status);
         const registeredIdentity =
           status?.userStatus === "ACTIVE"
             ? null
@@ -172,7 +203,7 @@ function AppRouter() {
         setData((old) => ({
           ...old,
           session: true,
-          onboarded: status?.userStatus === "ACTIVE",
+          onboarded: onboardingComplete,
           registrationInfoConfirmed: true,
           ...(registeredIdentity
             ? {
@@ -183,17 +214,16 @@ function AppRouter() {
                 },
               }
             : {}),
-          onboardingStep:
-            status?.userStatus === "ACTIVE"
-              ? "complete"
-              : onboardingStepFromStatus(status),
+          onboardingStep: onboardingComplete
+            ? "complete"
+            : onboardingStepFromStatus(status),
         }));
         setHandlingOAuthCallback(false);
         if (
           registrationPath &&
           window.location.pathname.startsWith("/registration")
         ) {
-          navigate(status?.userStatus === "ACTIVE" ? "/home" : "/onboarding", {
+          navigate(onboardingComplete ? "/home" : "/onboarding", {
             replace: true,
           });
         }
@@ -298,7 +328,8 @@ function AppRouter() {
   }
 
   async function handleLogout() {
-    if (logoutPending) return;
+    if (accountActionPendingRef.current) return;
+    accountActionPendingRef.current = true;
     setLogoutPending(true);
     try {
       await logoutAuth();
@@ -306,9 +337,35 @@ function AppRouter() {
       setData(makeInitialState());
       navigate("/login");
     } catch {
-      toast("로그아웃을 완료하지 못했어요. 잠시 후 다시 시도해주세요.");
+      toast("로그아웃을 완료하지 못했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
+      accountActionPendingRef.current = false;
       setLogoutPending(false);
+    }
+  }
+
+  async function handleUserWithdrawal() {
+    if (accountActionPendingRef.current) return;
+    accountActionPendingRef.current = true;
+    setUserWithdrawalPending(true);
+    try {
+      await executeUserWithdrawal({
+        withdrawUser: userApi.withdrawUser,
+        clearSession: clearAccessToken,
+        resetAppState: () => setData(makeInitialState()),
+        navigateToLogin: () => navigate("/login", { replace: true }),
+        notifySuccess: () => toast("계정 탈퇴가 완료됐어요."),
+        notifyFailure: (error) =>
+          toast(
+            apiErrorMessage(
+              error,
+              "계정 탈퇴를 완료하지 못했어요. 로그인 상태를 확인한 뒤 다시 시도해 주세요.",
+            ),
+          ),
+      });
+    } finally {
+      accountActionPendingRef.current = false;
+      setUserWithdrawalPending(false);
     }
   }
 
@@ -324,7 +381,8 @@ function AppRouter() {
   const simulationRoute = path.match(/^\/ai\/simulations\/(\d+)(?:\/report)?$/);
   const simulationId = simulationRoute ? Number(simulationRoute[1]) : null;
   const showNav =
-    data.onboarded && ["/", "/home", "/likes", "/chats", "/my"].includes(path);
+    data.onboarded &&
+    ["/", "/home", "/likes", "/chats", "/my", "/notifications"].includes(path);
   const showLanding = path === "/" && !data.session && !handlingOAuthCallback;
   const showPublicLogin = path === "/login" && !handlingOAuthCallback;
 
@@ -337,22 +395,17 @@ function AppRouter() {
         onLogin={beginKakaoLogin}
       />
     );
-  else if (loading)
-    page = (
-      <div className="loading-page">
-        <img src={asset("logo.png")} alt="" />
-        <span>잠시만 기다려주세요</span>
-      </div>
-    );
+  else if (loading) page = <SplashScreen message="잠시만 기다려 주세요…" />;
   else if (sessionCheckError)
     page = (
-      <div className="loading-page">
-        <img src={asset("logo.png")} alt="" />
-        <span>서버에 연결하지 못해 로그인 상태를 확인할 수 없어요.</span>
-        <PixelButton onClick={() => window.location.reload()}>
-          다시 시도
-        </PixelButton>
-      </div>
+      <SplashScreen
+        message="서버에 연결하지 못해 로그인 상태를 확인할 수 없어요."
+        action={
+          <PixelButton onClick={() => window.location.reload()}>
+            다시 시도
+          </PixelButton>
+        }
+      />
     );
   else if (path === "/registration/restricted")
     page = (
@@ -386,6 +439,7 @@ function AppRouter() {
         onAdvance={advanceRecommendation}
         onRetreat={retreatRecommendation}
         onDismiss={dismissRecommendation}
+        onPass={passRecommendation}
         onLoadMore={loadMoreRecommendations}
         onStartSimulation={startSimulation}
       />
@@ -393,9 +447,11 @@ function AppRouter() {
   else if (/^\/profiles\/\d+$/.test(path))
     page = (
       <OtherProfile
-        memberId={Number(path.split("/").pop())}
+        userId={Number(path.split("/").pop())}
         returnTo={profileReturnPath(search)}
         navigate={navigate}
+        onStartSimulation={startSimulation}
+        simulationStartingFor={simulationStartingFor}
       />
     );
   else if (path.startsWith("/profiles/"))
@@ -418,13 +474,14 @@ function AppRouter() {
         navigate={navigate}
         toast={toast}
         onStartSimulation={startSimulation}
+        onCancelSimulation={cancelSimulation}
         simulationStartingFor={simulationStartingFor}
       />
     );
   else if (path.startsWith("/ai/practice/"))
     page = (
       <Practice
-        targetMemberId={personId}
+        targetUserId={personId}
         chatRoomId={chatRoomId}
         navigate={navigate}
         onStartSimulation={startSimulation}
@@ -453,7 +510,9 @@ function AppRouter() {
       <Settings
         navigate={navigate}
         onLogout={handleLogout}
+        onWithdrawUser={handleUserWithdrawal}
         isLoggingOut={logoutPending}
+        isWithdrawingUser={userWithdrawalPending}
       />
     );
   else if (path === "/my/profile/view")
@@ -472,43 +531,93 @@ function AppRouter() {
     );
   else if (path === "/my/persona") page = <Persona navigate={navigate} />;
   else if (path === "/preferences")
-    page = <Preferences navigate={navigate} toast={toast} />;
+    page = (
+      <Preferences
+        navigate={navigate}
+        toast={toast}
+        onSaved={reloadRecommendationsAfterPreferences}
+      />
+    );
   else if (path === "/notifications")
-    page = <Notifications navigate={navigate} toast={toast} />;
+    page = (
+      <Notifications
+        navigate={navigate}
+        toast={toast}
+        initialCategory={new URLSearchParams(search).get("category")}
+      />
+    );
   else
     page = (
-      <EmptyState
-        title="화면을 찾을 수 없어요"
-        description="홈으로 돌아가 다시 시작해주세요."
-        action={
-          <PixelButton onClick={() => navigate("/home")}>
-            홈으로 가기
-          </PixelButton>
-        }
-      />
+      <main id="main-content" tabIndex={-1} className="not-found-main">
+        <h1 className="sr-only">화면을 찾을 수 없어요</h1>
+        <EmptyState
+          title="화면을 찾을 수 없어요"
+          description="홈으로 돌아가 다시 시작해 주세요."
+          action={
+            <PixelButton onClick={() => navigate("/home")}>
+              홈으로 가기
+            </PixelButton>
+          }
+        />
+      </main>
     );
 
   return (
-    <div className={`app-shell${showLanding ? " app-shell-landing" : ""}`}>
-      <div className={`app-screen${showLanding ? " app-screen-landing" : ""}`}>
-        {page}
-        {showNav && (
-          <BottomNav
+    <SimulationTrackingContext.Provider value={tracking}>
+      <div
+        className={`app-shell${showLanding ? " app-shell-landing" : ""}`}
+        ref={viewportRef}
+      >
+        <div
+          className={`app-screen${showLanding ? " app-screen-landing" : ""}`}
+          data-has-nav={showNav}
+          data-view={
+            /^\/(chats\/|ai\/practice\/|ai\/simulations\/\d+$)/.test(path)
+              ? "conversation"
+              : /^\/(profiles\/|my\/profile\/view)/.test(path)
+                ? "profile"
+                : "standard"
+          }
+        >
+          {!showLanding && (
+            <a className="skip-link" href="#main-content">
+              본문으로 건너뛰기
+            </a>
+          )}
+          <NotificationProvider
+            enabled={
+              !loading &&
+              !sessionCheckError &&
+              data.session &&
+              data.onboarded &&
+              path !== "/login"
+            }
             path={path}
-            unreadMessageCount={unreadMessageCount}
+            search={search}
             navigate={navigate}
-          />
-        )}
-        {toastText && (
-          <div
-            className={`toast${path === "/" || path === "/home" ? " toast-home" : ""}`}
-            role="status"
+            toast={toast}
+            blocked={Boolean(toastText)}
           >
-            {toastText}
-          </div>
-        )}
+            {page}
+            {showNav && (
+              <BottomNav
+                path={path}
+                unreadMessageCount={unreadMessageCount}
+                navigate={navigate}
+              />
+            )}
+            {toastText && (
+              <div
+                className={`toast${path === "/" || path === "/home" ? " toast-home" : ""}`}
+                role="status"
+              >
+                {toastText}
+              </div>
+            )}
+          </NotificationProvider>
+        </div>
       </div>
-    </div>
+    </SimulationTrackingContext.Provider>
   );
 }
 
