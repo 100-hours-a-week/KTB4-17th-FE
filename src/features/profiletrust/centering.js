@@ -1,0 +1,182 @@
+import { trustError } from "./model.js";
+
+const REQUIRED_FRAMES = 15;
+export const CENTER_HINTS = Object.freeze({
+  NO_FACE: "얼굴 전체가 화면에 보이도록 맞춰 주세요.",
+  MULTIPLE_FACES: "혼자 화면에 들어와 주세요.",
+  INVALID_POSE: "얼굴이 선명하게 보이도록 카메라를 봐 주세요.",
+  CROPPED: "얼굴 전체가 가이드 안에 들어오도록 맞춰 주세요.",
+  CLOSER: "카메라에 조금 더 가까이 와 주세요.",
+  BACK: "카메라에서 조금 멀어져 주세요.",
+  LEFT: "화면 기준 왼쪽으로 조금 이동해 주세요.",
+  RIGHT: "화면 기준 오른쪽으로 조금 이동해 주세요.",
+  UP: "얼굴을 조금 위로 맞춰 주세요.",
+  DOWN: "얼굴을 조금 아래로 맞춰 주세요.",
+  FRONTAL: "고개를 들거나 숙이지 말고 카메라를 정면으로 봐 주세요.",
+  LEVEL: "고개를 기울이지 말고 똑바로 해 주세요.",
+  HOLD: "좋아요. 정면으로 잠깐 가만히 있어 주세요.",
+  READY: "중앙 확인을 마쳤어요. 버튼을 눌러 기준을 확정해 주세요.",
+});
+
+export function facePosition(result) {
+  if (!result?.faceLandmarks?.length) return { issue: "NO_FACE" };
+  if (result.faceLandmarks.length !== 1) return { issue: "MULTIPLE_FACES" };
+  const points = result.faceLandmarks[0];
+  const m = result.facialTransformationMatrixes?.[0]?.data;
+  if (
+    !points.length ||
+    m?.length !== 16 ||
+    [...m].some((n) => !Number.isFinite(n)) ||
+    points.some(({ x, y }) => !Number.isFinite(x) || !Number.isFinite(y))
+  )
+    return { issue: "INVALID_POSE" };
+  if (Math.hypot(m[0], m[1], m[2]) < 1e-8 || Math.hypot(m[6], m[10]) < 1e-8)
+    return { issue: "INVALID_POSE" };
+  const xs = points.map((point) => point.x),
+    ys = points.map((point) => point.y);
+  const left = Math.min(...xs),
+    right = Math.max(...xs),
+    top = Math.min(...ys),
+    bottom = Math.max(...ys);
+  const toDeg = 180 / Math.PI;
+  // JS SDK는 column-major 배열을 반환한다. Python의 4x4 행렬과 같은 축으로 읽는다.
+  const pitch = Math.atan2(m[6], m[10]) * toDeg;
+  const yaw = -Math.atan2(m[2], Math.hypot(m[6], m[10])) * toDeg;
+  const roll = Math.atan2(-m[1], m[0]) * toDeg;
+  const face = {
+    x: (left + right) / 2,
+    y: (top + bottom) / 2,
+    width: right - left,
+    height: bottom - top,
+    yaw,
+    pitch,
+    roll,
+  };
+  let issue = null;
+  if (left < 0 || top < 0 || right > 1 || bottom > 1) issue = "CROPPED";
+  else if (face.width < 0.18 || face.height < 0.3) issue = "CLOSER";
+  else if (face.width > 0.5 || face.height > 0.8) issue = "BACK";
+  else if (face.x < 0.42) issue = "LEFT";
+  else if (face.x > 0.58) issue = "RIGHT";
+  else if (face.y < 0.38) issue = "DOWN";
+  else if (face.y > 0.58) issue = "UP";
+  else if (Math.abs(yaw) > 15 || Math.abs(pitch) > 15) issue = "FRONTAL";
+  else if (Math.abs(roll) > 12) issue = "LEVEL";
+  return { ...face, issue };
+}
+
+export function centerProgress(history, result) {
+  const face = facePosition(result);
+  const next = face.issue ? [] : [...history, face].slice(-REQUIRED_FRAMES);
+  const deviation = (key) => {
+    const mean = next.reduce((sum, item) => sum + item[key], 0) / next.length;
+    return Math.sqrt(
+      next.reduce((sum, item) => sum + (item[key] - mean) ** 2, 0) /
+        next.length,
+    );
+  };
+  const ready =
+    next.length === REQUIRED_FRAMES &&
+    deviation("yaw") <= 2 &&
+    deviation("pitch") <= 2 &&
+    deviation("x") <= 0.015 &&
+    deviation("y") <= 0.015;
+  return {
+    history: next,
+    ready,
+    hint: CENTER_HINTS[face.issue || (ready ? "READY" : "HOLD")],
+    progress: next.length / REQUIRED_FRAMES,
+  };
+}
+
+async function createTracker() {
+  const { FaceLandmarker, FilesetResolver } = await import(
+    "@mediapipe/tasks-vision"
+  );
+  const root = `${import.meta.env.BASE_URL}vision/`;
+  const files = await FilesetResolver.forVisionTasks(`${root}wasm`);
+  return FaceLandmarker.createFromOptions(files, {
+    baseOptions: {
+      modelAssetPath: `${root}face_landmarker.task`,
+      delegate: "CPU",
+    },
+    runningMode: "VIDEO",
+    numFaces: 2,
+    outputFacialTransformationMatrixes: true,
+    minFaceDetectionConfidence: 0.5,
+    minFacePresenceConfidence: 0.5,
+    minTrackingConfidence: 0.5,
+  });
+}
+
+export function waitForCenteredFace(
+  video,
+  { signal, onState, setConfirm, create = createTracker },
+) {
+  return new Promise((resolve, reject) => {
+    let tracker,
+      timer,
+      settled = false,
+      history = [],
+      ready = false;
+    const finish = (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      clearTimeout(deadline);
+      signal.removeEventListener("abort", abort);
+      setConfirm(null);
+      try {
+        tracker?.close();
+      } catch {
+        /* Release is best effort after interruption. */
+      }
+      if (error) reject(error);
+      else resolve();
+    };
+    const abort = () =>
+      finish(signal.reason || trustError("CAMERA_INTERRUPTED"));
+    const deadline = setTimeout(
+      () => finish(trustError("CAMERA_ALIGNMENT_TIMEOUT")),
+      60_000,
+    );
+    const tick = () => {
+      if (settled) return;
+      try {
+        if (!video || video.readyState < 2)
+          throw trustError("CAMERA_INTERRUPTED");
+        const state = centerProgress(
+          history,
+          tracker.detectForVideo(video, performance.now()),
+        );
+        history = state.history;
+        ready = state.ready;
+        onState({ ready, hint: state.hint, progress: state.progress });
+        if (!settled) timer = setTimeout(tick, 100);
+      } catch {
+        finish(trustError("CAMERA_MODEL_UNAVAILABLE"));
+      }
+    };
+    signal.addEventListener("abort", abort, { once: true });
+    if (signal.aborted) {
+      abort();
+      return;
+    }
+    setConfirm(() => {
+      if (ready) finish();
+    });
+    Promise.resolve()
+      .then(create)
+      .then(
+        (created) => {
+          if (settled) {
+            created.close();
+            return;
+          }
+          tracker = created;
+          tick();
+        },
+        () => finish(trustError("CAMERA_MODEL_UNAVAILABLE")),
+      );
+  });
+}

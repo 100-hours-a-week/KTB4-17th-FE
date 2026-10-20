@@ -56,15 +56,15 @@ function sessionWith(decisions = [], overrides = {}) {
       ? "VERIFIED"
       : last?.status === "PROCESSING"
         ? "PROCESSING"
-        : attemptsUsed === 5
+        : attemptsUsed === 3
           ? "EXHAUSTED"
           : "READY");
   return {
     sessionId: 7,
     status,
     attemptsUsed,
-    maxAttempts: 5,
-    remainingAttempts: 5 - attemptsUsed,
+    maxAttempts: 3,
+    remainingAttempts: 3 - attemptsUsed,
     nextAttemptNo: status === "READY" ? attemptsUsed + 1 : null,
     canRetry: status === "READY",
     attempt: last,
@@ -85,12 +85,43 @@ function dependencies(overrides = {}) {
   };
 }
 
+test("three attempts retain the same challenge returned by the server", async () => {
+  const first = ["LOOK_STRAIGHT", "HAND_TWO", "HAND_UP", "LOOK_UP"];
+  const second = [...first];
+  const seen = [];
+  const result = await verifySequentially(
+    sessionWith([], { challenges: first }),
+    dependencies({
+      record: async ({ attemptNo, challenges }) => {
+        seen.push({ attemptNo, challenges });
+        return new File([String(attemptNo)], "video.mp4", {
+          type: "video/mp4",
+        });
+      },
+      submit: async (_, attemptNo) =>
+        sessionWith(
+          [
+            ...Array(attemptNo - 1).fill("RETRY"),
+            attemptNo === 3 ? "VERIFIED" : "RETRY",
+          ],
+          { challenges: second },
+        ),
+    }),
+  );
+  assert.equal(result.status, "VERIFIED");
+  assert.deepEqual(seen, [
+    { attemptNo: 1, challenges: first },
+    { attemptNo: 2, challenges: second },
+    { attemptNo: 3, challenges: second },
+  ]);
+});
+
 for (const decisions of [
-  Array(5).fill("RETRY"),
-  Array(5).fill("NOT_VERIFIED"),
-  ["NOT_VERIFIED", "RETRY", "NOT_VERIFIED", "RETRY", "RETRY"],
+  Array(3).fill("RETRY"),
+  Array(3).fill("NOT_VERIFIED"),
+  ["NOT_VERIFIED", "RETRY", "RETRY"],
 ]) {
-  test(`${decisions.join("/")} submits five distinct clips in order in the same session`, async () => {
+  test(`${decisions.join("/")} submits three distinct clips in order in the same session`, async () => {
     const submitted = [];
     let recordings = 0;
     let inFlight = false;
@@ -117,15 +148,15 @@ for (const decisions of [
     assert.equal(result.canRetry, false);
     assert.deepEqual(
       submitted.map((item) => item.attempt),
-      [1, 2, 3, 4, 5],
+      [1, 2, 3],
     );
     assert.ok(submitted.every((item) => item.id === 7));
-    assert.equal(new Set(submitted.map((item) => item.body)).size, 5);
-    assert.equal(result.attempts.length, 5);
+    assert.equal(new Set(submitted.map((item) => item.body)).size, 3);
+    assert.equal(result.attempts.length, 3);
   });
 }
 
-for (const successAt of [1, 2, 3, 4, 5]) {
+for (const successAt of [1, 2, 3]) {
   test(`VERIFIED at attempt ${successAt} wins over previous failures and stops recording`, async () => {
     let recordings = 0;
     const decisions = Array.from({ length: successAt - 1 }, (_, index) =>
@@ -177,18 +208,18 @@ test("lost POST response recovers PROCESSING then VERIFIED without resubmitting"
 test("lost NOT_VERIFIED response resumes using the server's nextAttemptNo", async () => {
   const numbers = [];
   const result = await verifySequentially(
-    ready(2),
+    ready(1),
     dependencies({
       submit: async (_, number) => {
         numbers.push(number);
-        if (number === 3) throw new TypeError("network");
-        return sessionWith(["RETRY", "RETRY", "NOT_VERIFIED", "VERIFIED"]);
+        if (number === 2) throw new TypeError("network");
+        return sessionWith(["RETRY", "NOT_VERIFIED", "VERIFIED"]);
       },
-      getStatus: async () => sessionWith(["RETRY", "RETRY", "NOT_VERIFIED"]),
+      getStatus: async () => sessionWith(["RETRY", "NOT_VERIFIED"]),
     }),
   );
   assert.equal(result.status, "VERIFIED");
-  assert.deepEqual(numbers, [3, 4]);
+  assert.deepEqual(numbers, [2, 3]);
 });
 
 test("a rejected request that was not accepted is not automatically repeated", async () => {
@@ -230,7 +261,7 @@ test("PROCESSING is reconciled before opening the camera or recording", async ()
   assert.equal(recordings, 0);
 });
 
-for (const number of [1, 5]) {
+for (const number of [1, 3]) {
   test(`technical error at attempt ${number} remains a service error even when EXHAUSTED`, async () => {
     const failed = sessionWith([
       ...Array(number - 1).fill("RETRY"),
@@ -255,7 +286,7 @@ for (const number of [1, 5]) {
       { code: "AI_SERVER_RESPONSE_INVALID" },
     );
     assert.equal(sessionIssue(failed).kind, "system");
-    if (number === 5) assert.equal(sessionIssue(failed).action, "restart");
+    if (number === 3) assert.equal(sessionIssue(failed).action, "restart");
   });
 }
 
@@ -338,13 +369,13 @@ test("server validity, not a fixed 60-second timer, bounds sequential retries", 
           submits++;
           return sessionWith([
             ...Array(number - 1).fill("NOT_VERIFIED"),
-            number === 5 ? "VERIFIED" : "NOT_VERIFIED",
+            number === 3 ? "VERIFIED" : "NOT_VERIFIED",
           ]);
         },
       }),
     );
     assert.equal(result.status, "VERIFIED");
-    assert.equal(submits, 5);
+    assert.equal(submits, 3);
   } finally {
     Date.now = originalNow;
   }
@@ -365,7 +396,7 @@ test("an expired session prevents another recording", async () => {
 test("the last capture completes before its submission and result wait", async () => {
   const events = [];
   await verifySequentially(
-    ready(4),
+    ready(2),
     dependencies({
       record: async () => {
         events.push("capture");
@@ -374,7 +405,7 @@ test("the last capture completes before its submission and result wait", async (
       onStage: ({ stage }) => events.push(stage),
       submit: async () => {
         events.push("submit");
-        return sessionWith([...Array(4).fill("RETRY"), "VERIFIED"]);
+        return sessionWith([...Array(2).fill("RETRY"), "VERIFIED"]);
       },
     }),
   );
@@ -416,11 +447,11 @@ test("invalid and contradictory session data cannot initiate a recording", async
     null,
     { ...ready(), sessionId: 0 },
     { ...ready(), status: "UNKNOWN" },
-    { ...ready(), nextAttemptNo: 6 },
+    { ...ready(), nextAttemptNo: 4 },
     { ...ready(), canRetry: false },
     { ...ready(), attemptsUsed: -1 },
     { ...ready(), remainingAttempts: 4 },
-    { ...ready(), maxAttempts: 6 },
+    { ...ready(), maxAttempts: 4 },
     { ...ready(), status: "EXHAUSTED", canRetry: false, nextAttemptNo: null },
     { ...ready(1), attempts: [] },
     { ...ready(1), attempt: null },
@@ -737,16 +768,16 @@ test("all photo rejection reasons use photo replacement guidance without exposin
   assert.equal(confirmed.details.length, 1);
 });
 
-test("every combination of five normal failure results retains specific additional guidance", () => {
+test("every combination of three normal failure results retains specific additional guidance", () => {
   const codes = [
     "FACE_MISMATCH",
     "NO_FACE",
     "FACE_COMPARISON_FAILED",
     "LIVENESS_FAILED",
   ];
-  for (let combination = 0; combination < 4 ** 5; combination++) {
+  for (let combination = 0; combination < 4 ** 3; combination++) {
     const reasons = Array.from(
-      { length: 5 },
+      { length: 3 },
       (_, index) => codes[Math.floor(combination / 4 ** index) % 4],
     );
     const attempts = reasons.map((code, index) =>
@@ -778,14 +809,13 @@ test("a final technical error takes precedence over historic mismatch, while his
     errorCode: "AI_SERVER_UNAVAILABLE",
   });
   const system = sessionIssue(
-    sessionWith(["NOT_VERIFIED", "RETRY", "NOT_VERIFIED", "RETRY", errorAt(5)]),
+    sessionWith(["NOT_VERIFIED", "RETRY", errorAt(3)]),
   );
   assert.equal(system.kind, "system");
   assert.equal(system.code, "AI_SERVER_UNAVAILABLE");
   assert.ok(system.details.length > 0);
   assert.equal(
-    sessionIssue(sessionWith([errorAt(1), "RETRY", "RETRY", "RETRY", "RETRY"]))
-      .kind,
+    sessionIssue(sessionWith([errorAt(1), "RETRY", "RETRY"])).kind,
     "camera",
   );
   assert.equal(sessionIssue(sessionWith([errorAt(1), "VERIFIED"])), null);
@@ -919,13 +949,13 @@ test("recording progress starts at zero and only reaches completion for a usable
   assert.deepEqual(cancelled, [0]);
 });
 
-test("all bounded RETRY/NOT_VERIFIED decision sequences continue until success or five attempts", async () => {
-  for (let length = 0; length <= 5; length++) {
+test("all bounded RETRY/NOT_VERIFIED decision sequences continue until success or three attempts", async () => {
+  for (let length = 0; length <= 3; length++) {
     for (let mask = 0; mask < 2 ** length; mask++) {
       const decisions = Array.from({ length }, (_, index) =>
         mask & (1 << index) ? "NOT_VERIFIED" : "RETRY",
       );
-      if (length < 5) decisions.push("VERIFIED");
+      if (length < 3) decisions.push("VERIFIED");
       let submitted = 0;
       const result = await verifySequentially(
         ready(),
@@ -937,7 +967,7 @@ test("all bounded RETRY/NOT_VERIFIED decision sequences continue until success o
         }),
       );
       assert.equal(submitted, decisions.length);
-      assert.equal(result.status, length === 5 ? "EXHAUSTED" : "VERIFIED");
+      assert.equal(result.status, length === 3 ? "EXHAUSTED" : "VERIFIED");
     }
   }
 });
