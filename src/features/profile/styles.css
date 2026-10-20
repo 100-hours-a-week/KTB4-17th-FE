@@ -796,3 +796,26 @@
   height: 30px;
   image-rendering: pixelated;
 }
+
+/* 모바일 반응형 (#218): 화면 크기별 여백·크기만 적용하고 색·그림자 등 현재 디자인은 그대로 둔다 */
+@media (width <= 350px) {
+  .main-scroll.settings-main,
+  .main-scroll.edit-main,
+  .main-scroll.persona-main {
+    padding-inline: 16px;
+  }
+
+  .my-main .my-identity {
+    gap: 12px;
+    margin-inline: 12px;
+  }
+
+  .my-main .my-profile-avatar-button .person-avatar.large {
+    width: 72px;
+    height: 84px;
+  }
+
+  .my-main .my-menu {
+    margin-inline: 12px;
+  }
+}

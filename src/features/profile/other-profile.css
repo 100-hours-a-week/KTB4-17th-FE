@@ -492,3 +492,30 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* 모바일 반응형 (#218): 화면 크기별 여백·크기만 적용하고 색·그림자 등 현재 디자인은 그대로 둔다 */
+@media (width <= 350px) {
+  .other-profile-info {
+    margin-inline: 8px;
+    padding-inline: 14px;
+  }
+
+  .other-profile-detail-grid {
+    gap: 6px;
+  }
+
+  .other-profile-detail-tile {
+    padding-inline: 8px;
+  }
+}
+
+@media (width >= 720px) {
+  .other-profile-hero {
+    height: min(60dvh, 580px);
+  }
+
+  .other-profile-info {
+    margin-inline: 24px;
+    padding: 26px;
+  }
+}

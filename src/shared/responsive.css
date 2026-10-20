@@ -129,7 +129,7 @@
 }
 
 .preference-sheet {
-  max-width: min(100%, 390px);
+  max-width: min(100%, 480px);
   max-height: calc(var(--app-viewport-height, 100dvh) - 24px);
 }
 
@@ -153,4 +153,34 @@
 .kakao-file-name,
 .report-main {
   overflow-wrap: anywhere;
+}
+
+/* 모바일 반응형 (#218): 화면 크기별 여백·크기만 적용하고 색·그림자 등 현재 디자인은 그대로 둔다 */
+@media (width >= 600px) {
+  .app-shell {
+    align-items: center;
+    padding: 24px;
+  }
+
+  .app-screen {
+    height: min(960px, calc(var(--app-viewport-height, 100dvh) - 48px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: Honor the OS accessibility preference over feature animations. */
+    animation-duration: 0.01ms !important;
+
+    /* biome-ignore lint/complexity/noImportantStyles: Stop repeating decorative animations in reduced motion mode. */
+    animation-iteration-count: 1 !important;
+
+    /* biome-ignore lint/complexity/noImportantStyles: Honor reduced motion across all interactive states. */
+    transition-duration: 0.01ms !important;
+
+    /* biome-ignore lint/complexity/noImportantStyles: Disable feature-level smooth scrolling for reduced motion. */
+    scroll-behavior: auto !important;
+  }
 }
