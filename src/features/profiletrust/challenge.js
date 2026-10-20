@@ -60,11 +60,41 @@ export function challengeInstruction(challenge) {
   return `${HAND_NAMES[challenge.hand]} 모양이 ${direction} 향하도록 얼굴 옆에 유지하세요. 고개는 ${HEAD_NAMES[challenge.head]} 살짝 움직였다가 정면으로 돌아오세요.`;
 }
 
+// 안내 단계는 촬영 시간 기준이며 자세 인식 성공 여부를 뜻하지 않는다.
+export function headGuideStep(stage, progress = 0) {
+  if (stage !== "recording") return 0;
+  return progress < 0.18 ? 0 : progress < 0.72 ? 1 : 2;
+}
+
+export const HEAD_MOTIONS = Object.freeze({
+  TURN_LEFT: {
+    label: "내 왼쪽으로 돌리기",
+    detail: "어깨는 그대로 두고 코가 내 왼쪽을 향하도록 천천히 돌려 주세요.",
+    icon: "arrowLeft",
+  },
+  TURN_RIGHT: {
+    label: "내 오른쪽으로 돌리기",
+    detail: "어깨는 그대로 두고 코가 내 오른쪽을 향하도록 천천히 돌려 주세요.",
+    icon: "arrowRight",
+  },
+  LOOK_UP: {
+    label: "고개 위로 들기",
+    detail: "몸은 그대로 두고 턱을 살짝 들어 위로 바라봐 주세요.",
+    icon: "arrowDown",
+  },
+  LOOK_DOWN: {
+    label: "고개 아래로 숙이기",
+    detail: "몸은 그대로 두고 턱을 살짝 내려 아래로 바라봐 주세요.",
+    icon: "arrowDown",
+  },
+});
+
 export function recordingHint(challenge, progress) {
   if (challenge.legacy) return "정면을 유지해 주세요.";
-  if (progress < 0.18)
+  const step = headGuideStep("recording", progress);
+  if (step === 0)
     return "손 모양을 유지하고, 먼저 카메라를 정면으로 봐 주세요.";
-  if (progress < 0.72)
+  if (step === 1)
     return `손은 그대로, 고개를 ${HEAD_NAMES[challenge.head]} 살짝 움직여 주세요.`;
   return "손 모양을 유지하면서 다시 정면을 봐 주세요.";
 }

@@ -8,7 +8,13 @@ import {
   prepareProfilePhoto,
   profilePhotoErrorMessage,
 } from "../profile/photoUpload.js";
-import { HAND_DIRECTION_NAMES, HAND_NAMES, HEAD_NAMES } from "./challenge.js";
+import {
+  HAND_DIRECTION_NAMES,
+  HAND_NAMES,
+  HEAD_MOTIONS,
+  HEAD_NAMES,
+  headGuideStep,
+} from "./challenge.js";
 import {
   CLIP_DURATION_MS,
   reorderPhotos,
@@ -219,6 +225,48 @@ function PoseGuide({ challenge }) {
           <p>가로 방향은 왼쪽·오른쪽 어느 쪽을 향해도 괜찮아요.</p>
         )}
       </div>
+    </section>
+  );
+}
+
+function HeadMotionGuide({ challenge, progress }) {
+  if (!challenge || challenge.legacy) return null;
+  const motion = HEAD_MOTIONS[challenge.head];
+  const step = headGuideStep(progress.stage, progress.clipProgress);
+  const recording = progress.stage === "recording";
+  const labels = ["정면 보기", motion.label, "다시 정면"];
+  return (
+    <section className="trust-head-guide" aria-label="고개 움직임 순서">
+      <ol className="trust-head-steps">
+        {labels.map((label, index) => (
+          <li
+            key={label}
+            aria-current={recording && index === step ? "step" : undefined}
+          >
+            <span className="trust-head-number" aria-hidden="true">
+              {index + 1}
+            </span>
+            {label}
+          </li>
+        ))}
+      </ol>
+      <p className="trust-head-direction">
+        <PixelIcon
+          name={motion.icon}
+          scale={2}
+          className={challenge.head === "LOOK_UP" ? "trust-head-up" : ""}
+        />
+        {recording
+          ? step === 1
+            ? motion.detail
+            : step === 0
+              ? "지금은 정면을 보고, 다음 안내를 기다려 주세요."
+              : "다시 정면으로 돌아와 촬영이 끝날 때까지 유지해 주세요."
+          : motion.detail}
+      </p>
+      <small>
+        좌우는 내 몸 기준이에요. 손 모양은 촬영 끝까지 유지해 주세요.
+      </small>
     </section>
   );
 }
@@ -501,104 +549,125 @@ export function ProfilePhotoEditor({
                   </>
                 )}
               </h1>
+              <div className="trust-capture-workspace">
+                <p
+                  className="trust-camera-hint"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  {["analyzing", "recovering", "finalizing"].includes(
+                    trust.progress.stage,
+                  )
+                    ? trust.cameraOn
+                      ? "촬영한 영상을 확인하고 있어요. 다음 촬영을 위해 정면을 유지해 주세요."
+                      : "카메라를 껐어요. 결과 확인이 끝날 때까지 기다려 주세요."
+                    : trust.hint}
+                </p>
+                {["pose", "recording"].includes(trust.progress.stage) && (
+                  <>
+                    <PoseGuide challenge={trust.challenge} />
+                    <HeadMotionGuide
+                      challenge={trust.challenge}
+                      progress={trust.progress}
+                    />
+                  </>
+                )}
+                <div
+                  className={`trust-camera ${trust.cameraOn ? "is-live" : ""}`}
+                  style={{
+                    "--trust-camera-aspect": trust.cameraAspect || 4 / 3,
+                  }}
+                >
+                  <video
+                    ref={trust.videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    aria-label="본인 인증 카메라 미리보기"
+                  />
+                  {!trust.cameraOn && (
+                    <div className="trust-camera-placeholder">
+                      <PixelIcon name="bust" scale={8} />
+                      <span>
+                        {trust.progress.stage === "finalizing"
+                          ? "인증한 사진을 저장하고 있어요"
+                          : ["analyzing", "recovering"].includes(
+                                trust.progress.stage,
+                              )
+                            ? "인증 결과를 확인하고 있어요"
+                            : trust.active
+                              ? "카메라 인증을 준비하고 있어요"
+                              : "카메라를 켜면 내 얼굴이 보여요"}
+                      </span>
+                    </div>
+                  )}
+                  {trust.cameraOn && (
+                    <div
+                      className={`trust-face-outline ${trust.centerReady ? "is-ready" : ""}`}
+                      aria-hidden="true"
+                    />
+                  )}
+                  {trust.cameraOn && (
+                    <span className="trust-live">
+                      <i />{" "}
+                      {trust.progress.stage === "recording"
+                        ? "포즈 촬영 중"
+                        : trust.progress.stage === "centering"
+                          ? "얼굴 중앙 맞추기"
+                          : "포즈 준비"}
+                    </span>
+                  )}
+                  {trust.previewUrl && (
+                    <img
+                      className="trust-reference-photo"
+                      src={trust.previewUrl}
+                      width="52"
+                      height="64"
+                      alt="선택한 정면 사진"
+                    />
+                  )}
+                </div>
+                {trust.cameraOn && (
+                  <p className="trust-capture-tip">
+                    얼굴 전체를 타원 안에 맞춰 주세요. 손은 얼굴 옆에 두세요.
+                  </p>
+                )}
+                <div className="trust-capture-controls">
+                  {trust.active && trust.progress.stage === "centering" && (
+                    <PixelButton
+                      onClick={trust.confirmCenter}
+                      disabled={disabled || !trust.centerReady}
+                    >
+                      {trust.centerReady
+                        ? "중앙 확인 · 다음으로"
+                        : "얼굴을 중앙에 맞춰 주세요"}
+                    </PixelButton>
+                  )}
+                  {trust.active && trust.progress.stage === "pose" && (
+                    <PixelButton
+                      onClick={trust.confirmPose}
+                      disabled={disabled}
+                    >
+                      포즈 준비 완료 · 촬영 시작
+                    </PixelButton>
+                  )}
+                  {!trust.active && (
+                    <PixelButton
+                      onClick={() => void trust.start()}
+                      disabled={disabled}
+                    >
+                      {trust.progress.attemptsUsed > 0
+                        ? "카메라 켜고 이어서 인증하기"
+                        : "카메라 켜고 인증하기"}
+                    </PixelButton>
+                  )}
+                </div>
+              </div>
               <VerificationProgress
                 progress={trust.progress}
                 active={trust.active}
               />
-              {trust.active && trust.progress.stage === "centering" && (
-                <PixelButton
-                  onClick={trust.confirmCenter}
-                  disabled={disabled || !trust.centerReady}
-                >
-                  {trust.centerReady
-                    ? "중앙 확인 · 다음으로"
-                    : "얼굴을 중앙에 맞춰 주세요"}
-                </PixelButton>
-              )}
-              {["pose", "recording"].includes(trust.progress.stage) && (
-                <PoseGuide challenge={trust.challenge} />
-              )}
-              {trust.active && trust.progress.stage === "pose" && (
-                <PixelButton onClick={trust.confirmPose} disabled={disabled}>
-                  포즈 준비 완료 · 촬영 시작
-                </PixelButton>
-              )}
-              {!trust.active && (
-                <PixelButton
-                  onClick={() => void trust.start()}
-                  disabled={disabled}
-                >
-                  {trust.progress.attemptsUsed > 0
-                    ? "카메라 켜고 이어서 인증하기"
-                    : "카메라 켜고 인증하기"}
-                </PixelButton>
-              )}
-              <div
-                className={`trust-camera ${trust.cameraOn ? "is-live" : ""}`}
-                style={
-                  trust.cameraOn
-                    ? { aspectRatio: trust.cameraAspect, height: "auto" }
-                    : undefined
-                }
-              >
-                <video
-                  ref={trust.videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  aria-label="본인 인증 카메라 미리보기"
-                />
-                {!trust.cameraOn && (
-                  <div className="trust-camera-placeholder">
-                    <PixelIcon name="bust" scale={8} />
-                    <span>
-                      {trust.progress.stage === "finalizing"
-                        ? "인증한 사진을 저장하고 있어요"
-                        : ["analyzing", "recovering"].includes(
-                              trust.progress.stage,
-                            )
-                          ? "인증 결과를 확인하고 있어요"
-                          : trust.active
-                            ? "카메라 인증을 준비하고 있어요"
-                            : "카메라를 켜면 내 얼굴이 보여요"}
-                    </span>
-                  </div>
-                )}
-                {trust.cameraOn && (
-                  <div
-                    className={`trust-face-outline ${trust.centerReady ? "is-ready" : ""}`}
-                    aria-hidden="true"
-                  />
-                )}
-                {trust.cameraOn && (
-                  <span className="trust-live">
-                    <i />{" "}
-                    {trust.progress.stage === "recording"
-                      ? "포즈 촬영 중"
-                      : trust.progress.stage === "centering"
-                        ? "얼굴 중앙 맞추기"
-                        : "포즈 준비"}
-                  </span>
-                )}
-                {trust.previewUrl && (
-                  <img
-                    className="trust-reference-photo"
-                    src={trust.previewUrl}
-                    width="52"
-                    height="64"
-                    alt="선택한 정면 사진"
-                  />
-                )}
-              </div>
-              <p className="trust-camera-hint" role="status">
-                {["analyzing", "recovering", "finalizing"].includes(
-                  trust.progress.stage,
-                )
-                  ? trust.cameraOn
-                    ? "촬영한 영상을 확인하고 있어요. 다음 촬영을 위해 정면을 유지해 주세요."
-                    : "카메라를 껐어요. 결과 확인이 끝날 때까지 기다려 주세요."
-                  : trust.hint}
-              </p>
               <p className="trust-privacy">
                 <PixelIcon name="lock" /> 인증을 위해 짧은 영상을 전송해요.
                 영상은 백엔드에 저장하지 않아요.

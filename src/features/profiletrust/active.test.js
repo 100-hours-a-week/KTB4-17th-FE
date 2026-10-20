@@ -9,6 +9,7 @@ import {
   challengeInstruction,
   HAND_NAMES,
   HEAD_NAMES,
+  headGuideStep,
   parseChallenge,
   recordingHint,
 } from "./challenge.js";
@@ -185,4 +186,26 @@ test("recording guidance starts neutral, moves once and returns neutral", () => 
   assert.ok(recordingHint(target, 0).includes("먼저"));
   assert.ok(recordingHint(target, 0.5).includes("위로"));
   assert.ok(recordingHint(target, 0.9).includes("다시 정면"));
+});
+
+test("head guide and spoken instructions change together at recording boundaries", () => {
+  const challenge = parseChallenge([
+    "LOOK_STRAIGHT",
+    "HAND_TWO",
+    "HAND_UP",
+    "TURN_LEFT",
+  ]);
+  assert.equal(headGuideStep("pose", 1), 0);
+  for (const progress of [0, 0.179]) {
+    assert.equal(headGuideStep("recording", progress), 0);
+    assert.ok(recordingHint(challenge, progress).includes("먼저"));
+  }
+  for (const progress of [0.18, 0.719]) {
+    assert.equal(headGuideStep("recording", progress), 1);
+    assert.ok(recordingHint(challenge, progress).includes("본인 기준 왼쪽"));
+  }
+  for (const progress of [0.72, 1]) {
+    assert.equal(headGuideStep("recording", progress), 2);
+    assert.ok(recordingHint(challenge, progress).includes("다시 정면"));
+  }
 });
