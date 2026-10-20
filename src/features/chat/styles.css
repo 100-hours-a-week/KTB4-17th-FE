@@ -767,7 +767,9 @@
   min-width: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
+
+  /* 상대 사진·이름을 뒤로가기 바로 옆(왼쪽)에 붙인다 */
+  justify-content: flex-start;
   gap: 8px;
 }
 
