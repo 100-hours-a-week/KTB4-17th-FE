@@ -1,3 +1,56 @@
+.trust-head-guide {
+  display: grid;
+  gap: 6px;
+  color: var(--ink);
+}
+
+.trust-head-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trust-head-steps li {
+  padding: 6px 3px;
+  border: 1px solid var(--lavender);
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+  word-break: keep-all;
+}
+
+.trust-head-steps li[aria-current="step"] {
+  border: 2px solid var(--purple-deep);
+  background: var(--soft-lavender);
+  font-weight: 700;
+}
+
+.trust-head-number {
+  display: block;
+}
+
+.trust-head-direction {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.trust-head-direction > svg {
+  flex: none;
+  color: var(--purple-deep);
+}
+
+.trust-head-guide > small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 .profile-trust {
   --trust-gap: 20px;
 
@@ -627,5 +680,107 @@
   .trust-photo-badges {
     right: 44px;
     left: 4px;
+  }
+}
+
+/* 촬영 지시·카메라·버튼을 한 영역에 모아 모바일에서도 함께 보이게 한다. */
+.profile-trust[data-trust-phase="camera"] {
+  --trust-gap: 12px;
+}
+
+.profile-trust[data-trust-phase="camera"] h1 {
+  font-size: 20px;
+  line-height: 1.35;
+}
+
+.trust-capture-workspace {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 2px solid var(--lavender);
+  background: var(--paper, #fff);
+}
+
+.trust-capture-workspace .trust-camera-hint {
+  min-height: 0;
+  padding: 8px 10px;
+  background: var(--soft-lavender);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.trust-capture-workspace .trust-camera {
+  width: min(100%, calc(min(38dvh, 300px) * var(--trust-camera-aspect)));
+  height: auto;
+  aspect-ratio: var(--trust-camera-aspect);
+  justify-self: center;
+}
+
+.trust-capture-workspace .trust-pose-guide {
+  gap: 8px;
+  padding: 8px;
+}
+
+.trust-capture-workspace .trust-pose-symbol {
+  flex-basis: 36px;
+  font-size: 30px;
+}
+
+.trust-capture-workspace .trust-pose-guide p,
+.trust-capture-workspace .trust-pose-guide small {
+  display: none;
+}
+
+.trust-capture-workspace .trust-pose-guide strong {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.trust-capture-controls {
+  display: grid;
+  gap: 8px;
+}
+
+.trust-capture-workspace .trust-reference-photo {
+  width: 36px;
+  height: 44px;
+  right: 6px;
+  bottom: 6px;
+}
+
+@media (height < 650px) {
+  .trust-capture-workspace {
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .trust-capture-workspace .trust-camera {
+    width: min(100%, calc(30dvh * var(--trust-camera-aspect)));
+  }
+}
+
+.trust-capture-tip {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.trust-head-up {
+  transform: rotate(180deg);
+}
+
+.trust-capture-workspace:has(.trust-head-guide) .trust-camera {
+  width: min(100%, calc(min(30dvh, 240px) * var(--trust-camera-aspect)));
+}
+
+@media (height < 650px) {
+  .trust-capture-workspace:has(.trust-head-guide) .trust-camera {
+    width: min(100%, calc(24dvh * var(--trust-camera-aspect)));
   }
 }
