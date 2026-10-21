@@ -20,9 +20,16 @@ export const HEAD_NAMES = Object.freeze({
 });
 export const HAND_DIRECTION_NAMES = Object.freeze({
   UP: "위쪽",
-  DOWN: "아래쪽",
+  DOWN: "방향 무관",
   SIDEWAYS: "가로",
 });
+
+export function requiresHandDirection(hand, direction) {
+  return (
+    direction !== "DOWN" &&
+    !["HAND_FIST", "HAND_LOVE_YOU", "HAND_CALL_ME"].includes(hand)
+  );
+}
 
 export function parseChallenge(codes) {
   if (
@@ -34,32 +41,31 @@ export function parseChallenge(codes) {
   }
   if (
     !Array.isArray(codes) ||
-    codes.length !== 4 ||
+    ![3, 4].includes(codes.length) ||
     codes[0] !== "LOOK_STRAIGHT" ||
     !Object.hasOwn(HAND_NAMES, codes[1]) ||
     !["HAND_UP", "HAND_DOWN", "HAND_SIDEWAYS"].includes(codes[2]) ||
-    !Object.hasOwn(HEAD_NAMES, codes[3])
+    (codes.length === 4 && !Object.hasOwn(HEAD_NAMES, codes[3]))
   )
     throw trustError("VERIFICATION_RESPONSE_INVALID");
   return {
     legacy: false,
     hand: codes[1],
     direction: codes[2].slice("HAND_".length),
-    head: codes[3],
+    head: codes[3] || null,
   };
 }
 
 export function challengeInstruction(challenge) {
   if (challenge.legacy) return "촬영하는 동안 정면을 유지해 주세요.";
-  if (challenge.hand === "HAND_FIST")
-    return `주먹은 방향에 상관없이 화면 안 편한 위치에 유지하세요. 왼손·오른손, 손바닥·손등 모두 괜찮아요. 얼굴은 가리지 말고, 고개는 ${HEAD_NAMES[challenge.head]} 살짝 움직였다가 정면으로 돌아오세요.`;
+  const head = challenge.head
+    ? `고개는 ${HEAD_NAMES[challenge.head]} 살짝 움직였다가 정면으로 돌아오세요.`
+    : "정면을 바라보며 손 모양을 3초 유지하면 자동으로 촬영을 마쳐요.";
+  if (!requiresHandDirection(challenge.hand, challenge.direction))
+    return `${HAND_NAMES[challenge.hand]} 모양은 방향에 상관없이 화면 안 편한 위치에 유지하세요. 왼손·오른손, 손바닥·손등 모두 괜찮아요. 얼굴은 가리지 마세요. ${head}`;
   const direction =
-    challenge.direction === "UP"
-      ? "위를"
-      : challenge.direction === "DOWN"
-        ? "아래를"
-        : "가로(왼쪽 또는 오른쪽)를";
-  return `${HAND_NAMES[challenge.hand]} 모양이 ${direction} 향하도록 화면 안 편한 위치에 유지하세요. 왼손·오른손, 손바닥·손등 모두 괜찮아요. 얼굴은 가리지 마세요. 고개는 ${HEAD_NAMES[challenge.head]} 살짝 움직였다가 정면으로 돌아오세요.`;
+    challenge.direction === "UP" ? "위를" : "가로(왼쪽 또는 오른쪽)를";
+  return `${HAND_NAMES[challenge.hand]} 모양이 ${direction} 향하도록 화면 안 편한 위치에 유지하세요. 왼손·오른손, 손바닥·손등 모두 괜찮아요. 얼굴은 가리지 마세요. ${head}`;
 }
 
 // 안내 단계는 촬영 시간 기준이며 자세 인식 성공 여부를 뜻하지 않는다.
@@ -93,6 +99,8 @@ export const HEAD_MOTIONS = Object.freeze({
 
 export function recordingHint(challenge, progress) {
   if (challenge.legacy) return "정면을 유지해 주세요.";
+  if (!challenge.head)
+    return "정면을 바라보며 안내된 손 모양을 3초 유지해 주세요.";
   const step = headGuideStep("recording", progress);
   if (step === 0)
     return "손 모양을 유지하고, 먼저 카메라를 정면으로 봐 주세요.";

@@ -85,6 +85,28 @@ function dependencies(overrides = {}) {
   };
 }
 
+test("server step-up response changes only the next recording challenge", async () => {
+  const basic = ["LOOK_STRAIGHT", "HAND_TWO", "HAND_DOWN"];
+  const raised = [...basic, "TURN_RIGHT"];
+  const seen = [];
+  const additional = completed(1, "RETRY", "ADDITIONAL_CHALLENGE_REQUIRED");
+  const result = await verifySequentially(
+    sessionWith([], { challenges: basic }),
+    dependencies({
+      record: async ({ challenges }) => {
+        seen.push(challenges);
+        return "clip";
+      },
+      submit: async (_, attemptNo) =>
+        attemptNo === 1
+          ? sessionWith([additional], { challenges: raised })
+          : sessionWith([additional, "VERIFIED"], { challenges: raised }),
+    }),
+  );
+  assert.equal(result.status, "VERIFIED");
+  assert.deepEqual(seen, [basic, raised]);
+});
+
 test("three attempts retain the same challenge returned by the server", async () => {
   const first = ["LOOK_STRAIGHT", "HAND_TWO", "HAND_UP", "LOOK_UP"];
   const second = [...first];
@@ -543,6 +565,34 @@ class Recorder {
     this.onstop?.();
   }
 }
+
+test("continuous hold completion stops the recorder and failure discards the clip", async () => {
+  let reached = false;
+  const file = await recordClip(
+    {},
+    {
+      Recorder,
+      duration: 10_000,
+      until: async () => {
+        reached = true;
+      },
+    },
+  );
+  assert.equal(reached, true);
+  assert.equal(await file.text(), "complete-mp4");
+  await assert.rejects(
+    recordClip(
+      {},
+      {
+        Recorder,
+        until: async () => {
+          throw trustError("CAMERA_INTERRUPTED");
+        },
+      },
+    ),
+    { code: "CAMERA_INTERRUPTED" },
+  );
+});
 
 test("each clip has a new recorder and retains its actual MP4 MIME and extension", async () => {
   Recorder.instances.length = 0;

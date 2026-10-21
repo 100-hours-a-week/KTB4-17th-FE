@@ -406,21 +406,105 @@
   line-height: 1.8;
 }
 
-.trust-face-outline {
+.trust-camera-silhouette {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 58%;
-  aspect-ratio: 1;
-  border: 2px dashed rgb(233 221 255 / 70%);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
+  inset: 0;
+  overflow: hidden;
+  color: #fff;
   pointer-events: none;
 }
 
-.trust-face-outline.is-ready {
-  border-color: #91c6a4;
-  border-style: solid;
+.trust-camera-silhouette .trust-silhouette-art {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: auto;
+  max-width: none;
+  height: 100%;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 65%));
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 7 6;
+}
+
+.trust-silhouette-head {
+  fill: rgb(255 255 255 / 4%);
+}
+
+.trust-silhouette-shoulders,
+.trust-silhouette-eyeline {
+  opacity: 0.65;
+}
+
+.trust-camera-silhouette.is-ready {
+  color: #a4efbb;
+}
+
+.trust-camera-silhouette.is-ready .trust-silhouette-art {
+  stroke-dasharray: none;
+}
+
+.trust-camera-silhouette.is-recording .trust-silhouette-head,
+.trust-camera-silhouette.is-recording .trust-silhouette-shoulders,
+.trust-camera-silhouette.is-recording .trust-silhouette-eyeline {
+  opacity: 0.45;
+}
+
+.trust-camera-silhouette .trust-silhouette-hand {
+  position: absolute;
+  top: 28%;
+  right: 0;
+  width: 34%;
+  height: 40%;
+  color: #fff;
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 80%));
+}
+
+.trust-silhouette-hand.is-left {
+  right: auto;
+  left: 0;
+}
+
+.trust-camera-silhouette .trust-silhouette-motion {
+  stroke: #fff;
+  stroke-width: 3;
+  stroke-dasharray: none;
+}
+
+.trust-hand-guide-status {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.is-seeking-hand .trust-silhouette-hand {
+  animation: trust-hand-guide-pulse 1.8s ease-in-out infinite;
+}
+
+.is-seeking-hand .trust-silhouette-hand.is-right {
+  animation-delay: -0.9s;
+}
+
+@keyframes trust-hand-guide-pulse {
+  0%,
+  100% {
+    opacity: 0.9;
+  }
+
+  50% {
+    opacity: 0.2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-seeking-hand .trust-silhouette-hand {
+    animation: none;
+    opacity: 0.75;
+  }
 }
 
 .trust-pose-guide {
@@ -731,6 +815,34 @@
   font-size: 14px;
   font-weight: 700;
   line-height: 1.5;
+}
+
+.trust-face-visibility-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  padding: 10px;
+  border: 2px solid #b86a17;
+  background: #fff3d6;
+  color: #633407;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+.trust-face-visibility-icon {
+  margin-top: 2px;
+}
+
+.trust-face-visibility-note strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.trust-face-visibility-note p {
+  margin-top: 4px;
+  font-size: 12px;
 }
 
 .trust-capture-workspace .trust-camera {
