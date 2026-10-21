@@ -104,6 +104,33 @@ test("fifteen stable frames are required and loss of face resets readiness", () 
   assert.equal(state.history.length, 0);
 });
 
+test("a small offset from the center can complete camera preparation", () => {
+  let state = { history: [] };
+  for (let index = 0; index < 15; index++) {
+    const frame = neutral();
+    frame.faceLandmarks[0].forEach((point) => {
+      point.x += 0.11;
+      point.y += 0.12;
+    });
+    assert.equal(facePosition(frame).issue, null);
+    state = centerProgress(state.history, frame);
+  }
+  assert.equal(state.ready, true);
+});
+
+test("small natural position jitter does not restart camera preparation", () => {
+  let state = { history: [] };
+  for (let index = 0; index < 15; index++) {
+    const frame = neutral();
+    frame.faceLandmarks[0].forEach((point) => {
+      point.x += index % 2 ? -0.018 : 0.018;
+      point.y += index % 2 ? 0.018 : -0.018;
+    });
+    state = centerProgress(state.history, frame);
+  }
+  assert.equal(state.ready, true);
+});
+
 test("moving inside the guide still cannot confirm a center", () => {
   let state = { history: [] };
   for (let index = 0; index < 15; index++) {
