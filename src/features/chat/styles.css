@@ -1011,7 +1011,7 @@
   z-index: 10;
   top: calc(100% + 6px);
   right: 0;
-  width: min(264px, calc(100vw - 32px));
+  width: min(252px, calc(100vw - 32px));
   padding: 4px;
   border: 1px solid var(--line);
   border-radius: 4px;
@@ -1025,28 +1025,28 @@
   align-items: center;
   gap: 10px;
   width: 100%;
-  min-height: 64px;
+  min-height: 52px;
   border: 0;
   background: transparent;
   color: var(--ink);
   text-align: left;
-  padding: 8px 12px;
+  padding: 6px 10px;
 }
 
 .chat-assistance-menu .icon {
-  width: 28px;
-  height: 28px;
-  flex: 0 0 28px;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
 }
 
 .chat-assistance-copy {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 3px;
 }
 
 .chat-assistance-copy > span {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
 }
 
