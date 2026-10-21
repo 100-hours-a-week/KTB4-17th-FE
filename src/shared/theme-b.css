@@ -191,8 +191,18 @@ section.practice-dialog button.practice-dialog-button,
   line-height: 1;
 }
 
+/* 회전해도 레이아웃 상자 밖으로 넘치지 않게 정사각형에 담아, 글자와의 간격·좌우 여백이 정확히 맞게 한다 */
 :is(.conversation-header, .simulation-screen-header) .chat-assistance-caret {
   display: block;
+  width: 10px;
+  height: 10px;
+  transform: rotate(90deg);
+}
+
+:is(.conversation-header, .simulation-screen-header)
+  .chat-assistance[open]
+  .chat-assistance-caret {
+  transform: rotate(-90deg);
 }
 
 @media (width < 360px) {
