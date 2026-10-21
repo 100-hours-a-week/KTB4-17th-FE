@@ -3,11 +3,13 @@ import { trustError } from "./model.js";
 const REQUIRED_FRAMES = 15;
 export const CENTER_HOLD_MS = 2_000;
 const MAX_POSITION_DEVIATION = 0.02;
+const GUIDE_BOUNDS = { left: 0.31, right: 0.69, top: 0.16, bottom: 0.8 };
+const MAX_FRONTAL_ANGLE = 25;
 export const CENTER_HINTS = Object.freeze({
   NO_FACE: "얼굴 전체가 화면에 보이도록 맞춰 주세요.",
   MULTIPLE_FACES: "혼자 화면에 들어와 주세요.",
   INVALID_POSE: "얼굴이 선명하게 보이도록 카메라를 봐 주세요.",
-  CROPPED: "얼굴 전체가 가이드 안에 들어오도록 맞춰 주세요.",
+  CROPPED: "얼굴 전체가 화면에 보이도록 맞춰 주세요.",
   CLOSER: "카메라에 조금 더 가까이 와 주세요.",
   BACK: "카메라에서 조금 멀어져 주세요.",
   LEFT: "화면 기준 왼쪽으로 조금 이동해 주세요.",
@@ -54,16 +56,31 @@ export function facePosition(result) {
     pitch,
     roll,
   };
+  const overlapWidth = Math.max(
+    0,
+    Math.min(right, GUIDE_BOUNDS.right) - Math.max(left, GUIDE_BOUNDS.left),
+  );
+  const overlapHeight = Math.max(
+    0,
+    Math.min(bottom, GUIDE_BOUNDS.bottom) - Math.max(top, GUIDE_BOUNDS.top),
+  );
+  const outsideGuide =
+    overlapWidth * overlapHeight < face.width * face.height * 0.5 - 1e-9;
   let issue = null;
   if (left < 0 || top < 0 || right > 1 || bottom > 1) issue = "CROPPED";
   else if (face.width < 0.18 || face.height < 0.3) issue = "CLOSER";
-  else if (face.width > 0.5 || face.height > 0.8) issue = "BACK";
-  else if (face.x < 0.38) issue = "LEFT";
-  else if (face.x > 0.62) issue = "RIGHT";
-  else if (face.y < 0.34) issue = "DOWN";
-  else if (face.y > 0.62) issue = "UP";
-  else if (Math.abs(yaw) > 15 || Math.abs(pitch) > 15) issue = "FRONTAL";
-  else if (Math.abs(roll) > 12) issue = "LEVEL";
+  else if (outsideGuide) {
+    if (face.x < GUIDE_BOUNDS.left) issue = "LEFT";
+    else if (face.x > GUIDE_BOUNDS.right) issue = "RIGHT";
+    else if (face.y < GUIDE_BOUNDS.top) issue = "DOWN";
+    else if (face.y > GUIDE_BOUNDS.bottom) issue = "UP";
+    else issue = "BACK";
+  } else if (
+    Math.abs(yaw) > MAX_FRONTAL_ANGLE ||
+    Math.abs(pitch) > MAX_FRONTAL_ANGLE
+  )
+    issue = "FRONTAL";
+  else if (Math.abs(roll) > MAX_FRONTAL_ANGLE) issue = "LEVEL";
   return { ...face, issue };
 }
 
