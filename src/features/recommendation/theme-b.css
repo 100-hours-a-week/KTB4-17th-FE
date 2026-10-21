@@ -53,7 +53,7 @@
 
 .recommendation-info .recommendation-keyword {
   display: inline-flex;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
   padding: 5px 10px;
   background: rgb(255 255 255 / 18%);
   font-size: 12px;
@@ -64,10 +64,10 @@
 
 .recommendation-info h1 {
   gap: 8px;
-  margin-bottom: 4px;
-  font-size: 28px;
+  margin-bottom: 2px;
+  font-size: 24px;
   font-weight: 700;
-  line-height: 36px;
+  line-height: 30px;
 }
 
 .recommendation-info h1 span {
@@ -101,7 +101,7 @@
 .recommendation-info .recommendation-profile-link {
   gap: 2px;
   min-height: 44px;
-  margin-top: 4px;
+  margin-top: 0;
   color: #e3d9ff;
   font-size: 13px;
   font-weight: 700;
@@ -110,7 +110,7 @@
 
 .recommendation-info .recommendation-actions {
   align-items: flex-end;
-  margin-top: 18px;
+  margin-top: 10px;
 }
 
 .recommendation-actions .card-action {
@@ -316,8 +316,8 @@
 
 /* 인증 방패: 어두운 카드 위에서 보이도록 연보라 + 흰 테두리 */
 .recommendation-info h1 .verified-shield {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   filter: drop-shadow(0 0 4px rgb(203 184 255 / 70%));
 }
 
