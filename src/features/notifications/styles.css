@@ -149,6 +149,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
+  margin-bottom: 18px;
 }
 
 .notification-heading h1 {
@@ -177,8 +178,9 @@
   height: 21px;
 }
 
+/* 제목(알림)과 같은 줄 오른쪽에 둔다 */
 .notification-intro {
-  margin: 8px 0 18px;
+  margin: 0 0 0 auto;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.7;
@@ -541,7 +543,7 @@
     padding-top: 12px;
   }
 
-  .notification-intro {
+  .notification-heading {
     margin-bottom: 10px;
   }
 
