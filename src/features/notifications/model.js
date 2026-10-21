@@ -42,6 +42,7 @@ function positiveId(value) {
 }
 
 export function notificationDestination(item) {
+  if (item.type === "LIKE") return "/likes?tab=received";
   const id = positiveId(item.targetId);
   if (id && item.targetType === "PROFILE")
     return `/profiles/${id}?returnTo=%2Fnotifications`;

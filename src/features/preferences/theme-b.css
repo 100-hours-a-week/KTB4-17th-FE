@@ -7,6 +7,10 @@
   color: var(--ink);
 }
 
+.preferences-back {
+  color: var(--purple-deep);
+}
+
 .preferences-main {
   padding-top: 16px;
 }
@@ -137,7 +141,7 @@
 }
 
 .main-scroll.preferences-main {
-  top: calc(108px + env(safe-area-inset-top, 0px));
+  top: calc(54px + env(safe-area-inset-top, 0px));
   padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
 }
 

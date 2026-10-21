@@ -40,9 +40,19 @@ export function PixelButton({
   );
 }
 
-export function BrandHeader({ children, className = "", navigate }) {
+export function BrandHeader({ children, className = "", navigate, onBack }) {
   return (
     <header className={`brand-header ${className}`}>
+      {onBack && (
+        <button
+          type="button"
+          className="brand-header-back"
+          onClick={onBack}
+          aria-label="뒤로가기"
+        >
+          <PixelIcon name="back" scale={2} />
+        </button>
+      )}
       <button
         type="button"
         className="brand-header-home"

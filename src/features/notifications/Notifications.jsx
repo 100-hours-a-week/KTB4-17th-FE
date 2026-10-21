@@ -70,7 +70,10 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
   let previousDay;
   return (
     <>
-      <BrandHeader navigate={navigate} />
+      <BrandHeader
+        navigate={navigate}
+        onBack={() => navigate(notifications.returnTo || "/home")}
+      />
       <main
         id="main-content"
         tabIndex={-1}

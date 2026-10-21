@@ -68,13 +68,13 @@ export function headGuideStep(stage, progress = 0) {
 
 export const HEAD_MOTIONS = Object.freeze({
   TURN_LEFT: {
-    label: "내 왼쪽으로 돌리기",
-    detail: "어깨는 그대로 두고 코가 내 왼쪽을 향하도록 천천히 돌려 주세요.",
+    label: "왼쪽으로 고개 돌리기",
+    detail: "어깨는 그대로 두고 고개만 왼쪽으로 천천히 돌려 주세요.",
     icon: "arrowLeft",
   },
   TURN_RIGHT: {
-    label: "내 오른쪽으로 돌리기",
-    detail: "어깨는 그대로 두고 코가 내 오른쪽을 향하도록 천천히 돌려 주세요.",
+    label: "오른쪽으로 고개 돌리기",
+    detail: "어깨는 그대로 두고 고개만 오른쪽으로 천천히 돌려 주세요.",
     icon: "arrowRight",
   },
   LOOK_UP: {
