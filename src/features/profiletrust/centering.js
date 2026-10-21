@@ -1,6 +1,7 @@
 import { trustError } from "./model.js";
 
 const REQUIRED_FRAMES = 15;
+const MAX_POSITION_DEVIATION = 0.02;
 export const CENTER_HINTS = Object.freeze({
   NO_FACE: "얼굴 전체가 화면에 보이도록 맞춰 주세요.",
   MULTIPLE_FACES: "혼자 화면에 들어와 주세요.",
@@ -56,10 +57,10 @@ export function facePosition(result) {
   if (left < 0 || top < 0 || right > 1 || bottom > 1) issue = "CROPPED";
   else if (face.width < 0.18 || face.height < 0.3) issue = "CLOSER";
   else if (face.width > 0.5 || face.height > 0.8) issue = "BACK";
-  else if (face.x < 0.42) issue = "LEFT";
-  else if (face.x > 0.58) issue = "RIGHT";
-  else if (face.y < 0.38) issue = "DOWN";
-  else if (face.y > 0.58) issue = "UP";
+  else if (face.x < 0.38) issue = "LEFT";
+  else if (face.x > 0.62) issue = "RIGHT";
+  else if (face.y < 0.34) issue = "DOWN";
+  else if (face.y > 0.62) issue = "UP";
   else if (Math.abs(yaw) > 15 || Math.abs(pitch) > 15) issue = "FRONTAL";
   else if (Math.abs(roll) > 12) issue = "LEVEL";
   return { ...face, issue };
@@ -79,8 +80,8 @@ export function centerProgress(history, result) {
     next.length === REQUIRED_FRAMES &&
     deviation("yaw") <= 2 &&
     deviation("pitch") <= 2 &&
-    deviation("x") <= 0.015 &&
-    deviation("y") <= 0.015;
+    deviation("x") <= MAX_POSITION_DEVIATION &&
+    deviation("y") <= MAX_POSITION_DEVIATION;
   return {
     history: next,
     ready,
