@@ -44,7 +44,8 @@
 .pager-button > img {
   display: block;
   width: 30px;
-  height: 27px;
+  height: 25px;
+  image-rendering: pixelated;
 }
 
 :where(.brand-header .chat-assistance) + .pager-button {

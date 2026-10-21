@@ -53,6 +53,7 @@
 
 /* 뒤로가기와 사진 단계 막대를 한 줄에: 버튼 세로 중심 = 막대 세로 중심 */
 .other-profile-hero .other-profile-back {
+  color: var(--purple-deep);
   top: calc(env(safe-area-inset-top, 0px) + 6px);
   left: 8.5px;
   width: 44px;

@@ -218,6 +218,21 @@ export function MyPage({ navigate }) {
             </span>
           </button>
         </div>
+        <section className="my-support" aria-label="서비스 문의">
+          <a
+            className="my-report-link"
+            href="https://docs.google.com/forms/d/e/1FAIpQLSd53OE0upA39gbNQs91djxpZDn1MaEnpM38UMmVXwFUeevYxw/viewform?usp=header"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <PixelIcon name="alert" scale={3} />
+            <span>
+              <strong>버그 리포트 · 신고</strong>
+              <small>불편한 점이나 오류를 알려주세요 · 새 탭으로 열림</small>
+            </span>
+            <PixelIcon name="arrowUpRight" scale={2} />
+          </a>
+        </section>
         <p className="my-footer">*23# · LITTLE PIXELS, REAL CONNECTIONS.</p>
       </main>
     </>
@@ -772,7 +787,7 @@ export function Persona({ navigate }) {
   return (
     <>
       <ScreenHeader
-        className="account-header"
+        className="account-header persona-header"
         notificationAction
         title="내 페르소나"
         onBack={() => navigate("/my")}

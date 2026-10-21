@@ -1,3 +1,7 @@
+.my-report-link strong {
+  font-size: 14px;
+}
+
 .my-topbar {
   justify-content: space-between;
 }
@@ -818,4 +822,49 @@
   .my-main .my-menu {
     margin-inline: 12px;
   }
+}
+
+.my-support {
+  margin: 24px 16px 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.my-report-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px;
+  border: 1px solid var(--lavender);
+  color: var(--purple-deep);
+  text-decoration: none;
+  background: var(--paper);
+}
+
+.my-report-link > svg {
+  flex: none;
+}
+
+.my-report-link > span {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 4px;
+}
+
+.my-report-link small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+.my-report-link:hover {
+  background: var(--soft-lavender);
+}
+
+.my-report-link:focus-visible {
+  outline: 2px solid var(--purple-deep);
+  outline-offset: 3px;
 }

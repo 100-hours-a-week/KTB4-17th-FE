@@ -494,6 +494,15 @@ test("approved copy preserves sender information without inventing a chat previe
   );
 });
 
+test("like notifications open received likes instead of the sender profile", () => {
+  for (const item of [
+    { type: "LIKE", targetType: "PROFILE", targetId: 2 },
+    { type: "LIKE", targetType: "PROFILE", targetId: null },
+  ]) {
+    assert.equal(notificationDestination(item), "/likes?tab=received");
+  }
+});
+
 test("only supported server targets can navigate, and the profile returns to the inbox", () => {
   assert.equal(
     notificationDestination({ targetType: "PROFILE", targetId: 2 }),
