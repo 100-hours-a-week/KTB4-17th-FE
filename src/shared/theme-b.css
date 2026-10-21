@@ -16,6 +16,7 @@
 .other-profile-info,
 .other-profile-error,
 .edit-photo-section,
+.preference-range-field,
 .preference-choice-row,
 .settings-action,
 .practice-dialog,
@@ -299,8 +300,11 @@ section.practice-dialog button.practice-dialog-button,
   position: absolute;
   z-index: -1;
   inset: 0;
+
+  /* 160px 저해상도 한강 풍경을 그대로 키워 앱의 픽셀 스타일과 맞춘다 */
   background:
-    url("/assets/ambient-city-v1.webp") center bottom / 100% auto no-repeat;
+    url("/assets/ambient-city-pixel-v1.png") center bottom / 100% auto no-repeat;
+  image-rendering: pixelated;
   opacity: 0.2;
   pointer-events: none;
 }
