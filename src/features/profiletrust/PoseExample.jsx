@@ -261,7 +261,7 @@ function HaruPose({ challenge, moving }) {
   );
 }
 
-export function PoseExample({ challenge, progress }) {
+export function PoseExample({ challenge, progress, showHelp = true }) {
   const [demoStep, setDemoStep] = useState(0);
   const [playing, setPlaying] = useState(false);
   const recording = progress.stage === "recording";
@@ -334,32 +334,41 @@ export function PoseExample({ challenge, progress }) {
           ) : (
             <span>손끝 방향은 자유예요</span>
           )}
-          <span>손바닥·손등 어느 쪽도 OK</span>
-          <span>왼손·오른손 모두 가능</span>
+          {showHelp && (
+            <>
+              <span>손바닥·손등 어느 쪽도 OK</span>
+              <span>왼손·오른손 모두 가능</span>
+            </>
+          )}
         </div>
       </div>
-      <p className="trust-hand-variations-title">
-        같은 손 모양, 이렇게 잡아도 돼요
-      </p>
-      <div className="trust-hand-variations">
-        {[
-          { label: "왼손 · 손바닥", mirror: false, back: false },
-          { label: "오른손 · 손바닥", mirror: true, back: false },
-          { label: "왼손 · 손등", mirror: false, back: true },
-          { label: "오른손 · 손등", mirror: true, back: true },
-        ].map((variation) => (
-          <div className="trust-hand-variation" key={variation.label}>
-            <HandGlyph
-              hand={challenge.hand}
-              direction={challenge.direction}
-              mirror={variation.mirror}
-              back={variation.back}
-            />
-            <span>{variation.label}</span>
+      {showHelp && (
+        <>
+          <p className="trust-hand-variations-title">
+            같은 손 모양, 이렇게 잡아도 돼요
+          </p>
+          <div className="trust-hand-variations">
+            {[
+              { label: "왼손 · 손바닥", mirror: false, back: false },
+              { label: "오른손 · 손바닥", mirror: true, back: false },
+              { label: "왼손 · 손등", mirror: false, back: true },
+              { label: "오른손 · 손등", mirror: true, back: true },
+            ].map((variation) => (
+              <div className="trust-hand-variation" key={variation.label}>
+                <HandGlyph
+                  hand={challenge.hand}
+                  direction={challenge.direction}
+                  mirror={variation.mirror}
+                  back={variation.back}
+                />
+                <span>{variation.label}</span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      {requiresHandDirection(challenge.hand, challenge.direction) &&
+        </>
+      )}
+      {showHelp &&
+        requiresHandDirection(challenge.hand, challenge.direction) &&
         challenge.direction === "SIDEWAYS" && (
           <p className="trust-hand-direction-note">
             손끝은 ← 왼쪽 또는 오른쪽 → 어느 쪽을 향해도 돼요.
@@ -387,21 +396,23 @@ export function PoseExample({ challenge, progress }) {
           </li>
         ))}
       </ol>
-      <small>
-        {!motion
-          ? "정면과 손 모양이 확인되면 자동으로 촬영을 마쳐요."
-          : step === 1
-            ? motion.detail
-            : step === 0
-              ? "먼저 정면을 바라봐 주세요."
-              : "정면으로 돌아와 그대로 유지해 주세요."}{" "}
-        좌우는 내 몸 기준이에요.{" "}
-        {!requiresHandDirection(challenge.hand, challenge.direction)
-          ? "손 모양만 맞추고 방향에 상관없이 편한 위치에 두세요."
-          : "손 모양과 방향만 맞추면, 화면 안에서 편한 위치에 두어도 돼요."}{" "}
-        예시는 참고용이에요. 손바닥·손등 방향이나 팔 각도까지 똑같이 따라 하지
-        않아도 돼요. 얼굴은 가리지 말아 주세요.
-      </small>
+      {showHelp && (
+        <small>
+          {!motion
+            ? "정면과 손 모양이 확인되면 자동으로 촬영을 마쳐요."
+            : step === 1
+              ? motion.detail
+              : step === 0
+                ? "먼저 정면을 바라봐 주세요."
+                : "정면으로 돌아와 그대로 유지해 주세요."}{" "}
+          좌우는 내 몸 기준이에요.{" "}
+          {!requiresHandDirection(challenge.hand, challenge.direction)
+            ? "손 모양만 맞추고 방향에 상관없이 편한 위치에 두세요."
+            : "손 모양과 방향만 맞추면, 화면 안에서 편한 위치에 두어도 돼요."}{" "}
+          예시는 참고용이에요. 손바닥·손등 방향이나 팔 각도까지 똑같이 따라 하지
+          않아도 돼요. 얼굴은 가리지 말아 주세요.
+        </small>
+      )}
     </section>
   );
 }

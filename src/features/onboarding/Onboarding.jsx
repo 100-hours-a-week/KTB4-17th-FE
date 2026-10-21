@@ -1088,9 +1088,6 @@ export function Onboarding({ navigate, toast }) {
                 <AiAvatar size={42} />
                 <div>
                   <h1>이용약관에 동의해 주세요</h1>
-                  <p className="subcopy">
-                    안전하고 편안한 만남을 위해 확인해 주세요.
-                  </p>
                 </div>
               </div>
               <label className="agreement all">
@@ -1137,7 +1134,6 @@ export function Onboarding({ navigate, toast }) {
                   {item}
                 </label>
               ))}
-              <p className="hint">필수 약관 동의는 가입을 위해 필요해요.</p>
             </>
           )}
           {step === "identity" && (
@@ -1146,7 +1142,6 @@ export function Onboarding({ navigate, toast }) {
                 <AiAvatar size={42} />
                 <div>
                   <h1>기본 정보를 알려 주세요</h1>
-                  <p className="subcopy">본인 확인을 위한 정보예요.</p>
                 </div>
               </div>
               <BirthDateInput
@@ -1174,19 +1169,6 @@ export function Onboarding({ navigate, toast }) {
                   />
                 </Field>
               </div>
-              <section className="onboarding-note tint">
-                <strong className="onboarding-note-label">
-                  <PixelIcon name="lock" />
-                  PRIVATE MODE
-                </strong>
-                <ul>
-                  <li>입력한 생년월일은 성인 확인과 프로필 생일에 사용돼요.</li>
-                  <li>
-                    가입 후에는 기본 정보를 변경할 수 없어요. 신중하게 입력해
-                    주세요.
-                  </li>
-                </ul>
-              </section>
             </>
           )}
           {step === "region" && (
@@ -1195,10 +1177,6 @@ export function Onboarding({ navigate, toast }) {
                 <AiAvatar size={42} />
                 <div>
                   <h1>활동 지역을 알려 주세요</h1>
-                  <p className="subcopy">
-                    가까운 사람들을 추천해드려요. 활동 지역은 시·군·구 단위까지
-                    검색할 수 있어요.
-                  </p>
                 </div>
               </div>
               <Field label="지역 검색">
@@ -1269,15 +1247,9 @@ export function Onboarding({ navigate, toast }) {
                 ))}
               </div>
               {profile.regionName && (
-                <section className="onboarding-note tint">
-                  <strong className="onboarding-note-label">
-                    <PixelIcon name="pin" />
-                    SELECTED AREA
-                  </strong>
-                  <p>
-                    선택한 지역 · <b>{profile.regionName}</b>
-                  </p>
-                </section>
+                <p className="region-search-state" role="status">
+                  선택: {profile.regionName}
+                </p>
               )}
             </>
           )}
@@ -1287,12 +1259,9 @@ export function Onboarding({ navigate, toast }) {
                 <AiAvatar size={42} />
                 <div>
                   <h1>프로필을 알려 주세요</h1>
-                  <p className="subcopy">
-                    나를 표현할 수 있는 정보를 입력해 주세요.
-                  </p>
                 </div>
               </div>
-              <Field label="닉네임" hint="한글·영문·숫자 2~10자">
+              <Field label="닉네임">
                 <input
                   ref={nicknameInputRef}
                   type="text"
@@ -1356,9 +1325,6 @@ export function Onboarding({ navigate, toast }) {
                 <AiAvatar size={42} />
                 <div>
                   <h1>라이프스타일을 알려 주세요</h1>
-                  <p className="subcopy">
-                    서로의 일상을 이해하는 데 도움이 돼요.
-                  </p>
                 </div>
               </div>
               <Field label="종교">
@@ -1406,19 +1372,15 @@ export function Onboarding({ navigate, toast }) {
                 ref={personaChatRef}
                 aria-live="polite"
               >
-                {personaLog.map((entry, index) =>
+                {personaLog.map((entry) =>
                   entry.from === "haru" ? (
                     <div className="persona-chat-group" key={entry.id}>
                       <p className="persona-chat-system">
                         <b>Q.{pad2(entry.turn)}</b>
-                        {index === 0
-                          ? "프로필만으로 알기 어려운 부분을 여쭤볼게요"
-                          : "다음 질문"}
                       </p>
                       <div className="persona-chat-who">
                         <AiAvatar size={34} />
                         하루
-                        <small>AI MATE</small>
                       </div>
                       {entry.lines.map((line) => (
                         <p
@@ -1503,15 +1465,11 @@ export function Onboarding({ navigate, toast }) {
                 <AiAvatar size={42} />
                 <div>
                   <h1>이렇게 이해했어요</h1>
-                  <p className="subcopy">
-                    답변을 바탕으로 정리한 나의 가치관이에요.
-                  </p>
                 </div>
               </div>
               <div className="persona-summary-list">
-                {personaConversation?.personaDraft?.narrative ? (
+                {personaConversation?.personaDraft?.narrative && (
                   <section className="persona-summary-card holo">
-                    <small>MY TYPE</small>
                     <h2>
                       {personaConversation.personaDraft.narrative.headline}
                     </h2>
@@ -1524,10 +1482,6 @@ export function Onboarding({ navigate, toast }) {
                       )}
                     </div>
                   </section>
-                ) : (
-                  <p className="info-panel">
-                    지금까지의 답변을 바탕으로 가치관을 정리했어요.
-                  </p>
                 )}
                 {(personaConversation?.personaDraft?.summaries || []).map(
                   (summary) => (
@@ -1561,6 +1515,7 @@ export function Onboarding({ navigate, toast }) {
               <ProfilePhotoEditor
                 initialPhotos={savedPhotos}
                 requireVerification
+                showHelp={false}
                 disabled={photoSaving}
                 onChange={setPhotoState}
               />
