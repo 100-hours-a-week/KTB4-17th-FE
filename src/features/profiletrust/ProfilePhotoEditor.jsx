@@ -175,7 +175,7 @@ const EMPTY_PHOTOS = [];
 export function ProfilePhotoEditor({
   initialPhotos = EMPTY_PHOTOS,
   requireVerification = false,
-  showHelp = true,
+  compactPose = false,
   disabled = false,
   onChange,
 }) {
@@ -190,6 +190,12 @@ export function ProfilePhotoEditor({
   const dragged = useRef(null);
   const heading = useRef(null);
   const trust = useFaceVerification();
+  const showHelp =
+    !compactPose ||
+    !["camera", "failure"].includes(trust.phase) ||
+    !["pose", "recording", "analyzing", "recovering", "finalizing"].includes(
+      trust.progress.stage,
+    );
   const { side: handGuideSide, unavailable: handGuideUnavailable } =
     useHandGuideSide({
       videoRef: trust.videoRef,

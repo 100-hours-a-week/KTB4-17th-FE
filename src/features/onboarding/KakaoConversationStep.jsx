@@ -177,8 +177,24 @@ export function KakaoConversationStep({ onContinue, toast }) {
             <h1 className="onboarding-title">
               평소 말투도 알려 주세요 <small>선택사항</small>
             </h1>
+            <p className="subcopy">
+              카카오톡 대화를 참고해 AI가 내 말투와 표현 방식을 이해할 수
+              있어요.
+            </p>
           </div>
         </div>
+
+        <section className="onboarding-note tint">
+          <strong className="onboarding-note-label">
+            <PixelIcon name="lock" />
+            대화를 추가하기 전에
+          </strong>
+          <p>대화 추가는 선택사항이에요. 부담스럽다면 건너뛰어도 돼요.</p>
+          <p className="kakao-data-notice">
+            업로드한 파일은 AI 분석 서버로 전달돼요. 본인으로 지정된 이름의
+            텍스트 대화는 대화 스타일 분석을 위해 저장·사용돼요.
+          </p>
+        </section>
 
         <input
           ref={fileInput}
@@ -201,6 +217,8 @@ export function KakaoConversationStep({ onContinue, toast }) {
               <PixelIcon name="chat" scale={4} />
             </span>
             <strong>카카오톡 파일 선택</strong>
+            <span>대화 내보내기로 받은 원본 파일을 선택해 주세요.</span>
+            <small>TXT · CSV / 최대 5MB</small>
           </button>
         ) : (
           <section className="kakao-file-card" aria-label="선택한 파일">
@@ -243,6 +261,10 @@ export function KakaoConversationStep({ onContinue, toast }) {
           ) : (
             <fieldset className="kakao-speakers">
               <legend>대화 참여자 중 본인은 누구인가요?</legend>
+              <p>
+                업로드한 대화에 등장하는 이름 중 본인의 이름을 선택해 주세요.
+                본인의 메시지를 구분하는 데 사용돼요.
+              </p>
               <div className="kakao-speaker-list">
                 {participants.map(({ name }) => (
                   <label
@@ -264,12 +286,19 @@ export function KakaoConversationStep({ onContinue, toast }) {
                   </label>
                 ))}
               </div>
+              <p className="kakao-speaker-help">
+                본인의 이름이 없다면 파일을 제거하고 다른 대화 파일을 올려
+                주세요.
+              </p>
             </fieldset>
           ))}
 
         {submitting && (
           <div role="status" className="kakao-request-status">
             <p>대화를 전달하고 있어요…</p>
+            <small>
+              요청을 보낸 뒤에는 화면을 나가도 분석이 진행될 수 있어요.
+            </small>
           </div>
         )}
         {error && (
