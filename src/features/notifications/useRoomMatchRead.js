@@ -5,7 +5,7 @@ import { readRoomMatchNotifications } from "./unread.js";
 
 export function useRoomMatchRead(roomId, ready) {
   const { subject, matchRevision, refresh } = useNotifications();
-  // biome-ignore lint/correctness/useExhaustiveDependencies: A newly delivered match or stream reconnection must rescan this room's match records.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: A newly polled match or initial snapshot must rescan this room's match records.
   useEffect(() => {
     if (!ready || !subject) return undefined;
     const controller = new AbortController();
