@@ -635,9 +635,12 @@
 }
 
 .message-composer-controls > button[type="submit"] {
+  display: grid;
   flex: none;
+  place-items: center;
   width: 44px;
   height: 44px;
+  padding: 0;
   border: 0;
   border-radius: 0;
   background: var(--purple);
@@ -1112,7 +1115,7 @@
 }
 
 .chat-room-view .chat-message-row .message-bubble {
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .chat-avatar-spacer {

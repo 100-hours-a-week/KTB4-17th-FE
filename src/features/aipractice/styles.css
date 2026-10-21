@@ -157,15 +157,20 @@ section.practice-dialog button.practice-dialog-button.is-primary {
 
 .practice-view .ai-notice {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   min-height: 0;
-  padding: 10px 16px;
+  padding: 6px 16px;
   border-bottom: 1px solid var(--line-soft, var(--line));
   background: #f1eaf8;
   color: #625171;
   font-size: 11px;
-  line-height: 1.6;
+  line-height: 1.4;
+}
+
+/* 아이콘 세로 중심을 첫 줄(실제 상대가 아닌…) 가운데에 맞춘다 */
+.practice-view .ai-notice > .ai-avatar {
+  margin-top: calc((1.4em - var(--ai-avatar-size)) / 2);
 }
 
 .practice-ai-notice-copy {
@@ -174,9 +179,9 @@ section.practice-dialog button.practice-dialog-button.is-primary {
 }
 
 .practice-view .ai-notice span:not(:where(.ai-avatar)) {
-  margin-top: 3px;
+  margin-top: 1px;
   color: #766282;
-  font-size: 10px;
+  font-size: 9px;
 }
 
 .practice-message-area {
