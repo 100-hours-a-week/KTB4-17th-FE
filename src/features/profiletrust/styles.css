@@ -490,8 +490,14 @@
 }
 
 @keyframes trust-hand-guide-pulse {
-  0%, 100% { opacity: 0.9; }
-  50% { opacity: 0.2; }
+  0%,
+  100% {
+    opacity: 0.9;
+  }
+
+  50% {
+    opacity: 0.2;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
