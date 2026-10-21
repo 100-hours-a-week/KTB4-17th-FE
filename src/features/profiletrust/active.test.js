@@ -98,6 +98,49 @@ test("centering requires one face, suitable distance, location and frontal pose"
   assert.equal(facePosition(bad).issue, "INVALID_POSE");
 });
 
+test("a photo-approved pose stays frontal during camera verification", () => {
+  const frame = neutral();
+  const radians = (18 * Math.PI) / 180;
+  frame.facialTransformationMatrixes[0].data[5] = Math.cos(radians);
+  frame.facialTransformationMatrixes[0].data[6] = Math.sin(radians);
+  frame.facialTransformationMatrixes[0].data[9] = -Math.sin(radians);
+  frame.facialTransformationMatrixes[0].data[10] = Math.cos(radians);
+  let hold = { history: [], since: null };
+  for (let index = 0; index <= 20; index++) {
+    hold = centerHoldProgress(hold, frame, index * 100);
+  }
+  assert.equal(hold.done, true);
+});
+
+test("guide overlap tolerates offsets and size changes until over half is outside", () => {
+  for (const [left, top, right, bottom, expected] of [
+    [0.47, 0.23, 0.77, 0.73, null],
+    [0.23, 0.23, 0.53, 0.73, null],
+    [0.35, 0.35, 0.65, 0.85, null],
+    [0.35, 0.03, 0.65, 0.53, null],
+    [0.23, 0.05, 0.77, 0.95, null],
+    [0.54, 0.23, 0.84, 0.73, null],
+    [0.16, 0.23, 0.46, 0.73, null],
+    [0.35, 0.55, 0.65, 1, null],
+    [0.35, 0.6, 0.65, 1, null],
+    [0.55, 0.23, 0.85, 0.73, "RIGHT"],
+    [0.15, 0.23, 0.45, 0.73, "LEFT"],
+    [0.35, 0.61, 0.65, 1, "UP"],
+    [0.55, 0.55, 0.85, 1, "RIGHT"],
+  ]) {
+    const frame = neutral();
+    frame.faceLandmarks[0] = [
+      { x: left, y: top },
+      { x: right, y: bottom },
+    ];
+    assert.equal(
+      facePosition(frame).issue,
+      expected,
+      `${left},${top},${right},${bottom}`,
+    );
+  }
+});
+
 test("fifteen stable frames are required and loss of face resets readiness", () => {
   let state = { history: [] };
   for (let index = 0; index < 15; index++) {

@@ -32,16 +32,17 @@
   background: linear-gradient(145deg, #e9d7ff, #fbc6e8);
 }
 
+/* 상단 바(54px) 세로 중심 27px에 뒤로가기·설정(44px)·알림(44px)·사진 장수(28px)를 맞춘다 */
 .other-profile-back,
 .other-profile-settings {
   position: absolute;
   z-index: 7;
-  top: calc(env(safe-area-inset-top, 0px) + 14px);
+  top: calc(env(safe-area-inset-top, 0px) + 5px);
   display: grid;
   place-items: center;
   width: 44px;
   height: 44px;
-  padding: 0 2px 4px 0;
+  padding: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -410,13 +411,13 @@
 .other-profile-toolbar .profile-pager {
   position: absolute;
   right: 12px;
-  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  top: calc(env(safe-area-inset-top, 0px) + 5px);
 }
 
 .other-profile-photo-count {
   position: absolute;
   z-index: 6;
-  top: calc(env(safe-area-inset-top, 0px) + 16px);
+  top: calc(env(safe-area-inset-top, 0px) + 13px);
   left: 50%;
   padding: 5px 11px;
   border-radius: 20px;
@@ -519,4 +520,41 @@
     margin-inline: 24px;
     padding: 26px;
   }
+}
+
+/* 프로필 사진 전체 보기: 채팅 .image-viewer 레이아웃에 장수 표시와 이전·다음 버튼을 더한다 */
+.photo-viewer-count {
+  position: absolute;
+  z-index: 1;
+  top: 18px;
+  left: 50%;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: rgb(0 0 0 / 40%);
+  color: white;
+  font-size: 12px;
+  transform: translateX(-50%);
+}
+
+/* transform 대신 top으로 세로 중앙을 잡아, 공통 버튼의 hover·눌림 효과가 위치를 덮어쓰지 않고 살짝만 반응하게 한다 */
+.photo-viewer-step {
+  position: absolute;
+  z-index: 1;
+  top: calc(50% - 22px);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: white;
+}
+
+.photo-viewer-prev {
+  left: 4px;
+}
+
+.photo-viewer-next {
+  right: 4px;
 }

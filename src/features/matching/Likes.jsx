@@ -191,7 +191,7 @@ export function Likes({
   return (
     <>
       <BrandHeader navigate={navigate} />
-      <h1 className="likes-page-title">좋아요</h1>
+      <h1 className="sr-only">좋아요</h1>
       <fieldset className="segmented-tabs likes-seg">
         <legend className="sr-only">좋아요 목록 종류</legend>
         <button

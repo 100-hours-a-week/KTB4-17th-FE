@@ -70,10 +70,14 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
   let previousDay;
   return (
     <>
-      <BrandHeader
-        navigate={navigate}
-        onBack={() => navigate(notifications.returnTo || "/home")}
-      />
+      <BrandHeader navigate={navigate} notificationAction={false}>
+        <span className="notification-count" role="status">
+          <PagerIcon />
+          {notifications.count == null
+            ? "새 소식"
+            : `새 알림 ${notifications.count}`}
+        </span>
+      </BrandHeader>
       <main
         id="main-content"
         tabIndex={-1}
@@ -83,14 +87,8 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
         <div className="notification-toolbar">
           <div className="notification-heading">
             <h1>알림</h1>
-            <span className="notification-count" role="status">
-              <PagerIcon />
-              {notifications.count == null
-                ? "새 소식"
-                : `새 알림 ${notifications.count}`}
-            </span>
+            <p className="notification-intro">당신에게 도착한 설레는 소식들</p>
           </div>
-          <p className="notification-intro">당신에게 도착한 설레는 소식들</p>
           <nav className="notification-tabs" aria-label="알림 종류">
             {NOTIFICATION_CATEGORIES.map(([key, label]) => (
               <button

@@ -122,7 +122,7 @@ function VerificationProgress({ progress, active }) {
           : stage === "finalizing"
             ? "얼굴 인증을 마쳤어요. 사진을 저장하고 있어요."
             : stage === "centering"
-              ? "먼저 얼굴을 중앙에 맞추고 정면을 확인해 주세요."
+              ? "편하게 정면을 봐 주세요. 가이드에 정확히 맞추지 않아도 돼요."
               : stage === "pose"
                 ? automatic
                   ? "안내된 손 모양을 3초 유지하면 자동으로 완료돼요."

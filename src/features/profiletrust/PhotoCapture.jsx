@@ -100,7 +100,8 @@ export function PhotoCapture({ onCapture, onCancel, disabled }) {
     <>
       <h1>정면 사진을 촬영해 주세요</h1>
       <p className="trust-subcopy">
-        밝은 곳에서 얼굴과 어깨를 실루엣에 맞추고 정면을 바라봐주세요.
+        밝은 곳에서 편하게 정면을 바라봐주세요. 실루엣에 정확히 맞추지 않아도
+        돼요.
       </p>
       <div
         className="trust-camera trust-photo-camera"

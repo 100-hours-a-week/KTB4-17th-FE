@@ -677,7 +677,7 @@
 .trust-photo-badges {
   position: absolute;
   top: 6px;
-  right: 44px;
+  right: 40px;
   left: 6px;
   display: flex;
   flex-wrap: wrap;
@@ -698,12 +698,16 @@
   background: rgb(27 20 48 / 60%);
 }
 
+/* 사진 위 조작 버튼은 대표사진 뱃지(28px) 크기에 맞춰 사진을 덜 가리게 한다 */
 .trust-photo-remove {
   position: absolute;
-  top: 0;
-  right: 0;
-  width: 44px;
-  height: 44px;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border: none;
   background: rgb(27 20 48 / 65%);
   color: white;
@@ -721,8 +725,11 @@
 }
 
 .trust-photo-order button {
+  display: grid;
   flex: 1;
-  min-height: 44px;
+  place-items: center;
+  min-height: 32px;
+  padding: 0;
   border: none;
   background: transparent;
   color: white;
@@ -781,7 +788,7 @@
   }
 
   .trust-photo-badges {
-    right: 44px;
+    right: 40px;
     left: 4px;
   }
 }

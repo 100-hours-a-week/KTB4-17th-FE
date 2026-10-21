@@ -15,24 +15,19 @@
   padding-top: 16px;
 }
 
-/* 나이 · 키 카드 */
+/* 나이 · 키 카드: 테두리는 공통 픽셀 카드(border-image)로 그려 계단 모서리까지 선이 이어지게 하고, 8px 테두리만큼 안쪽 여백을 줄였다 */
 .preference-range-field {
   position: relative;
-  margin: 0 0 12px;
-  padding: 14px 16px 18px;
-  background: var(--paper);
-  box-shadow:
-    inset 0 0 0 1px var(--line),
-    inset 0 -3px 0 rgb(124 92 250 / 8%);
-  clip-path: var(--pixel-step-shape);
+  margin: 0 0 8px;
+  padding: 2px 6px;
 }
 
 .preference-range-label {
   float: left;
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 6px;
   padding: 0;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 22px;
 }
@@ -42,10 +37,10 @@
 }
 
 .preference-range-value {
-  padding: 3px 8px;
+  padding: 2px 6px;
   background: var(--soft-lavender);
   color: var(--purple-deep);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   clip-path: var(--pixel-step-shape);
 }
@@ -108,15 +103,16 @@
 
 /* 종교 · 음주 · 흡연 줄 */
 .preference-choice-rows {
-  gap: 10px;
+  gap: 8px;
   margin: 0 0 24px;
 }
 
+/* 나이·키 카드와 같은 밀도로 타이트하게 */
 .preferences-controls .preference-choice-row {
-  min-height: 52px;
+  min-height: 44px;
   gap: 10px;
-  padding: 6px 8px;
-  font-size: 15px;
+  padding: 4px 8px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 22px;
 }
@@ -124,7 +120,7 @@
 .preference-choice-row .preference-choice-summary {
   flex: 1;
   color: var(--purple-deep);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 400;
 }
 
@@ -145,6 +141,17 @@
   padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
 }
 
+/* 저장하기 버튼은 화면 아래쪽에 붙이고, 내용이 길면 그대로 이어서 흐르게 한다 */
+.preferences-main > form {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.preferences-main .preferences-save {
+  margin-top: auto;
+}
+
 /* #218에서 새로 추가된 요소 스타일 (최신 버전 유지) */
 .screen-header.preferences-header.account-header {
   display: grid;
@@ -156,7 +163,7 @@
 }
 
 .preferences-main .preferences-intro {
-  margin: 0 2px 24px;
+  margin: 0 2px 12px;
   color: var(--muted);
   font-size: 14px;
   line-height: 1.75;
@@ -177,6 +184,6 @@
   }
 
   .preferences-main .preference-range-field {
-    padding-inline: 12px;
+    padding-inline: 4px;
   }
 }

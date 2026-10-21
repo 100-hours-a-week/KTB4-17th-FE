@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { PhotoSegments, ProfilePhoto } from "../../shared/ui/components.jsx";
 import { PixelIcon } from "../../shared/ui/pixel.jsx";
@@ -22,6 +28,99 @@ function profileChoiceLabel(options, value) {
   return options.find(([option]) => option === value)?.[1] || value;
 }
 
+function PhotoViewer({ person, index, count, onSelect, onClose }) {
+  const dialogRef = useRef(null);
+  const closeRef = useRef(null);
+  useLayoutEffect(() => {
+    closeRef.current?.focus();
+  }, []);
+  const step = (direction) => onSelect((index + direction + count) % count);
+  return (
+    <div
+      ref={dialogRef}
+      className="image-viewer photo-viewer"
+      role="dialog"
+      aria-modal="true"
+      aria-label="프로필 사진 크게 보기"
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          event.stopPropagation();
+          onClose();
+          return;
+        }
+        if (
+          count > 1 &&
+          (event.key === "ArrowLeft" || event.key === "ArrowRight")
+        ) {
+          event.preventDefault();
+          step(event.key === "ArrowLeft" ? -1 : 1);
+          return;
+        }
+        if (event.key !== "Tab") return;
+        const buttons = [
+          ...dialogRef.current.querySelectorAll("button:not([disabled])"),
+        ].filter((button) => button.tabIndex >= 0);
+        const first = buttons[0];
+        const last = buttons[buttons.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }}
+    >
+      <button
+        type="button"
+        tabIndex={-1}
+        className="image-viewer-backdrop"
+        aria-label="사진 닫기"
+        onClick={onClose}
+      />
+      <button
+        ref={closeRef}
+        type="button"
+        className="image-viewer-close"
+        aria-label="사진 닫기"
+        onClick={onClose}
+      >
+        <PixelIcon name="x" scale={2} />
+      </button>
+      <ProfilePhoto person={person} index={index} />
+      {count > 1 && (
+        <>
+          <span
+            className="photo-viewer-count"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            <span className="sr-only">사진 </span>
+            {index + 1}/{count}
+          </span>
+          <button
+            type="button"
+            className="photo-viewer-step photo-viewer-prev"
+            aria-label="이전 사진"
+            onClick={() => step(-1)}
+          >
+            <PixelIcon name="back" scale={3} />
+          </button>
+          <button
+            type="button"
+            className="photo-viewer-step photo-viewer-next"
+            aria-label="다음 사진"
+            onClick={() => step(1)}
+          >
+            <PixelIcon name="chev" scale={3} />
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function OtherProfile({
   userId,
   returnTo,
@@ -37,6 +136,8 @@ export function OtherProfile({
   const [accessUnavailable, setAccessUnavailable] = useState(false);
   const profileRequestVersion = useRef(0);
   const pointerStart = useRef(null);
+  const heroRef = useRef(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
   const photos = profile?.photos || [];
   const [simulationBusy, setSimulationBusy] = useState(false);
   const showAiActions = !isOwn && returnTo?.split("?")[0] === "/likes";
@@ -126,13 +227,19 @@ export function OtherProfile({
     if (!start || start.pointerId !== event.pointerId) return;
     if (event.currentTarget.hasPointerCapture(event.pointerId))
       event.currentTarget.releasePointerCapture(event.pointerId);
-    if (photos.length < 2) return;
+    if (!photos.length) return;
 
     const x = event.clientX - start.x;
     const y = event.clientY - start.y;
     if (Math.abs(x) <= 8 && Math.abs(y) <= 8) {
+      // 가운데 1/3을 누르면 사진 전체 보기, 양쪽은 이전·다음 사진
       const bounds = event.currentTarget.getBoundingClientRect();
-      const direction = event.clientX < bounds.left + bounds.width / 2 ? -1 : 1;
+      const offset = (event.clientX - bounds.left) / bounds.width;
+      if (photos.length < 2 || (offset > 1 / 3 && offset < 2 / 3)) {
+        setViewerOpen(true);
+        return;
+      }
+      const direction = offset < 0.5 ? -1 : 1;
       setPhotoIndex((current) =>
         Math.max(0, Math.min(current + direction, photos.length - 1)),
       );
@@ -199,7 +306,7 @@ export function OtherProfile({
         >
           <PixelIcon name="back" scale={3} />
         </button>
-        <NotificationButton className="profile-pager" />
+        {!isOwn && <NotificationButton className="profile-pager" />}
         {isOwn && (
           <button
             type="button"
@@ -225,6 +332,7 @@ export function OtherProfile({
         )}
       </header>
       <section
+        ref={heroRef}
         className="other-profile-hero"
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
@@ -234,11 +342,14 @@ export function OtherProfile({
             event.currentTarget.releasePointerCapture(event.pointerId);
         }}
         onDragStart={(event) => event.preventDefault()}
-        tabIndex={photos.length > 1 ? 0 : undefined}
-        aria-label="프로필 사진. 양쪽을 터치하거나 좌우로 스와이프해 사진을 볼 수 있어요."
+        tabIndex={photos.length ? 0 : undefined}
+        aria-label="프로필 사진. 가운데를 누르면 사진 전체를 볼 수 있고, 양쪽을 터치하거나 좌우로 스와이프해 사진을 넘길 수 있어요."
         onKeyDown={(event) => {
           if (event.target !== event.currentTarget) return;
-          if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+          if (photos.length && (event.key === "Enter" || event.key === " ")) {
+            event.preventDefault();
+            setViewerOpen(true);
+          } else if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
             event.preventDefault();
             cyclePhoto(event.key === "ArrowLeft" ? -1 : 1);
           }
@@ -388,6 +499,18 @@ export function OtherProfile({
             )}
           </section>
         )
+      )}
+      {viewerOpen && profile && photos.length > 0 && (
+        <PhotoViewer
+          person={profile}
+          index={photoIndex}
+          count={photos.length}
+          onSelect={setPhotoIndex}
+          onClose={() => {
+            setViewerOpen(false);
+            heroRef.current?.focus();
+          }}
+        />
       )}
     </main>
   );

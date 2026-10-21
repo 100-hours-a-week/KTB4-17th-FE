@@ -463,7 +463,7 @@ export function Practice({
         }
       />
       <div className="ai-notice">
-        <AiAvatar size={22} />
+        <AiAvatar size={18} />
         <div className="practice-ai-notice-copy">
           <div>
             실제 상대가 아닌 AI예요. 대화 내용은 상대에게 전달되지 않아요.

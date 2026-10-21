@@ -53,7 +53,7 @@
 
 .recommendation-info .recommendation-keyword {
   display: inline-flex;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
   padding: 5px 10px;
   background: rgb(255 255 255 / 18%);
   font-size: 12px;
@@ -64,10 +64,10 @@
 
 .recommendation-info h1 {
   gap: 8px;
-  margin-bottom: 4px;
-  font-size: 28px;
+  margin-bottom: 2px;
+  font-size: 24px;
   font-weight: 700;
-  line-height: 36px;
+  line-height: 30px;
 }
 
 .recommendation-info h1 span {
@@ -101,7 +101,7 @@
 .recommendation-info .recommendation-profile-link {
   gap: 2px;
   min-height: 44px;
-  margin-top: 4px;
+  margin-top: 0;
   color: #e3d9ff;
   font-size: 13px;
   font-weight: 700;
@@ -110,7 +110,7 @@
 
 .recommendation-info .recommendation-actions {
   align-items: flex-end;
-  margin-top: 18px;
+  margin-top: 10px;
 }
 
 .recommendation-actions .card-action {
@@ -172,9 +172,9 @@
 
 /* 좋아요 탭 — 세그먼트 토글 */
 .segmented-tabs.likes-seg {
-  height: 52px;
-  margin: 16px 16px 0;
-  padding: 4px;
+  height: 40px;
+  margin: 12px 16px 0;
+  padding: 3px;
   border-bottom: 0;
   background: #ede8f4;
   clip-path: var(--pixel-step-shape);
@@ -185,7 +185,7 @@
   align-items: center;
   justify-content: center;
   color: var(--subtle);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -300,8 +300,8 @@
 
 /* 좋아요 목록: 탭 바와 같은 좌우 16px, 탭 바 아래 · 카드 사이 모두 16px */
 .segmented-tabs.likes-seg + .likes-main {
-  /* 헤더 56 + 페이지 제목(#218) 40 + 탭 여백 16 + 탭 52 */
-  top: calc(164px + env(safe-area-inset-top, 0px) - 8px);
+  /* 헤더 56 + 탭 여백 12 + 탭 40 */
+  top: calc(108px + env(safe-area-inset-top, 0px));
   padding: 16px 16px 24px;
 }
 
@@ -316,8 +316,8 @@
 
 /* 인증 방패: 어두운 카드 위에서 보이도록 연보라 + 흰 테두리 */
 .recommendation-info h1 .verified-shield {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   filter: drop-shadow(0 0 4px rgb(203 184 255 / 70%));
 }
 
@@ -385,16 +385,6 @@
 }
 
 /* #218에서 새로 추가된 요소 스타일 (최신 버전 유지) */
-.likes-page-title {
-  display: grid;
-  height: 28px;
-  place-items: center;
-  margin: 4px 0 8px;
-  color: var(--ink);
-  font-size: 18px;
-  line-height: 1;
-}
-
 .likes-tab-count {
   font-variant-numeric: tabular-nums;
   opacity: 0.8;
@@ -417,19 +407,25 @@
   outline-offset: 3px;
 }
 
+/* 좋아요 카드는 사진·글을 한 단계 작게 써서 카드를 타이트하게 */
+.like-card .person-avatar.large {
+  width: 72px;
+  height: 72px;
+}
+
 .like-person-copy {
   display: flex;
   min-width: 0;
   flex: 1;
   flex-direction: column;
-  gap: 8px;
-  padding-block: 4px;
+  gap: 6px;
+  padding-block: 2px;
 }
 
 .like-person-copy > strong {
   display: block;
   overflow: hidden;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   line-height: 1.35;
   text-overflow: ellipsis;
@@ -440,7 +436,7 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   color: #62596f;
   font-size: 11px;
   line-height: 1.4;
@@ -490,6 +486,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
+  font-size: 14px;
 }
 
 .likes-main .like-actions .pixel-icon {

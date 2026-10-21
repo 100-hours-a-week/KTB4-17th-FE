@@ -16,6 +16,7 @@
 .other-profile-info,
 .other-profile-error,
 .edit-photo-section,
+.preference-range-field,
 .preference-choice-row,
 .settings-action,
 .practice-dialog,
@@ -169,10 +170,10 @@ section.practice-dialog button.practice-dialog-button,
 :is(.conversation-header, .simulation-screen-header) .chat-assistance summary {
   flex-direction: row;
   width: auto;
-  height: 32px;
-  min-height: 32px;
-  gap: 5px;
-  padding: 0 9px;
+  height: 28px;
+  min-height: 28px;
+  gap: 4px;
+  padding: 0 8px;
   border: 0;
   border-image: none;
   background: linear-gradient(135deg, #f2edff 0%, #ffe9f5 100%);
@@ -191,8 +192,12 @@ section.practice-dialog button.practice-dialog-button,
   line-height: 1;
 }
 
+/* 회전해도 레이아웃 상자 밖으로 넘치지 않게 정사각형에 담아, 글자와의 간격·좌우 여백이 정확히 맞게 한다 */
 :is(.conversation-header, .simulation-screen-header) .chat-assistance-caret {
   display: block;
+  width: 10px;
+  height: 10px;
+  transform: rotate(90deg);
 }
 
 @media (width < 360px) {
@@ -254,6 +259,12 @@ section.practice-dialog button.practice-dialog-button,
   transform: rotate(-90deg) scale(0.8);
 }
 
+:is(.conversation-header, .simulation-screen-header)
+  .chat-assistance[open]
+  .chat-assistance-caret {
+  transform: rotate(-90deg);
+}
+
 /* ---------- AI 아바타 (하루 · AI 연습대화 · 시뮬레이션 · 페르소나) ---------- */
 .ai-avatar {
   position: relative;
@@ -289,8 +300,11 @@ section.practice-dialog button.practice-dialog-button,
   position: absolute;
   z-index: -1;
   inset: 0;
+
+  /* 160px 저해상도 한강 풍경을 그대로 키워 앱의 픽셀 스타일과 맞춘다 */
   background:
-    url("/assets/ambient-city-v1.webp") center bottom / 100% auto no-repeat;
+    url("/assets/ambient-city-pixel-v1.png") center bottom / 100% auto no-repeat;
+  image-rendering: pixelated;
   opacity: 0.2;
   pointer-events: none;
 }
