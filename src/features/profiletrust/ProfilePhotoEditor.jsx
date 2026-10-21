@@ -102,21 +102,14 @@ function CaptureGuide() {
   );
 }
 
-function VerificationProgress({ progress, active }) {
-  const {
-    stage,
-    attemptNo,
-    completedAttempts,
-    maxAttempts,
-    clipProgress,
-    automatic,
-  } = progress;
+function VerificationProgress({ progress }) {
+  const { stage, attemptNo, clipProgress, automatic } = progress;
   const waiting = ["analyzing", "recovering", "finalizing"].includes(stage);
   const message =
     stage === "recording"
-      ? `${attemptNo}/${maxAttempts}번째 얼굴 확인을 위해 촬영하고 있어요.`
+      ? `${attemptNo}번째 인증 시도를 촬영하고 있어요.`
       : stage === "analyzing"
-        ? `${attemptNo}/${maxAttempts}번째 영상을 확인하고 있어요.`
+        ? `${attemptNo}번째 촬영 결과를 확인하고 있어요.`
         : stage === "recovering"
           ? "전달한 영상의 인증 결과를 다시 확인하고 있어요."
           : stage === "finalizing"
@@ -133,32 +126,8 @@ function VerificationProgress({ progress, active }) {
   return (
     <div className="trust-camera-guidance">
       <p role="status">{message}</p>
-      <div
-        className="trust-attempt-progress"
-        role="progressbar"
-        aria-label="얼굴 확인 진행 횟수"
-        aria-valuemin={0}
-        aria-valuemax={maxAttempts}
-        aria-valuenow={completedAttempts}
-        aria-valuetext={`${maxAttempts}회 중 ${completedAttempts}회 진행`}
-      >
-        {Array.from({ length: maxAttempts }, (_, index) => index + 1).map(
-          (number) => (
-            <span
-              key={`attempt-${number}`}
-              data-state={
-                number <= completedAttempts
-                  ? "done"
-                  : active && number === attemptNo
-                    ? "current"
-                    : "pending"
-              }
-            />
-          ),
-        )}
-      </div>
       <small>
-        {completedAttempts}/{maxAttempts}회 진행
+        한 번 성공하면 완료돼요. 실패하면 재시도를 선택할 수 있어요.
       </small>
       {(stage === "recording" || (stage === "pose" && automatic)) && (
         <>
@@ -188,11 +157,7 @@ function VerificationProgress({ progress, active }) {
           <span aria-hidden="true">…</span> 확인 중이에요. 잠시만 기다려 주세요…
         </div>
       )}
-      <small>
-        한 번만 인증에 성공하면 바로 완료돼요. 실패한 경우에만 최대{" "}
-        {maxAttempts}회 시도해요. 전송과 분석 시간은 연결 상태에 따라 달라질 수
-        있어요.
-      </small>
+      <small>전송과 분석 시간은 연결 상태에 따라 달라질 수 있어요.</small>
     </div>
   );
 }
@@ -649,10 +614,7 @@ export function ProfilePhotoEditor({
                   )}
                 </div>
               </div>
-              <VerificationProgress
-                progress={trust.progress}
-                active={trust.active}
-              />
+              <VerificationProgress progress={trust.progress} />
               <p className="trust-privacy">
                 <PixelIcon name="lock" /> 인증을 위해 짧은 영상을 전송해요.
                 영상은 백엔드에 저장하지 않아요.
@@ -696,6 +658,9 @@ export function ProfilePhotoEditor({
               <p className="trust-failure-message" role="alert">
                 {trust.issue?.message}
               </p>
+              {trust.issue?.kind === "camera" && trust.issue.notice && (
+                <p className="trust-subcopy">{trust.issue.notice}</p>
+              )}
               {trust.issue?.kind === "system" && (
                 <p className="trust-subcopy">
                   {trust.issue.notice ||

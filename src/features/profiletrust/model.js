@@ -231,7 +231,7 @@ function issueWithAction(issue) {
       issue.kind === "photo"
         ? "정면 사진 다시 선택"
         : issue.kind === "camera"
-          ? "카메라 인증 다시 하기"
+          ? "재시도"
           : "다시 시도하기",
     ...issue,
   };
@@ -349,8 +349,10 @@ export function sessionIssue(session) {
     return verificationIssue(trustError("VERIFICATION_SESSION_EXPIRED"));
   const attempts = attemptHistory(session);
   const last = latestAttempt(session);
+  const relevantAttempts =
+    session?.status === "READY" && last ? [last] : attempts;
   const reasonCodes = new Set(
-    attempts
+    relevantAttempts
       .filter((attempt) => attempt.status !== "ERROR" && !attempt.errorCode)
       .flatMap((attempt) =>
         Array.isArray(attempt.reasonCodes) ? attempt.reasonCodes : [],
@@ -376,6 +378,20 @@ export function sessionIssue(session) {
       ...FACE_REASONS[reasons[0]],
       code: reasons[0],
       details: reasons.slice(1).map((code) => FACE_REASONS[code].message),
+      ...(FACE_REASONS[reasons[0]].kind === "camera"
+        ? session.canRetry
+          ? {
+              notice: `자동으로 다시 촬영하지 않아요. 재시도를 누르면 다시 촬영해요. 남은 재시도는 ${session.remainingAttempts}회예요.`,
+            }
+          : session.status === "EXHAUSTED"
+            ? {
+                action: "restart",
+                actionLabel: "인증 다시 시작",
+                notice:
+                  "이번 인증의 재시도 횟수를 모두 사용했어요. 인증 다시 시작을 누르면 새 인증을 진행해요.",
+              }
+            : {}
+        : {}),
     });
   return verificationIssue(trustError("VERIFICATION_RESPONSE_INVALID"));
 }
