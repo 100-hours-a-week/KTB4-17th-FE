@@ -41,18 +41,17 @@ test("all 120 challenge combinations preserve hand, up/down/sideways and head di
         assert.equal(challenge.hand, hand);
         assert.equal(challenge.direction, direction);
         assert.equal(challenge.head, head);
-        if (hand === "HAND_FIST") {
+        if (
+          ["HAND_FIST", "HAND_LOVE_YOU", "HAND_CALL_ME"].includes(hand) ||
+          direction === "DOWN"
+        ) {
           assert.match(challengeInstruction(challenge), /방향에 상관없이/);
           count++;
           continue;
         }
         assert.ok(
           challengeInstruction(challenge).includes(
-            direction === "UP"
-              ? "위를"
-              : direction === "DOWN"
-                ? "아래를"
-                : "가로(왼쪽 또는 오른쪽)를",
+            direction === "UP" ? "위를" : "가로(왼쪽 또는 오른쪽)를",
           ),
         );
         count++;
@@ -149,7 +148,7 @@ test("moving inside the guide still cannot confirm a center", () => {
   assert.equal(state.ready, false);
 });
 
-test("the camera advances automatically after three seconds and releases the local model", async () => {
+test("the camera advances automatically after two seconds and releases the local model", async () => {
   const signal = new AbortController().signal;
   let frames = 0,
     closed = 0,
@@ -174,7 +173,7 @@ test("the camera advances automatically after three seconds and releases the loc
     },
   );
   await waiting;
-  assert.ok(performance.now() - started >= 3000);
+  assert.ok(performance.now() - started >= 2000);
   assert.ok(frames >= 15);
   assert.equal(closed, 1);
   assert.equal(lastProgress, 1);
@@ -241,15 +240,15 @@ test("head guide and spoken instructions change together at recording boundaries
   }
 });
 
-test("three-second hold resets when the face is lost or no longer frontal", () => {
+test("two-second hold resets when the face is lost or no longer frontal", () => {
   let state = { history: [], since: null };
-  for (let time = 0; time <= 2900; time += 100)
+  for (let time = 0; time <= 1900; time += 100)
     state = centerHoldProgress(state, neutral(), time);
   assert.equal(state.done, false);
   state = centerHoldProgress(state, {}, 3000);
   assert.equal(state.progress, 0);
   assert.equal(state.since, null);
-  for (let time = 3100; time <= 6000; time += 100)
+  for (let time = 4100; time <= 6000; time += 100)
     state = centerHoldProgress(state, neutral(), time);
   assert.equal(state.done, false);
   state = centerHoldProgress(state, neutral(), 6100);

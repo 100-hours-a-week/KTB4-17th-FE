@@ -15,6 +15,7 @@ import {
   trustError,
   verificationIssue,
 } from "./model.js";
+import { waitForPoseHold } from "./poseHold.js";
 import {
   abortable,
   assertSession,
@@ -341,6 +342,61 @@ export function useFaceVerification() {
             setCenterReady(false);
             setCenterHold(0);
           }
+          if (!target.legacy && !target.head) {
+            const capture = new AbortController();
+            const captureSignal = AbortSignal.any([
+              signal,
+              run.cameraController.signal,
+              capture.signal,
+            ]);
+            try {
+              return await recordClip(run.stream, {
+                signal: captureSignal,
+                duration: 11_500,
+                until: async () => {
+                  await waitForCenteredFace(videoRef.current, {
+                    signal: captureSignal,
+                    onState: (state) => {
+                      if (!current()) return;
+                      setCenterReady(state.ready);
+                      setCenterHold(state.progress);
+                      setHint(state.hint);
+                    },
+                  });
+                  captureSignal.throwIfAborted();
+                  updateStage({
+                    stage: "pose",
+                    automatic: true,
+                    attemptNo,
+                    maxAttempts,
+                    clipProgress: 0,
+                  });
+                  if (current()) {
+                    setCenterReady(false);
+                    setHint(challengeInstruction(target));
+                  }
+                  await waitForPoseHold(videoRef.current, target, {
+                    signal: captureSignal,
+                    onState: (state) => {
+                      if (!current()) return;
+                      setProgress((previous) => ({
+                        ...previous,
+                        clipProgress: state.progress,
+                      }));
+                      setHint(
+                        state.progress > 0
+                          ? `좋아요. 손 모양을 그대로 유지해 주세요. ${Math.max(1, Math.ceil((1 - state.progress) * 3))}초 남았어요.`
+                          : challengeInstruction(target),
+                      );
+                    },
+                  });
+                },
+              });
+            } finally {
+              capture.abort();
+            }
+          }
+          updateStage({ stage: "centering", automatic: false });
           await waitForCenteredFace(videoRef.current, {
             signal,
             onState: (state) => {

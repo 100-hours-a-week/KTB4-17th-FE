@@ -161,6 +161,7 @@ export function recordClip(
     duration = CLIP_DURATION_MS,
     Recorder = globalThis.MediaRecorder,
     onProgress = () => {},
+    until,
   } = {},
 ) {
   return new Promise((resolve, reject) => {
@@ -236,6 +237,20 @@ export function recordClip(
     };
     try {
       recorder.start(1_000);
+      if (until) {
+        Promise.resolve()
+          .then(until)
+          .then(
+            () => {
+              try {
+                if (!settled && recorder.state !== "inactive") recorder.stop();
+              } catch {
+                finish(trustError("VIDEO_EMPTY"));
+              }
+            },
+            (error) => finish(error),
+          );
+      }
       const startedAt = Date.now();
       onProgress(0);
       progressTimer = setInterval(

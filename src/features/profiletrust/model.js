@@ -168,6 +168,11 @@ const SERVICE_MESSAGES = Object.freeze({
 });
 
 const FACE_REASONS = Object.freeze({
+  ADDITIONAL_CHALLENGE_REQUIRED: {
+    kind: "camera",
+    title: "추가 확인이 필요해요",
+    message: "본인 확인을 위해 안내된 고개 동작을 한 번 더 따라 해 주세요.",
+  },
   FACE_NOT_CENTERED: {
     kind: "camera",
     title: "시작 정면을 확인하지 못했어요",
@@ -184,7 +189,7 @@ const FACE_REASONS = Object.freeze({
     kind: "camera",
     title: "안내한 손 자세와 달라요",
     message:
-      "손 모양과 안내된 손끝 방향을 확인해 주세요. 손바닥·손등과 왼손·오른손은 상관없어요.",
+      "안내된 손 모양을 확인해 주세요. 방향 안내가 있는 경우에만 손끝 방향도 맞춰 주세요. 왼손·오른손, 손바닥·손등 모두 괜찮아요.",
   },
   HEAD_MOVEMENT_NOT_COMPLETED: {
     kind: "camera",
@@ -377,6 +382,8 @@ export function sessionIssue(session) {
 
 export function captureHint(session) {
   const reasons = latestAttempt(session)?.reasonCodes ?? [];
+  if (reasons.includes("ADDITIONAL_CHALLENGE_REQUIRED"))
+    return "본인 확인을 위해 안내된 고개 동작을 한 번 더 따라 해 주세요.";
   if (reasons.includes("NO_FACE"))
     return "얼굴 전체가 점선 안에 들어오도록 맞춰주세요.";
   if (reasons.includes("LIVENESS_FAILED"))

@@ -4,99 +4,16 @@ import {
   HAND_NAMES,
   HEAD_MOTIONS,
   headGuideStep,
+  requiresHandDirection,
 } from "./challenge.js";
-
-// 손가락을 각각 그려 숫자 3·4도 글자가 아닌 손 모양으로 보여 준다.
-const FINGERS = {
-  HAND_FIST: [],
-  HAND_ONE: [0],
-  HAND_TWO: [0, 1],
-  HAND_THREE: [0, 1, 2],
-  HAND_FOUR: [0, 1, 2, 3],
-  HAND_OPEN_PALM: [0, 1, 2, 3],
-  HAND_THUMBS_UP: [],
-  HAND_L_SHAPE: [0],
-  HAND_LOVE_YOU: [0, 3],
-  HAND_CALL_ME: [3],
-};
-const THUMB_OUT = new Set([
-  "HAND_OPEN_PALM",
-  "HAND_L_SHAPE",
-  "HAND_LOVE_YOU",
-  "HAND_CALL_ME",
-]);
-
-function HandShape({ hand, back = false }) {
-  // 모든 예시가 같은 손가락 모양을 사용한다. 손등/손바닥은 표면 무늬만 다르다.
-  const shapes = [
-    "M6 10Q5 9 5 12v3q0 4 4 4h3q4 0 4-4v-4q0-2-2-2H8Z",
-    "M8 18h5v4H8z",
-  ];
-  const fingers = [
-    "M6 12 5 4Q5 2 6.5 2T8 4l1 8Z",
-    "M9 11V2Q9 0 10.5 0T12 2v10Z",
-    "M12 12V4q0-2 1.5-2T15 4v9Z",
-    "M15 13l1-6q.3-1.5 1.5-1.2T19 7.5L18 15Z",
-  ];
-  for (const finger of FINGERS[hand]) {
-    shapes.push(
-      hand === "HAND_TWO"
-        ? finger === 0
-          ? "M7 12 3 4Q2 2 3.5 1.5T6 3l4 8Z"
-          : "M10 11 12 2q.5-2 2-1.5T15 3l-2 10Z"
-        : fingers[finger],
-    );
-  }
-  if (hand === "HAND_THUMBS_UP") {
-    shapes.push("M5 13 4 9l1-6q.3-2 2-1.5Q9 2 8 5L8 9h4v7Z");
-  } else if (THUMB_OUT.has(hand)) {
-    shapes.push("M8 13 3 8Q1.5 6.5.3 8T1 11l5 6Z");
-  } else {
-    shapes.push("M6 12q-3-2-3 0v3q0 2 3 2l5-2q1-2-1-2Z");
-  }
-  return (
-    <g strokeLinejoin="round" strokeLinecap="round">
-      <g fill={back ? "#f7c7ac" : "#ffe0c5"} stroke="#6d4d70" strokeWidth="1.1">
-        {shapes.map((d) => (
-          <path key={d} d={d} />
-        ))}
-      </g>
-      <path
-        d="M7 12q1-1 2-1M7 15q3 1 6 0"
-        fill="none"
-        stroke={back ? "#e9ab9a" : "#f4bda8"}
-        strokeWidth="0.7"
-      />
-      {back ? (
-        <path d="M8 13h1m2-1h1m2 1h1" stroke="#b67d86" strokeWidth="0.8" />
-      ) : (
-        <path
-          d="M8 17q2 1 4 0"
-          fill="none"
-          stroke="#d9998f"
-          strokeWidth="0.7"
-        />
-      )}
-      <path
-        d="M7.5 20h6v3h-6z"
-        fill="#b79cf1"
-        stroke="#6d4d70"
-        strokeWidth="1"
-      />
-      <path d="M8.5 21h3.8" stroke="#f4ecff" strokeWidth="0.65" />
-    </g>
-  );
-}
+import { HandGlyph, HandShape } from "./HandShape.jsx";
 
 function HandExample({ hand, direction }) {
-  const angle =
-    hand === "HAND_FIST"
-      ? 0
-      : direction === "DOWN"
-        ? 180
-        : direction === "SIDEWAYS"
-          ? 90
-          : 0;
+  const angle = !requiresHandDirection(hand, direction)
+    ? 0
+    : direction === "SIDEWAYS"
+      ? 90
+      : 0;
   const radians = (angle * Math.PI) / 180;
   const wristX =
     109 + 1.55 * (10 + 0.5 * Math.cos(radians) - 12 * Math.sin(radians));
@@ -145,34 +62,6 @@ function HandExample({ hand, direction }) {
         <HandShape hand={hand} />
       </g>
     </g>
-  );
-}
-
-function HandVariation({ hand, direction, mirror, back }) {
-  // 좌우 손을 뒤집어도 같은 챌린지이며, 가로 방향의 반대쪽도 허용된다.
-  const angle =
-    hand === "HAND_FIST"
-      ? 0
-      : direction === "DOWN"
-        ? 180
-        : direction === "SIDEWAYS"
-          ? mirror
-            ? -90
-            : 90
-          : 0;
-  return (
-    <svg
-      className="trust-hand-glyph"
-      viewBox="0 0 48 48"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <g
-        transform={`translate(24 24) scale(1.55) rotate(${angle}) scale(${mirror ? -1 : 1} 1) translate(-10 -11)`}
-      >
-        <HandShape hand={hand} back={back} />
-      </g>
-    </svg>
   );
 }
 
@@ -391,26 +280,34 @@ export function PoseExample({ challenge, progress }) {
     return () => media.removeEventListener("change", reset);
   }, [key, recording]);
   useEffect(() => {
-    if (!playing || recording) return undefined;
+    if (!playing || recording || !challenge?.head) return undefined;
     const timer = window.setInterval(
       () => setDemoStep((step) => (step + 1) % 3),
       1800,
     );
     return () => window.clearInterval(timer);
-  }, [playing, recording]);
+  }, [playing, recording, challenge?.head]);
   if (!challenge || challenge.legacy) return null;
   const motion = HEAD_MOTIONS[challenge.head];
-  const step = recording
-    ? headGuideStep(progress.stage, progress.clipProgress)
-    : demoStep;
-  const labels = ["정면 보기", motion.label, "다시 정면"];
+  const step = !motion
+    ? progress.stage === "centering"
+      ? 0
+      : 1
+    : recording
+      ? headGuideStep(progress.stage, progress.clipProgress)
+      : demoStep;
+  const labels = motion
+    ? ["정면 보기", motion.label, "다시 정면"]
+    : ["정면 2초", "포즈 3초", "자동 완료"];
   return (
     <section className="trust-pose-example" aria-label="하루의 포즈 예시">
       <div className="trust-example-heading">
         <strong>
-          {recording ? "하루와 함께 따라 해요" : "하루가 먼저 보여줄게요"}
+          {motion
+            ? "추가 확인 · 하루와 함께 따라 해요"
+            : "정면 확인 후 이 포즈를 3초 유지해 주세요"}
         </strong>
-        {!recording && (
+        {!recording && motion && (
           <button
             type="button"
             onClick={() => setPlaying((value) => !value)}
@@ -421,16 +318,21 @@ export function PoseExample({ challenge, progress }) {
         )}
       </div>
       <div className="trust-example-preview">
-        <HaruPose challenge={challenge} moving={step === 1} />
+        <HaruPose
+          challenge={challenge}
+          moving={Boolean(motion) && step === 1}
+        />
         <div className="trust-example-copy">
           <strong>{HAND_NAMES[challenge.hand]}</strong>
-          {challenge.hand !== "HAND_FIST" && (
+          {requiresHandDirection(challenge.hand, challenge.direction) ? (
             <span>
               손끝:{" "}
               {challenge.direction === "SIDEWAYS"
                 ? "← 가로 → 어느 쪽이든"
                 : HAND_DIRECTION_NAMES[challenge.direction]}
             </span>
+          ) : (
+            <span>손끝 방향은 자유예요</span>
           )}
           <span>손바닥·손등 어느 쪽도 OK</span>
           <span>왼손·오른손 모두 가능</span>
@@ -447,7 +349,7 @@ export function PoseExample({ challenge, progress }) {
           { label: "오른손 · 손등", mirror: true, back: true },
         ].map((variation) => (
           <div className="trust-hand-variation" key={variation.label}>
-            <HandVariation
+            <HandGlyph
               hand={challenge.hand}
               direction={challenge.direction}
               mirror={variation.mirror}
@@ -457,15 +359,16 @@ export function PoseExample({ challenge, progress }) {
           </div>
         ))}
       </div>
-      {challenge.hand !== "HAND_FIST" && challenge.direction === "SIDEWAYS" && (
-        <p className="trust-hand-direction-note">
-          손끝은 ← 왼쪽 또는 오른쪽 → 어느 쪽을 향해도 돼요.
-        </p>
-      )}
+      {requiresHandDirection(challenge.hand, challenge.direction) &&
+        challenge.direction === "SIDEWAYS" && (
+          <p className="trust-hand-direction-note">
+            손끝은 ← 왼쪽 또는 오른쪽 → 어느 쪽을 향해도 돼요.
+          </p>
+        )}
       <ol className="trust-head-steps">
         {labels.map((label, index) => (
           <li key={label} aria-current={index === step ? "step" : undefined}>
-            {recording ? (
+            {recording || !motion ? (
               <span>
                 {index + 1}. {label}
               </span>
@@ -485,14 +388,16 @@ export function PoseExample({ challenge, progress }) {
         ))}
       </ol>
       <small>
-        {step === 1
-          ? motion.detail
-          : step === 0
-            ? "먼저 정면을 바라봐 주세요."
-            : "정면으로 돌아와 그대로 유지해 주세요."}{" "}
+        {!motion
+          ? "정면과 손 모양이 확인되면 자동으로 촬영을 마쳐요."
+          : step === 1
+            ? motion.detail
+            : step === 0
+              ? "먼저 정면을 바라봐 주세요."
+              : "정면으로 돌아와 그대로 유지해 주세요."}{" "}
         좌우는 내 몸 기준이에요.{" "}
-        {challenge.hand === "HAND_FIST"
-          ? "주먹은 방향에 상관없이 화면 안 편한 위치에 두세요."
+        {!requiresHandDirection(challenge.hand, challenge.direction)
+          ? "손 모양만 맞추고 방향에 상관없이 편한 위치에 두세요."
           : "손 모양과 방향만 맞추면, 화면 안에서 편한 위치에 두어도 돼요."}{" "}
         예시는 참고용이에요. 손바닥·손등 방향이나 팔 각도까지 똑같이 따라 하지
         않아도 돼요. 얼굴은 가리지 말아 주세요.

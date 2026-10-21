@@ -1,7 +1,7 @@
 import { trustError } from "./model.js";
 
 const REQUIRED_FRAMES = 15;
-export const CENTER_HOLD_MS = 3_000;
+export const CENTER_HOLD_MS = 2_000;
 const MAX_POSITION_DEVIATION = 0.02;
 export const CENTER_HINTS = Object.freeze({
   NO_FACE: "얼굴 전체가 화면에 보이도록 맞춰 주세요.",
@@ -142,6 +142,7 @@ export function waitForCenteredFace(
     let tracker,
       timer,
       settled = false,
+      lastFrame = null,
       hold = { history: [], since: null };
     const finish = (error) => {
       if (settled) return;
@@ -168,11 +169,26 @@ export function waitForCenteredFace(
       try {
         if (!video || video.readyState < 2)
           throw trustError("CAMERA_INTERRUPTED");
+        const mediaTime = Number.isFinite(video.currentTime)
+          ? video.currentTime
+          : null;
+        if (mediaTime != null && mediaTime === lastFrame) {
+          timer = setTimeout(tick, 100);
+          return;
+        }
+        if (
+          mediaTime != null &&
+          lastFrame != null &&
+          (mediaTime <= lastFrame || mediaTime - lastFrame > 0.35)
+        ) {
+          hold = { history: [], since: null };
+        }
+        lastFrame = mediaTime;
         const now = performance.now();
         hold = centerHoldProgress(
           hold,
           tracker.detectForVideo(video, now),
-          now,
+          mediaTime != null ? mediaTime * 1000 : now,
         );
         onState({
           ready: hold.ready,
