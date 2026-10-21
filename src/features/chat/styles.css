@@ -1289,11 +1289,12 @@
   border-top: 1px solid var(--line);
 }
 
+/* 터치 기기는 iOS 확대 방지를 위해 responsive.css에서 16px로 유지된다 */
 .chat-room-view .message-text-input {
   height: 44px;
   min-height: 44px;
-  font-size: 16px;
-  line-height: 20px;
+  font-size: 14px;
+  line-height: 18px;
 }
 
 .chat-room-view .attach-image-button,

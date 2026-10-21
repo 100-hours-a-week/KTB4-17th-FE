@@ -656,6 +656,12 @@
   margin: 0;
 }
 
+/* 페르소나 화면은 소개 카드 아래에 상태 안내가 이어지므로, 화면 전체 높이를 차지하지 않고 한 화면에 들어오게 한다 */
+.main-scroll.persona-main > .empty-state {
+  min-height: 0;
+  padding-top: 32px;
+}
+
 .persona-main h2 {
   margin: 25px 0 15px;
 }
