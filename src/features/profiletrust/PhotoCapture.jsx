@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { PixelButton } from "../../shared/ui/components.jsx";
 import { PixelIcon } from "../../shared/ui/pixel.jsx";
+import { CameraSilhouette } from "./CameraSilhouette.jsx";
 import {
   capturePhoto,
   openCamera,
@@ -16,6 +17,7 @@ export function PhotoCapture({ onCapture, onCancel, disabled }) {
   const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = useState("starting");
   const [message, setMessage] = useState("");
+  const [cameraAspect, setCameraAspect] = useState(4 / 3);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Explicit retries must reopen the camera.
   useEffect(() => {
@@ -58,6 +60,7 @@ export function PhotoCapture({ onCapture, onCancel, disabled }) {
           });
         await previewCamera(preview, current.stream, controller.signal);
         controller.signal.throwIfAborted();
+        setCameraAspect(preview.videoWidth / preview.videoHeight || 4 / 3);
         setStatus("ready");
       } catch (error) {
         if (controller.signal.aborted) stopCamera(current.stream);
@@ -97,9 +100,12 @@ export function PhotoCapture({ onCapture, onCancel, disabled }) {
     <>
       <h1>정면 사진을 촬영해 주세요</h1>
       <p className="trust-subcopy">
-        밝은 곳에서 얼굴 전체가 보이도록 정면을 바라봐주세요.
+        밝은 곳에서 얼굴과 어깨를 실루엣에 맞추고 정면을 바라봐주세요.
       </p>
-      <div className="trust-camera trust-photo-camera">
+      <div
+        className="trust-camera trust-photo-camera"
+        style={{ aspectRatio: cameraAspect }}
+      >
         <video
           ref={video}
           autoPlay
@@ -107,6 +113,7 @@ export function PhotoCapture({ onCapture, onCancel, disabled }) {
           muted
           aria-label="정면 사진 촬영 미리보기"
         />
+        {["ready", "capturing"].includes(status) && <CameraSilhouette />}
         {status === "starting" && (
           <div className="trust-camera-placeholder" role="status">
             <PixelIcon name="bust" scale={8} /> 카메라를 준비하고 있어요…

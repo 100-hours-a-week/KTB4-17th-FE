@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { PixelIcon } from "../../shared/ui/pixel.jsx";
 
 const UNAVAILABLE_MESSAGE = "아직 준비되지 않은 기능이에요.";
 
@@ -49,7 +50,7 @@ export function ChatDetailMenu({
         className="more-button chat-detail-summary"
         aria-label="채팅방 상세 메뉴"
       >
-        •••
+        <PixelIcon name="kebab" scale={2} />
       </summary>
       <fieldset className="chat-detail-menu" aria-label="채팅방 상세 기능">
         <button

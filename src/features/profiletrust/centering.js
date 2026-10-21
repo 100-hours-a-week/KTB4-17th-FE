@@ -1,6 +1,8 @@
 import { trustError } from "./model.js";
 
 const REQUIRED_FRAMES = 15;
+export const CENTER_HOLD_MS = 2_000;
+const MAX_POSITION_DEVIATION = 0.02;
 export const CENTER_HINTS = Object.freeze({
   NO_FACE: "얼굴 전체가 화면에 보이도록 맞춰 주세요.",
   MULTIPLE_FACES: "혼자 화면에 들어와 주세요.",
@@ -15,7 +17,7 @@ export const CENTER_HINTS = Object.freeze({
   FRONTAL: "고개를 들거나 숙이지 말고 카메라를 정면으로 봐 주세요.",
   LEVEL: "고개를 기울이지 말고 똑바로 해 주세요.",
   HOLD: "좋아요. 정면으로 잠깐 가만히 있어 주세요.",
-  READY: "중앙 확인을 마쳤어요. 버튼을 눌러 기준을 확정해 주세요.",
+  READY: "정면 확인을 마쳤어요. 다음 포즈를 준비해 주세요.",
 });
 
 export function facePosition(result) {
@@ -56,10 +58,10 @@ export function facePosition(result) {
   if (left < 0 || top < 0 || right > 1 || bottom > 1) issue = "CROPPED";
   else if (face.width < 0.18 || face.height < 0.3) issue = "CLOSER";
   else if (face.width > 0.5 || face.height > 0.8) issue = "BACK";
-  else if (face.x < 0.42) issue = "LEFT";
-  else if (face.x > 0.58) issue = "RIGHT";
-  else if (face.y < 0.38) issue = "DOWN";
-  else if (face.y > 0.58) issue = "UP";
+  else if (face.x < 0.38) issue = "LEFT";
+  else if (face.x > 0.62) issue = "RIGHT";
+  else if (face.y < 0.34) issue = "DOWN";
+  else if (face.y > 0.62) issue = "UP";
   else if (Math.abs(yaw) > 15 || Math.abs(pitch) > 15) issue = "FRONTAL";
   else if (Math.abs(roll) > 12) issue = "LEVEL";
   return { ...face, issue };
@@ -79,13 +81,36 @@ export function centerProgress(history, result) {
     next.length === REQUIRED_FRAMES &&
     deviation("yaw") <= 2 &&
     deviation("pitch") <= 2 &&
-    deviation("x") <= 0.015 &&
-    deviation("y") <= 0.015;
+    deviation("x") <= MAX_POSITION_DEVIATION &&
+    deviation("y") <= MAX_POSITION_DEVIATION;
   return {
     history: next,
     ready,
     hint: CENTER_HINTS[face.issue || (ready ? "READY" : "HOLD")],
     progress: next.length / REQUIRED_FRAMES,
+  };
+}
+
+// 프레임 개수가 아닌 실제 경과 시간으로 유지 시간을 계산한다.
+export function centerHoldProgress(previous, result, now) {
+  const state = centerProgress(previous.history, result);
+  const stable =
+    state.history.length > 0 &&
+    (state.history.length < REQUIRED_FRAMES || state.ready);
+  const since = stable ? (previous.since ?? now) : null;
+  const elapsed = since == null ? 0 : Math.max(0, now - since);
+  const done = state.ready && elapsed >= CENTER_HOLD_MS;
+  const progress = stable ? Math.min(elapsed / CENTER_HOLD_MS, 1) : 0;
+  return {
+    ...state,
+    since,
+    done,
+    progress,
+    hint: done
+      ? CENTER_HINTS.READY
+      : stable
+        ? `정면을 그대로 유지해 주세요. ${Math.max(1, Math.ceil((CENTER_HOLD_MS - elapsed) / 1000))}초 후 자동으로 넘어가요.`
+        : state.hint,
   };
 }
 
@@ -111,21 +136,20 @@ async function createTracker() {
 
 export function waitForCenteredFace(
   video,
-  { signal, onState, setConfirm, create = createTracker },
+  { signal, onState, create = createTracker },
 ) {
   return new Promise((resolve, reject) => {
     let tracker,
       timer,
       settled = false,
-      history = [],
-      ready = false;
+      lastFrame = null,
+      hold = { history: [], since: null };
     const finish = (error) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
       clearTimeout(deadline);
       signal.removeEventListener("abort", abort);
-      setConfirm(null);
       try {
         tracker?.close();
       } catch {
@@ -145,14 +169,34 @@ export function waitForCenteredFace(
       try {
         if (!video || video.readyState < 2)
           throw trustError("CAMERA_INTERRUPTED");
-        const state = centerProgress(
-          history,
-          tracker.detectForVideo(video, performance.now()),
+        const mediaTime = Number.isFinite(video.currentTime)
+          ? video.currentTime
+          : null;
+        if (mediaTime != null && mediaTime === lastFrame) {
+          timer = setTimeout(tick, 100);
+          return;
+        }
+        if (
+          mediaTime != null &&
+          lastFrame != null &&
+          (mediaTime <= lastFrame || mediaTime - lastFrame > 0.35)
+        ) {
+          hold = { history: [], since: null };
+        }
+        lastFrame = mediaTime;
+        const now = performance.now();
+        hold = centerHoldProgress(
+          hold,
+          tracker.detectForVideo(video, now),
+          mediaTime != null ? mediaTime * 1000 : now,
         );
-        history = state.history;
-        ready = state.ready;
-        onState({ ready, hint: state.hint, progress: state.progress });
-        if (!settled) timer = setTimeout(tick, 100);
+        onState({
+          ready: hold.ready,
+          hint: hold.hint,
+          progress: hold.progress,
+        });
+        if (hold.done) finish();
+        else if (!settled) timer = setTimeout(tick, 100);
       } catch {
         finish(trustError("CAMERA_MODEL_UNAVAILABLE"));
       }
@@ -162,9 +206,6 @@ export function waitForCenteredFace(
       abort();
       return;
     }
-    setConfirm(() => {
-      if (ready) finish();
-    });
     Promise.resolve()
       .then(create)
       .then(

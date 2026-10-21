@@ -767,7 +767,9 @@
   min-width: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
+
+  /* 상대 사진·이름을 뒤로가기 바로 옆(왼쪽)에 붙인다 */
+  justify-content: flex-start;
   gap: 8px;
 }
 
@@ -816,12 +818,13 @@
   gap: 4px;
 }
 
+/* 세로 ⋮ 메뉴: 아이콘을 버튼 오른쪽 끝에 붙여 뒤로가기(<)와 같은 16px 간격으로 대칭 (높이 44px 터치 영역 유지) */
 .chat-header-actions .more-button {
   display: grid;
-  width: 44px;
+  width: 24px;
   height: 44px;
   padding: 0;
-  place-items: center;
+  place-items: center end;
   cursor: pointer;
 }
 
@@ -1443,4 +1446,39 @@
 /* 상단바 → 첫 채팅방 간격을 채팅방 사이 간격(28px)과 같게 */
 .chat-list-main .chat-list-items {
   padding-top: 14px;
+}
+
+/* 모바일 반응형 (#218): 화면 크기별 여백·크기만 적용하고 색·그림자 등 현재 디자인은 그대로 둔다 */
+@media (width < 360px) {
+  .chat-room-header.conversation-header {
+    gap: 4px;
+    padding-inline: 6px;
+  }
+
+  .chat-room-partner {
+    gap: 9px;
+  }
+
+  .chat-room-view .chat-messages {
+    padding-inline: 12px;
+  }
+
+  .chat-bubble-content {
+    gap: 4px;
+  }
+
+  .message-bubble {
+    padding: 9px 11px;
+  }
+
+  .chat-list-item {
+    gap: 10px;
+    padding-inline: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-messages {
+    scroll-behavior: auto;
+  }
 }

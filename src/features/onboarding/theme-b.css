@@ -53,7 +53,7 @@
   padding: 0;
   border: 4px solid transparent;
   background: transparent;
-  color: var(--purple);
+  color: var(--purple-deep);
 }
 
 .onboarding-progress {
@@ -1227,4 +1227,33 @@
 .onboarding-step-photo .profile-trust h1:focus {
   outline: none;
   scroll-margin-block: 24px;
+}
+
+/* 모바일 반응형 (#218): 화면 크기별 여백·크기만 적용하고 색·그림자 등 현재 디자인은 그대로 둔다 */
+@media (width <= 350px) {
+  .onboarding-page .onboarding-top,
+  .onboarding-page .onboarding-body,
+  .onboarding-step-kakao .kakao-conversation-content {
+    padding-inline: 16px;
+  }
+
+  .onboarding-page .onboarding-eyebrow {
+    margin-inline: 16px;
+  }
+
+  .onboarding-page .persona-bubble.left,
+  .onboarding-page .persona-chat-meta.left,
+  .onboarding-page .persona-actions {
+    margin-left: 30px;
+  }
+
+  .onboarding-step-kakao .kakao-speaker-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-page .persona-bubble.typing i {
+    animation: none;
+  }
 }

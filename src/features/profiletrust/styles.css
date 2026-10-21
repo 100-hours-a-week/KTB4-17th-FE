@@ -1,3 +1,71 @@
+.trust-example-heading button {
+  min-height: 32px;
+  padding: 4px 6px;
+  border: 1px solid var(--lavender);
+  background: var(--paper);
+  color: var(--purple-deep);
+  font: inherit;
+}
+
+.trust-pose-example > small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.trust-head-guide {
+  display: grid;
+  gap: 6px;
+  color: var(--ink);
+}
+
+.trust-head-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trust-head-steps li {
+  padding: 6px 3px;
+  border: 1px solid var(--lavender);
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+  word-break: keep-all;
+}
+
+.trust-head-steps li[aria-current="step"] {
+  border: 2px solid var(--purple-deep);
+  background: var(--soft-lavender);
+  font-weight: 700;
+}
+
+.trust-head-number {
+  display: block;
+}
+
+.trust-head-direction {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.trust-head-direction > svg {
+  flex: none;
+  color: var(--purple-deep);
+}
+
+.trust-head-guide > small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 .profile-trust {
   --trust-gap: 20px;
 
@@ -338,17 +406,105 @@
   line-height: 1.8;
 }
 
-.trust-face-outline {
+.trust-camera-silhouette {
   position: absolute;
-  inset: 16% 31% 20%;
-  border: 2px dashed rgb(233 221 255 / 70%);
-  border-radius: 45%;
+  inset: 0;
+  overflow: hidden;
+  color: #fff;
   pointer-events: none;
 }
 
-.trust-face-outline.is-ready {
-  border-color: #91c6a4;
-  border-style: solid;
+.trust-camera-silhouette .trust-silhouette-art {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: auto;
+  max-width: none;
+  height: 100%;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 65%));
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 7 6;
+}
+
+.trust-silhouette-head {
+  fill: rgb(255 255 255 / 4%);
+}
+
+.trust-silhouette-shoulders,
+.trust-silhouette-eyeline {
+  opacity: 0.65;
+}
+
+.trust-camera-silhouette.is-ready {
+  color: #a4efbb;
+}
+
+.trust-camera-silhouette.is-ready .trust-silhouette-art {
+  stroke-dasharray: none;
+}
+
+.trust-camera-silhouette.is-recording .trust-silhouette-head,
+.trust-camera-silhouette.is-recording .trust-silhouette-shoulders,
+.trust-camera-silhouette.is-recording .trust-silhouette-eyeline {
+  opacity: 0.45;
+}
+
+.trust-camera-silhouette .trust-silhouette-hand {
+  position: absolute;
+  top: 28%;
+  right: 0;
+  width: 34%;
+  height: 40%;
+  color: #fff;
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 80%));
+}
+
+.trust-silhouette-hand.is-left {
+  right: auto;
+  left: 0;
+}
+
+.trust-camera-silhouette .trust-silhouette-motion {
+  stroke: #fff;
+  stroke-width: 3;
+  stroke-dasharray: none;
+}
+
+.trust-hand-guide-status {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.is-seeking-hand .trust-silhouette-hand {
+  animation: trust-hand-guide-pulse 1.8s ease-in-out infinite;
+}
+
+.is-seeking-hand .trust-silhouette-hand.is-right {
+  animation-delay: -0.9s;
+}
+
+@keyframes trust-hand-guide-pulse {
+  0%,
+  100% {
+    opacity: 0.9;
+  }
+
+  50% {
+    opacity: 0.2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-seeking-hand .trust-silhouette-hand {
+    animation: none;
+    opacity: 0.75;
+  }
 }
 
 .trust-pose-guide {
@@ -615,5 +771,258 @@
   .trust-guide,
   .trust-note {
     padding: 8px;
+  }
+}
+
+/* 모바일 반응형 (#218): 화면 크기별 여백·크기만 적용하고 색·그림자 등 현재 디자인은 그대로 둔다 */
+@media (width <= 350px) {
+  .trust-photo-grid {
+    gap: 8px;
+  }
+
+  .trust-photo-badges {
+    right: 44px;
+    left: 4px;
+  }
+}
+
+/* 촬영 지시·카메라·버튼을 한 영역에 모아 모바일에서도 함께 보이게 한다. */
+.profile-trust[data-trust-phase="camera"] {
+  --trust-gap: 12px;
+}
+
+.profile-trust[data-trust-phase="camera"] h1 {
+  font-size: 20px;
+  line-height: 1.35;
+}
+
+.trust-capture-workspace {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 2px solid var(--lavender);
+  background: var(--paper, #fff);
+}
+
+.trust-capture-workspace .trust-camera-hint {
+  min-height: 0;
+  padding: 8px 10px;
+  background: var(--soft-lavender);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.trust-face-visibility-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  padding: 10px;
+  border: 2px solid #b86a17;
+  background: #fff3d6;
+  color: #633407;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+.trust-face-visibility-icon {
+  margin-top: 2px;
+}
+
+.trust-face-visibility-note strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.trust-face-visibility-note p {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.trust-capture-workspace .trust-camera {
+  width: min(100%, calc(min(38dvh, 300px) * var(--trust-camera-aspect)));
+  height: auto;
+  aspect-ratio: var(--trust-camera-aspect);
+  justify-self: center;
+}
+
+.trust-capture-workspace .trust-pose-guide {
+  gap: 8px;
+  padding: 8px;
+}
+
+.trust-capture-workspace .trust-pose-symbol {
+  flex-basis: 36px;
+  font-size: 30px;
+}
+
+.trust-capture-workspace .trust-pose-guide p,
+.trust-capture-workspace .trust-pose-guide small {
+  display: none;
+}
+
+.trust-capture-workspace .trust-pose-guide strong {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.trust-capture-controls {
+  display: grid;
+  gap: 8px;
+}
+
+.trust-capture-workspace .trust-reference-photo {
+  width: 36px;
+  height: 44px;
+  right: 6px;
+  bottom: 6px;
+}
+
+@media (height < 650px) {
+  .trust-capture-workspace {
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .trust-capture-workspace .trust-camera {
+    width: min(100%, calc(30dvh * var(--trust-camera-aspect)));
+  }
+}
+
+.trust-capture-tip {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.trust-head-up {
+  transform: rotate(180deg);
+}
+
+.trust-capture-workspace:has(.trust-head-guide) .trust-camera {
+  width: min(100%, calc(min(30dvh, 240px) * var(--trust-camera-aspect)));
+}
+
+@media (height < 650px) {
+  .trust-capture-workspace:has(.trust-head-guide) .trust-camera {
+    width: min(100%, calc(24dvh * var(--trust-camera-aspect)));
+  }
+}
+
+.trust-pose-example {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--lavender);
+  background: #faf7ff;
+}
+
+.trust-example-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.trust-example-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.trust-example-art {
+  display: block;
+  flex: 0 1 160px;
+  width: 160px;
+  min-width: 0;
+  height: 105px;
+}
+
+.trust-example-head {
+  transition: transform 350ms ease;
+}
+
+.trust-example-copy {
+  display: grid;
+  gap: 3px;
+  color: var(--purple-deep);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.trust-hand-variations-title {
+  margin: 8px 0 0;
+  color: var(--purple-deep);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.trust-hand-variations {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  margin: 4px 0;
+}
+
+.trust-hand-variation {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 4px 2px;
+  border: 1px solid #d9cbee;
+  background: #f7f2ff;
+  color: var(--purple-deep);
+  text-align: center;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.trust-hand-glyph {
+  display: block;
+  width: 48px;
+  height: 48px;
+}
+
+.trust-hand-direction-note {
+  margin: 2px 0 4px;
+  color: var(--purple-deep);
+  text-align: center;
+  font-size: 11px;
+}
+
+.trust-pose-example .trust-head-steps li {
+  display: grid;
+  padding: 0;
+}
+
+.trust-pose-example .trust-head-steps button,
+.trust-pose-example .trust-head-steps li > span {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.trust-capture-workspace:has(.trust-pose-example) .trust-camera {
+  width: min(100%, calc(min(26dvh, 210px) * var(--trust-camera-aspect)));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trust-example-head {
+    transition: none;
   }
 }

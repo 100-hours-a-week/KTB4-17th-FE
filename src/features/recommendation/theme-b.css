@@ -532,3 +532,38 @@
   font-variant-numeric: tabular-nums;
   cursor: pointer;
 }
+
+/* 모바일 반응형 (#218): 화면 크기별 여백·크기만 적용하고 색·그림자 등 현재 디자인은 그대로 둔다 */
+@media (width < 360px) {
+  .likes-main .like-card {
+    padding: 8px;
+  }
+
+  .likes-main .person-avatar.large {
+    height: 128px;
+  }
+}
+
+@media (height <= 600px) {
+  .home-main:has(> .recommendation-stack) {
+    padding-block: 6px;
+  }
+
+  .home-main:has(> .recommendation-stack) > .recommendation-stack {
+    gap: 6px;
+  }
+
+  .recommendation-card .recommendation-info {
+    bottom: 4px;
+  }
+
+  .recommendation-card .recommendation-profile-link {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recommendation-card-current.is-settling {
+    transition: none;
+  }
+}

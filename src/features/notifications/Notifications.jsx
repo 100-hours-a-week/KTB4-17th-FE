@@ -70,7 +70,10 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
   let previousDay;
   return (
     <>
-      <BrandHeader navigate={navigate} />
+      <BrandHeader
+        navigate={navigate}
+        onBack={() => navigate(notifications.returnTo || "/home")}
+      />
       <main
         id="main-content"
         tabIndex={-1}
@@ -112,7 +115,7 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
         </div>
         {notifications.connection === "reconnecting" && (
           <p className="notification-connection" role="status">
-            실시간 연결을 복구하고 있어요… 소식은 주기적으로 확인하고 있어요.
+            소식을 확인하지 못했어요. 잠시 후 다시 확인할게요.
           </p>
         )}
         {page.error && (

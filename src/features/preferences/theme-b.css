@@ -7,6 +7,10 @@
   color: var(--ink);
 }
 
+.preferences-back {
+  color: var(--purple-deep);
+}
+
 .preferences-main {
   padding-top: 16px;
 }
@@ -137,7 +141,7 @@
 }
 
 .main-scroll.preferences-main {
-  top: calc(108px + env(safe-area-inset-top, 0px));
+  top: calc(54px + env(safe-area-inset-top, 0px));
   padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
 }
 
@@ -157,4 +161,22 @@
   font-size: 14px;
   line-height: 1.75;
   word-break: keep-all;
+}
+
+/* 모바일 반응형 (#218): 화면 크기별 여백·크기만 적용하고 색·그림자 등 현재 디자인은 그대로 둔다 */
+@media (width >= 600px) {
+  .preference-sheet {
+    bottom: 24px;
+  }
+}
+
+@media (width <= 350px) {
+  .main-scroll.preferences-main,
+  .preference-sheet {
+    padding-inline: 16px;
+  }
+
+  .preferences-main .preference-range-field {
+    padding-inline: 12px;
+  }
 }

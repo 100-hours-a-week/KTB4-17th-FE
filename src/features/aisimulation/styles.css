@@ -577,3 +577,17 @@
     padding-inline: 30px;
   }
 }
+
+/* 모바일 반응형 (#218): 화면 크기별 여백·크기만 적용하고 색·그림자 등 현재 디자인은 그대로 둔다 */
+@media (width <= 350px) {
+  .report-main .score-card,
+  .report-main .report-areas {
+    padding: 14px;
+  }
+}
+
+@media (width >= 720px) {
+  .main-scroll.report-main {
+    padding-inline: 28px;
+  }
+}

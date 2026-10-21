@@ -4,16 +4,13 @@ import {
   getAuthSessionSubject,
 } from "../../shared/api/authToken.js";
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
-import {
-  CHAT_READ_UPDATED_EVENT,
-  createUnreadCountTracker,
-} from "../chat/unreadCount.js";
+import { CHAT_READ_UPDATED_EVENT } from "../chat/unreadCount.js";
 import * as api from "./api.js";
 import { NotificationContext } from "./context.jsx";
 import { isCurrentChatNotification, notificationDestination } from "./model.js";
 import { NotificationToast } from "./NotificationToast.jsx";
+import { createNotificationPoller } from "./polling.js";
 import { createNotificationSound } from "./sound.js";
-import { connectNotificationStream } from "./stream.js";
 
 export function NotificationProvider({
   enabled,
@@ -45,40 +42,22 @@ export function NotificationProvider({
     returnPath.current = "/home";
     let active = true;
     const isCurrent = () => active && getAuthSessionSubject() === subject;
-    const seen = new Set();
     const sound = createNotificationSound();
-    const current = createUnreadCountTracker({
-      fetchCount: async (signal) => (await api.unreadCount(signal)).count,
-      onCount: (count) => {
-        if (isCurrent()) setSnapshot({ subject, count });
-      },
-    });
-    tracker.current = current;
-    const synchronize = () => {
-      if (
-        isCurrent() &&
-        document.visibilityState !== "hidden" &&
-        navigator.onLine !== false
-      )
-        refresh();
-    };
-    const disconnect = connectNotificationStream({
-      onConnected: () => {
+    setConnection("connecting");
+    const current = createNotificationPoller({
+      isCurrent,
+      onSnapshot: ({ count, initial, changed }) => {
         if (!isCurrent()) return;
-        synchronize();
-        setMatchRevision((value) => value + 1);
+        setSnapshot({ subject, count });
+        if (changed) setRevision((value) => value + 1);
+        if (initial) setMatchRevision((value) => value + 1);
       },
       onStatus: (status) => {
         if (isCurrent()) setConnection(status);
       },
       onNotification: (item) => {
         if (!isCurrent()) return;
-        refresh();
         if (item.type === "MATCH") setMatchRevision((value) => value + 1);
-        const id = String(item.notificationId);
-        if (seen.has(id)) return;
-        seen.add(id);
-        if (seen.size > 200) seen.delete(seen.values().next().value);
         const inCurrentRoom =
           document.visibilityState !== "hidden" &&
           (isCurrentChatNotification(item, location.current.path) ||
@@ -95,10 +74,13 @@ export function NotificationProvider({
           setRecent({ subject, item });
       },
     });
+    tracker.current = current;
+    const synchronize = () => {
+      if (isCurrent()) current.refresh();
+    };
     const clear = () => {
       active = false;
       current.stop();
-      disconnect();
       sound.stop();
       setSnapshot(null);
       setRecent(null);
@@ -107,25 +89,24 @@ export function NotificationProvider({
     window.addEventListener(CHAT_READ_UPDATED_EVENT, synchronize);
     window.addEventListener("focus", synchronize);
     window.addEventListener("online", synchronize);
+    window.addEventListener("offline", synchronize);
     window.addEventListener("pageshow", synchronize);
     document.addEventListener("visibilitychange", synchronize);
-    const timer = window.setInterval(synchronize, 30000);
     synchronize();
     return () => {
       active = false;
       current.stop();
-      disconnect();
       sound.stop();
       if (tracker.current === current) tracker.current = null;
-      window.clearInterval(timer);
       window.removeEventListener(AUTH_SESSION_CLEARED_EVENT, clear);
       window.removeEventListener(CHAT_READ_UPDATED_EVENT, synchronize);
       window.removeEventListener("focus", synchronize);
       window.removeEventListener("online", synchronize);
+      window.removeEventListener("offline", synchronize);
       window.removeEventListener("pageshow", synchronize);
       document.removeEventListener("visibilitychange", synchronize);
     };
-  }, [enabled, subject, refresh]);
+  }, [enabled, subject]);
 
   useEffect(() => {
     if (enabled) refresh();

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  centerHoldProgress,
   centerProgress,
   facePosition,
   waitForCenteredFace,
@@ -9,6 +10,7 @@ import {
   challengeInstruction,
   HAND_NAMES,
   HEAD_NAMES,
+  headGuideStep,
   parseChallenge,
   recordingHint,
 } from "./challenge.js";
@@ -39,13 +41,17 @@ test("all 120 challenge combinations preserve hand, up/down/sideways and head di
         assert.equal(challenge.hand, hand);
         assert.equal(challenge.direction, direction);
         assert.equal(challenge.head, head);
+        if (
+          ["HAND_FIST", "HAND_LOVE_YOU", "HAND_CALL_ME"].includes(hand) ||
+          direction === "DOWN"
+        ) {
+          assert.match(challengeInstruction(challenge), /방향에 상관없이/);
+          count++;
+          continue;
+        }
         assert.ok(
           challengeInstruction(challenge).includes(
-            direction === "UP"
-              ? "위를"
-              : direction === "DOWN"
-                ? "아래를"
-                : "가로(왼쪽 또는 오른쪽)를",
+            direction === "UP" ? "위를" : "가로(왼쪽 또는 오른쪽)를",
           ),
         );
         count++;
@@ -103,6 +109,33 @@ test("fifteen stable frames are required and loss of face resets readiness", () 
   assert.equal(state.history.length, 0);
 });
 
+test("a small offset from the center can complete camera preparation", () => {
+  let state = { history: [] };
+  for (let index = 0; index < 15; index++) {
+    const frame = neutral();
+    frame.faceLandmarks[0].forEach((point) => {
+      point.x += 0.11;
+      point.y += 0.12;
+    });
+    assert.equal(facePosition(frame).issue, null);
+    state = centerProgress(state.history, frame);
+  }
+  assert.equal(state.ready, true);
+});
+
+test("small natural position jitter does not restart camera preparation", () => {
+  let state = { history: [] };
+  for (let index = 0; index < 15; index++) {
+    const frame = neutral();
+    frame.faceLandmarks[0].forEach((point) => {
+      point.x += index % 2 ? -0.018 : 0.018;
+      point.y += index % 2 ? 0.018 : -0.018;
+    });
+    state = centerProgress(state.history, frame);
+  }
+  assert.equal(state.ready, true);
+});
+
 test("moving inside the guide still cannot confirm a center", () => {
   let state = { history: [] };
   for (let index = 0; index < 15; index++) {
@@ -115,18 +148,16 @@ test("moving inside the guide still cannot confirm a center", () => {
   assert.equal(state.ready, false);
 });
 
-test("the camera waits for explicit confirmation and releases the local model", async () => {
+test("the camera advances automatically after two seconds and releases the local model", async () => {
   const signal = new AbortController().signal;
-  let confirm,
-    frames = 0,
-    closed = 0;
+  let frames = 0,
+    closed = 0,
+    lastProgress = 0;
+  const started = performance.now();
   const waiting = waitForCenteredFace(
     { readyState: 2 },
     {
       signal,
-      setConfirm: (next) => {
-        confirm = next;
-      },
       create: async () => ({
         detectForVideo: () => {
           frames++;
@@ -137,14 +168,15 @@ test("the camera waits for explicit confirmation and releases the local model", 
         },
       }),
       onState: (state) => {
-        if (state.ready) queueMicrotask(() => confirm());
+        lastProgress = state.progress;
       },
     },
   );
   await waiting;
-  assert.equal(frames, 15);
+  assert.ok(performance.now() - started >= 2000);
+  assert.ok(frames >= 15);
   assert.equal(closed, 1);
-  assert.equal(confirm, null);
+  assert.equal(lastProgress, 1);
 });
 
 test("cancelled model loading cannot leave a camera-analysis model alive", async () => {
@@ -156,7 +188,6 @@ test("cancelled model loading cannot leave a camera-analysis model alive", async
     {
       signal: controller.signal,
       onState: () => {},
-      setConfirm: () => {},
       create: () =>
         new Promise((resolve) => {
           resolveModel = resolve;
@@ -185,4 +216,59 @@ test("recording guidance starts neutral, moves once and returns neutral", () => 
   assert.ok(recordingHint(target, 0).includes("먼저"));
   assert.ok(recordingHint(target, 0.5).includes("위로"));
   assert.ok(recordingHint(target, 0.9).includes("다시 정면"));
+});
+
+test("head guide and spoken instructions change together at recording boundaries", () => {
+  const challenge = parseChallenge([
+    "LOOK_STRAIGHT",
+    "HAND_TWO",
+    "HAND_UP",
+    "TURN_LEFT",
+  ]);
+  assert.equal(headGuideStep("pose", 1), 0);
+  for (const progress of [0, 0.179]) {
+    assert.equal(headGuideStep("recording", progress), 0);
+    assert.ok(recordingHint(challenge, progress).includes("먼저"));
+  }
+  for (const progress of [0.18, 0.719]) {
+    assert.equal(headGuideStep("recording", progress), 1);
+    assert.ok(recordingHint(challenge, progress).includes("본인 기준 왼쪽"));
+  }
+  for (const progress of [0.72, 1]) {
+    assert.equal(headGuideStep("recording", progress), 2);
+    assert.ok(recordingHint(challenge, progress).includes("다시 정면"));
+  }
+});
+
+test("two-second hold resets when the face is lost or no longer frontal", () => {
+  let state = { history: [], since: null };
+  for (let time = 0; time <= 1900; time += 100)
+    state = centerHoldProgress(state, neutral(), time);
+  assert.equal(state.done, false);
+  state = centerHoldProgress(state, {}, 3000);
+  assert.equal(state.progress, 0);
+  assert.equal(state.since, null);
+  for (let time = 4100; time <= 6000; time += 100)
+    state = centerHoldProgress(state, neutral(), time);
+  assert.equal(state.done, false);
+  state = centerHoldProgress(state, neutral(), 6100);
+  assert.equal(state.done, true);
+  const turned = neutral();
+  turned.facialTransformationMatrixes[0].data[2] = Math.sin(Math.PI / 4);
+  state = centerHoldProgress(state, turned, 6200);
+  assert.equal(state.done, false);
+  assert.equal(state.progress, 0);
+});
+
+test("unstable movement resets the automatic hold even within the guide", () => {
+  let state = { history: [], since: null };
+  for (let time = 0; time <= 3000; time += 100) {
+    const frame = neutral();
+    frame.faceLandmarks[0].forEach((p) => {
+      p.x += time % 200 ? -0.055 : 0.055;
+    });
+    state = centerHoldProgress(state, frame, time);
+  }
+  assert.equal(state.done, false);
+  assert.equal(state.progress, 0);
 });

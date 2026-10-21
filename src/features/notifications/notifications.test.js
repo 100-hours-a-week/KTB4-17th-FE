@@ -11,8 +11,297 @@ import {
   notificationDestination,
   notificationTime,
 } from "./model.js";
+import { createNotificationPoller } from "./polling.js";
 import { connectNotificationStream, createSseParser } from "./stream.js";
 import { loadUnreadCategories, readRoomMatchNotifications } from "./unread.js";
+
+async function settlePolling() {
+  for (let index = 0; index < 20; index += 1) await Promise.resolve();
+}
+
+function pollingFixture(t, options = {}) {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  let items = [{ notificationId: 10, type: "LIKE", readAt: null }];
+  let count = 1;
+  const snapshots = [];
+  const arrivals = [];
+  const statuses = [];
+  const poller = createNotificationPoller({
+    fetchCount: async () => ({ count }),
+    fetchPage: async () => ({ items }),
+    onSnapshot: (snapshot) => snapshots.push(snapshot),
+    onNotification: (item) => arrivals.push(item.notificationId),
+    onStatus: (status) => statuses.push(status),
+    canPoll: () => true,
+    random: () => 0.5,
+    ...options,
+  });
+  t.after(() => poller.stop());
+  return {
+    poller,
+    snapshots,
+    arrivals,
+    statuses,
+    update(nextItems, nextCount = count) {
+      items = nextItems;
+      count = nextCount;
+    },
+    async tick(ms = 0) {
+      t.mock.timers.tick(ms);
+      await settlePolling();
+    },
+  };
+}
+
+test("polling baselines old records and finds new IDs even when unread totals stay equal", async (t) => {
+  const state = pollingFixture(t);
+  state.poller.refresh();
+  await state.tick();
+  assert.deepEqual(state.arrivals, []);
+  assert.deepEqual(state.snapshots[0], {
+    count: 1,
+    initial: true,
+    changed: true,
+  });
+  // A lower ID can commit late. Do not use max(id) as an arrival cursor.
+  state.update([
+    { notificationId: "10", type: "LIKE", readAt: "read" },
+    { notificationId: 9, type: "CHAT_MESSAGE", readAt: null },
+  ]);
+  await state.tick(4999);
+  assert.equal(state.snapshots.length, 1);
+  await state.tick(1);
+  assert.deepEqual(state.arrivals, [9]);
+  assert.equal(state.snapshots[1].count, 1);
+  await state.tick(5000);
+  assert.deepEqual(state.arrivals, [9]);
+  assert.equal(state.snapshots[2].changed, false);
+});
+
+test("polling detects read and delete state without repeating arrival banners", async (t) => {
+  const state = pollingFixture(t);
+  state.poller.refresh();
+  await state.tick();
+  state.update([{ notificationId: 10, type: "LIKE", readAt: "read" }], 0);
+  await state.tick(5000);
+  state.update([], 0);
+  await state.tick(5000);
+  assert.deepEqual(state.arrivals, []);
+  assert.equal(state.snapshots[1].changed, true);
+  assert.equal(state.snapshots[2].changed, true);
+});
+
+test("new polling arrivals are delivered oldest first so the newest banner wins", async (t) => {
+  const state = pollingFixture(t);
+  state.poller.refresh();
+  await state.tick();
+  state.update([
+    { notificationId: 12, type: "MATCH" },
+    { notificationId: 11, type: "CHAT_MESSAGE" },
+    { notificationId: 10, type: "LIKE" },
+  ]);
+  await state.tick(5000);
+  assert.deepEqual(state.arrivals, [11, 12]);
+});
+
+test("refreshes coalesce behind a request and discard its outdated snapshot", async (t) => {
+  let resolveCount;
+  let calls = 0;
+  const state = pollingFixture(t, {
+    fetchCount: () => {
+      calls += 1;
+      return calls === 1
+        ? new Promise((resolve) => {
+            resolveCount = resolve;
+          })
+        : Promise.resolve({ count: 2 });
+    },
+  });
+  state.poller.refresh();
+  await state.tick();
+  state.poller.refresh();
+  state.poller.refresh();
+  assert.equal(calls, 1);
+  resolveCount({ count: 1 });
+  await settlePolling();
+  assert.equal(state.snapshots.length, 0);
+  await state.tick();
+  assert.equal(calls, 2);
+  assert.equal(state.snapshots[0].count, 2);
+});
+
+test("hidden or offline clients abort polling and resume with an immediate refresh", async (t) => {
+  let available = true;
+  let calls = 0;
+  let signal;
+  let finish;
+  const state = pollingFixture(t, {
+    canPoll: () => available,
+    fetchCount: (currentSignal) => {
+      calls += 1;
+      signal = currentSignal;
+      return calls === 1
+        ? new Promise((resolve) => {
+            finish = resolve;
+          })
+        : Promise.resolve({ count: 1 });
+    },
+  });
+  state.poller.refresh();
+  await state.tick();
+  available = false;
+  state.poller.refresh();
+  assert.equal(signal.aborted, true);
+  finish({ count: 1 });
+  await settlePolling();
+  await state.tick(60000);
+  assert.equal(calls, 1);
+  assert.equal(state.snapshots.length, 0);
+  available = true;
+  state.poller.refresh();
+  await state.tick();
+  assert.equal(calls, 2);
+  assert.equal(state.snapshots.length, 1);
+});
+
+test("logout and account changes suppress pending results and future polling", async (t) => {
+  let current = true;
+  let finish;
+  let signal;
+  let calls = 0;
+  const state = pollingFixture(t, {
+    isCurrent: () => current,
+    fetchCount: (currentSignal) => {
+      calls += 1;
+      signal = currentSignal;
+      return new Promise((resolve) => {
+        finish = resolve;
+      });
+    },
+  });
+  state.poller.refresh();
+  await state.tick();
+  current = false;
+  state.poller.stop();
+  finish({ count: 4 });
+  await settlePolling();
+  state.poller.refresh();
+  await state.tick(60000);
+  assert.equal(signal.aborted, true);
+  assert.equal(calls, 1);
+  assert.deepEqual(state.snapshots, []);
+  assert.deepEqual(state.arrivals, []);
+});
+
+test("temporary failures retain the confirmed snapshot and back off before recovery", async (t) => {
+  let fails = false;
+  const state = pollingFixture(t, {
+    fetchCount: async () => {
+      if (fails) throw Object.assign(new Error("Unavailable"), { status: 503 });
+      return { count: 1 };
+    },
+  });
+  state.poller.refresh();
+  await state.tick();
+  fails = true;
+  await state.tick(5000);
+  assert.equal(state.snapshots.length, 1);
+  assert.equal(state.statuses.at(-1), "reconnecting");
+  fails = false;
+  await state.tick(9999);
+  assert.equal(state.snapshots.length, 1);
+  await state.tick(1);
+  assert.equal(state.snapshots.length, 2);
+  assert.equal(state.statuses.at(-1), "connected");
+  assert.deepEqual(state.arrivals, []);
+});
+
+test("polling stops after authentication is rejected", async (t) => {
+  let calls = 0;
+  const state = pollingFixture(t, {
+    fetchCount: async () => {
+      calls += 1;
+      throw Object.assign(new Error("Unauthorized"), { status: 401 });
+    },
+  });
+  state.poller.refresh();
+  await state.tick();
+  state.poller.refresh();
+  await state.tick(60000);
+  assert.equal(calls, 1);
+  assert.deepEqual(state.statuses, ["unauthenticated"]);
+});
+
+test("a stalled polling request is aborted and can recover on the next attempt", async (t) => {
+  let calls = 0;
+  let signal;
+  const state = pollingFixture(t, {
+    fetchCount: (currentSignal) => {
+      calls += 1;
+      signal = currentSignal;
+      if (calls > 1) return Promise.resolve({ count: 1 });
+      return new Promise((_resolve, reject) => {
+        currentSignal.addEventListener("abort", () =>
+          reject(new DOMException("Aborted", "AbortError")),
+        );
+      });
+    },
+  });
+  state.poller.refresh();
+  await state.tick();
+  await state.tick(15000);
+  assert.equal(signal.aborted, true);
+  assert.equal(state.statuses.at(-1), "reconnecting");
+  await state.tick(10000);
+  assert.equal(calls, 2);
+  assert.equal(state.snapshots.length, 1);
+});
+
+test("the default poller reads authenticated REST snapshots without opening SSE", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const previousWindow = globalThis.window;
+  globalThis.window = new EventTarget();
+  window.sessionStorage = { getItem: () => null, setItem() {} };
+  setAccessToken("polling-token");
+  const calls = [];
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    calls.push({ url, options });
+    assert.doesNotMatch(url, /\/stream/);
+    const data = url.endsWith("/unread-count")
+      ? { count: 7 }
+      : { items: [{ notificationId: 1, type: "MATCH" }] };
+    return new Response(JSON.stringify({ data }), {
+      headers: { "content-type": "application/json" },
+    });
+  });
+  const snapshots = [];
+  const poller = createNotificationPoller({
+    canPoll: () => true,
+    onSnapshot: (snapshot) => snapshots.push(snapshot),
+    onNotification() {
+      assert.fail("Old records must not become new arrivals");
+    },
+  });
+  try {
+    poller.refresh();
+    t.mock.timers.tick(0);
+    await settlePolling();
+    assert.equal(calls.length, 2);
+    assert.equal(snapshots[0].count, 7);
+    assert.match(calls[1].url, /notifications\?category=ALL&size=20$/);
+    for (const call of calls) {
+      assert.equal(
+        call.options.headers.get("Authorization"),
+        "Bearer polling-token",
+      );
+      assert.equal(call.options.cache, "no-store");
+      assert.equal(call.options.headers.get("Accept"), "application/json");
+    }
+  } finally {
+    poller.stop();
+    globalThis.window = previousWindow;
+  }
+});
 
 test("category dots include old unread items beyond a fully read first page", async () => {
   const cursors = [];
@@ -203,6 +492,15 @@ test("approved copy preserves sender information without inventing a chat previe
     notificationCopy({ type: "NOTICE", title: "공지", body: "내용" }).body,
     "내용",
   );
+});
+
+test("like notifications open received likes instead of the sender profile", () => {
+  for (const item of [
+    { type: "LIKE", targetType: "PROFILE", targetId: 2 },
+    { type: "LIKE", targetType: "PROFILE", targetId: null },
+  ]) {
+    assert.equal(notificationDestination(item), "/likes?tab=received");
+  }
 });
 
 test("only supported server targets can navigate, and the profile returns to the inbox", () => {

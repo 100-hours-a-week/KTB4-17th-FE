@@ -53,6 +53,7 @@
 
 /* 뒤로가기와 사진 단계 막대를 한 줄에: 버튼 세로 중심 = 막대 세로 중심 */
 .other-profile-hero .other-profile-back {
+  color: var(--purple-deep);
   top: calc(env(safe-area-inset-top, 0px) + 6px);
   left: 8.5px;
   width: 44px;
@@ -490,5 +491,32 @@
 @media (width >= 720px) {
   .other-profile-ai-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* 모바일 반응형 (#218): 화면 크기별 여백·크기만 적용하고 색·그림자 등 현재 디자인은 그대로 둔다 */
+@media (width <= 350px) {
+  .other-profile-info {
+    margin-inline: 8px;
+    padding-inline: 14px;
+  }
+
+  .other-profile-detail-grid {
+    gap: 6px;
+  }
+
+  .other-profile-detail-tile {
+    padding-inline: 8px;
+  }
+}
+
+@media (width >= 720px) {
+  .other-profile-hero {
+    height: min(60dvh, 580px);
+  }
+
+  .other-profile-info {
+    margin-inline: 24px;
+    padding: 26px;
   }
 }

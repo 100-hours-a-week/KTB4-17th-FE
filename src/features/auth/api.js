@@ -1,14 +1,44 @@
 import { storeBearerToken } from "../../shared/api/authToken.js";
 import { apiRequest } from "../../shared/api/client.js";
+import { API_ERROR_MESSAGES } from "../../shared/api/errorMessages.js";
 
 export const localTestAuthEnabled =
   import.meta.env.DEV && import.meta.env.VITE_ENABLE_LOCAL_TEST_AUTH === "true";
 
 let oauthCallbackExchange = null;
 
-export function beginKakaoLogin() {
+const LOGIN_CHECK_TIMEOUT_MS = 8_000;
+
+function loginUnavailableError() {
+  const error = new Error(API_ERROR_MESSAGES.SERVER_UNAVAILABLE);
+  error.code = "SERVER_UNAVAILABLE";
+  return error;
+}
+
+// Leaving the app for Kakao is a full-page navigation, so a proxy error (502 etc.)
+// would replace the app with a bare error page. Check the login endpoint first and
+// keep users on the login screen with a friendly message when the server is down.
+export async function beginKakaoLogin() {
   const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
-  window.location.assign(`${baseUrl}/api/v1/auth/kakao`);
+  const url = `${baseUrl}/api/v1/auth/kakao`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), LOGIN_CHECK_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      redirect: "manual",
+      credentials: "include",
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (response.status >= 500) throw loginUnavailableError();
+  } catch (error) {
+    if (error.code === "SERVER_UNAVAILABLE" || error.name === "AbortError")
+      throw loginUnavailableError();
+    // Network or CORS failures cannot be inspected here; let the browser try.
+  } finally {
+    clearTimeout(timer);
+  }
+  window.location.assign(url);
 }
 
 export const logout = () =>
