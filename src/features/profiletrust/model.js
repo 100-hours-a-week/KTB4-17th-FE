@@ -177,12 +177,14 @@ const FACE_REASONS = Object.freeze({
   HAND_NOT_DETECTED: {
     kind: "camera",
     title: "손 모양을 확인하지 못했어요",
-    message: "손이 잘리지 않도록 얼굴 옆에 두고 촬영 내내 유지해 주세요.",
+    message:
+      "손이 화면 안에 다 보이도록 편한 위치에 두고, 얼굴은 가리지 말아 주세요.",
   },
   HAND_GESTURE_MISMATCH: {
     kind: "camera",
     title: "안내한 손 자세와 달라요",
-    message: "손 모양과 위·아래 방향을 확인하고 다시 촬영해 주세요.",
+    message:
+      "손 모양과 안내된 손끝 방향을 확인해 주세요. 손바닥·손등과 왼손·오른손은 상관없어요.",
   },
   HEAD_MOVEMENT_NOT_COMPLETED: {
     kind: "camera",

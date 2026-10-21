@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  centerHoldProgress,
   centerProgress,
   facePosition,
   waitForCenteredFace,
@@ -40,6 +41,11 @@ test("all 120 challenge combinations preserve hand, up/down/sideways and head di
         assert.equal(challenge.hand, hand);
         assert.equal(challenge.direction, direction);
         assert.equal(challenge.head, head);
+        if (hand === "HAND_FIST") {
+          assert.match(challengeInstruction(challenge), /방향에 상관없이/);
+          count++;
+          continue;
+        }
         assert.ok(
           challengeInstruction(challenge).includes(
             direction === "UP"
@@ -143,18 +149,16 @@ test("moving inside the guide still cannot confirm a center", () => {
   assert.equal(state.ready, false);
 });
 
-test("the camera waits for explicit confirmation and releases the local model", async () => {
+test("the camera advances automatically after three seconds and releases the local model", async () => {
   const signal = new AbortController().signal;
-  let confirm,
-    frames = 0,
-    closed = 0;
+  let frames = 0,
+    closed = 0,
+    lastProgress = 0;
+  const started = performance.now();
   const waiting = waitForCenteredFace(
     { readyState: 2 },
     {
       signal,
-      setConfirm: (next) => {
-        confirm = next;
-      },
       create: async () => ({
         detectForVideo: () => {
           frames++;
@@ -165,14 +169,15 @@ test("the camera waits for explicit confirmation and releases the local model", 
         },
       }),
       onState: (state) => {
-        if (state.ready) queueMicrotask(() => confirm());
+        lastProgress = state.progress;
       },
     },
   );
   await waiting;
-  assert.equal(frames, 15);
+  assert.ok(performance.now() - started >= 3000);
+  assert.ok(frames >= 15);
   assert.equal(closed, 1);
-  assert.equal(confirm, null);
+  assert.equal(lastProgress, 1);
 });
 
 test("cancelled model loading cannot leave a camera-analysis model alive", async () => {
@@ -184,7 +189,6 @@ test("cancelled model loading cannot leave a camera-analysis model alive", async
     {
       signal: controller.signal,
       onState: () => {},
-      setConfirm: () => {},
       create: () =>
         new Promise((resolve) => {
           resolveModel = resolve;
@@ -235,4 +239,37 @@ test("head guide and spoken instructions change together at recording boundaries
     assert.equal(headGuideStep("recording", progress), 2);
     assert.ok(recordingHint(challenge, progress).includes("다시 정면"));
   }
+});
+
+test("three-second hold resets when the face is lost or no longer frontal", () => {
+  let state = { history: [], since: null };
+  for (let time = 0; time <= 2900; time += 100)
+    state = centerHoldProgress(state, neutral(), time);
+  assert.equal(state.done, false);
+  state = centerHoldProgress(state, {}, 3000);
+  assert.equal(state.progress, 0);
+  assert.equal(state.since, null);
+  for (let time = 3100; time <= 6000; time += 100)
+    state = centerHoldProgress(state, neutral(), time);
+  assert.equal(state.done, false);
+  state = centerHoldProgress(state, neutral(), 6100);
+  assert.equal(state.done, true);
+  const turned = neutral();
+  turned.facialTransformationMatrixes[0].data[2] = Math.sin(Math.PI / 4);
+  state = centerHoldProgress(state, turned, 6200);
+  assert.equal(state.done, false);
+  assert.equal(state.progress, 0);
+});
+
+test("unstable movement resets the automatic hold even within the guide", () => {
+  let state = { history: [], since: null };
+  for (let time = 0; time <= 3000; time += 100) {
+    const frame = neutral();
+    frame.faceLandmarks[0].forEach((p) => {
+      p.x += time % 200 ? -0.055 : 0.055;
+    });
+    state = centerHoldProgress(state, frame, time);
+  }
+  assert.equal(state.done, false);
+  assert.equal(state.progress, 0);
 });

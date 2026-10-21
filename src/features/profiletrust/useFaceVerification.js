@@ -41,6 +41,7 @@ export function useFaceVerification() {
   const [hint, setHint] = useState("");
   const [result, setResult] = useState(null);
   const [centerReady, setCenterReady] = useState(false);
+  const [centerHold, setCenterHold] = useState(0);
   const [challenge, setChallenge] = useState(null);
   const [cameraAspect, setCameraAspect] = useState("4 / 3");
   const videoRef = useRef(null);
@@ -336,17 +337,18 @@ export function useFaceVerification() {
             maxAttempts,
             clipProgress: 0,
           });
-          if (current()) setCenterReady(false);
+          if (current()) {
+            setCenterReady(false);
+            setCenterHold(0);
+          }
           await waitForCenteredFace(videoRef.current, {
             signal,
             onState: (state) => {
               if (current()) {
                 setCenterReady(state.ready);
+                setCenterHold(state.progress);
                 setHint(state.hint);
               }
-            },
-            setConfirm: (confirm) => {
-              run.confirmCenter = confirm;
             },
           });
           signal.throwIfAborted();
@@ -485,7 +487,7 @@ export function useFaceVerification() {
     centerReady,
     challenge,
     cameraAspect,
-    confirmCenter: () => runRef.current?.confirmCenter?.(),
+    centerHold,
     confirmPose: () => runRef.current?.confirmPose?.(),
     videoRef,
     selectPhoto,

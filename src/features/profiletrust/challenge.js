@@ -51,13 +51,15 @@ export function parseChallenge(codes) {
 
 export function challengeInstruction(challenge) {
   if (challenge.legacy) return "촬영하는 동안 정면을 유지해 주세요.";
+  if (challenge.hand === "HAND_FIST")
+    return `주먹은 방향에 상관없이 화면 안 편한 위치에 유지하세요. 왼손·오른손, 손바닥·손등 모두 괜찮아요. 얼굴은 가리지 말고, 고개는 ${HEAD_NAMES[challenge.head]} 살짝 움직였다가 정면으로 돌아오세요.`;
   const direction =
     challenge.direction === "UP"
       ? "위를"
       : challenge.direction === "DOWN"
         ? "아래를"
         : "가로(왼쪽 또는 오른쪽)를";
-  return `${HAND_NAMES[challenge.hand]} 모양이 ${direction} 향하도록 얼굴 옆에 유지하세요. 고개는 ${HEAD_NAMES[challenge.head]} 살짝 움직였다가 정면으로 돌아오세요.`;
+  return `${HAND_NAMES[challenge.hand]} 모양이 ${direction} 향하도록 화면 안 편한 위치에 유지하세요. 왼손·오른손, 손바닥·손등 모두 괜찮아요. 얼굴은 가리지 마세요. 고개는 ${HEAD_NAMES[challenge.head]} 살짝 움직였다가 정면으로 돌아오세요.`;
 }
 
 // 안내 단계는 촬영 시간 기준이며 자세 인식 성공 여부를 뜻하지 않는다.

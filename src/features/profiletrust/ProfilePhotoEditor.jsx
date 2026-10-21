@@ -9,18 +9,12 @@ import {
   profilePhotoErrorMessage,
 } from "../profile/photoUpload.js";
 import {
-  HAND_DIRECTION_NAMES,
-  HAND_NAMES,
-  HEAD_MOTIONS,
-  HEAD_NAMES,
-  headGuideStep,
-} from "./challenge.js";
-import {
   CLIP_DURATION_MS,
   reorderPhotos,
   replaceFrontalPhoto,
 } from "./model.js";
 import { PhotoCapture } from "./PhotoCapture.jsx";
+import { PoseExample } from "./PoseExample.jsx";
 import { useFaceVerification } from "./useFaceVerification.js";
 
 const PHOTO_ACCEPT =
@@ -180,94 +174,11 @@ function VerificationProgress({ progress, active }) {
         </div>
       )}
       <small>
-        최대 {maxAttempts}회 확인하고, 인증에 성공하면 바로 끝나요. 전송과 분석
-        시간은 연결 상태에 따라 달라질 수 있어요.
+        한 번만 인증에 성공하면 바로 완료돼요. 실패한 경우에만 최대{" "}
+        {maxAttempts}회 시도해요. 전송과 분석 시간은 연결 상태에 따라 달라질 수
+        있어요.
       </small>
     </div>
-  );
-}
-
-function PoseGuide({ challenge }) {
-  if (!challenge || challenge.legacy) return null;
-  const symbols = {
-    HAND_FIST: "✊",
-    HAND_ONE: "☝️",
-    HAND_TWO: "✌️",
-    HAND_THREE: "3",
-    HAND_FOUR: "4",
-    HAND_OPEN_PALM: "✋",
-    HAND_THUMBS_UP: "👍",
-    HAND_L_SHAPE: "L",
-    HAND_LOVE_YOU: "🤟",
-    HAND_CALL_ME: "🤙",
-  };
-  return (
-    <section className="trust-pose-guide" aria-label="이번 촬영의 포즈 안내">
-      <span
-        className={`trust-pose-symbol is-${challenge.direction.toLowerCase()}`}
-        aria-hidden="true"
-      >
-        {symbols[challenge.hand]}
-      </span>
-      <div>
-        <strong>
-          {HAND_NAMES[challenge.hand]} ·{" "}
-          {HAND_DIRECTION_NAMES[challenge.direction]} 방향
-        </strong>
-        <p>손은 얼굴을 가리지 않게 옆에 두고 끝까지 유지해 주세요.</p>
-        <p>
-          처음에는 정면, 안내가 나오면 고개를{" "}
-          <strong>{HEAD_NAMES[challenge.head]}</strong> 살짝 움직인 뒤 정면으로
-          돌아오세요.
-        </p>
-        <small>왼손·오른손, 손바닥·손등은 모두 괜찮아요.</small>
-        {challenge.direction === "SIDEWAYS" && (
-          <p>가로 방향은 왼쪽·오른쪽 어느 쪽을 향해도 괜찮아요.</p>
-        )}
-      </div>
-    </section>
-  );
-}
-
-function HeadMotionGuide({ challenge, progress }) {
-  if (!challenge || challenge.legacy) return null;
-  const motion = HEAD_MOTIONS[challenge.head];
-  const step = headGuideStep(progress.stage, progress.clipProgress);
-  const recording = progress.stage === "recording";
-  const labels = ["정면 보기", motion.label, "다시 정면"];
-  return (
-    <section className="trust-head-guide" aria-label="고개 움직임 순서">
-      <ol className="trust-head-steps">
-        {labels.map((label, index) => (
-          <li
-            key={label}
-            aria-current={recording && index === step ? "step" : undefined}
-          >
-            <span className="trust-head-number" aria-hidden="true">
-              {index + 1}
-            </span>
-            {label}
-          </li>
-        ))}
-      </ol>
-      <p className="trust-head-direction">
-        <PixelIcon
-          name={motion.icon}
-          scale={2}
-          className={challenge.head === "LOOK_UP" ? "trust-head-up" : ""}
-        />
-        {recording
-          ? step === 1
-            ? motion.detail
-            : step === 0
-              ? "지금은 정면을 보고, 다음 안내를 기다려 주세요."
-              : "다시 정면으로 돌아와 촬영이 끝날 때까지 유지해 주세요."
-          : motion.detail}
-      </p>
-      <small>
-        좌우는 내 몸 기준이에요. 손 모양은 촬영 끝까지 유지해 주세요.
-      </small>
-    </section>
   );
 }
 
@@ -562,16 +473,16 @@ export function ProfilePhotoEditor({
                     ? trust.cameraOn
                       ? "촬영한 영상을 확인하고 있어요. 다음 촬영을 위해 정면을 유지해 주세요."
                       : "카메라를 껐어요. 결과 확인이 끝날 때까지 기다려 주세요."
-                    : trust.hint}
+                    : trust.progress.stage === "pose" &&
+                        !trust.challenge?.legacy
+                      ? "하루 예시를 따라 준비한 뒤 촬영을 시작해 주세요."
+                      : trust.hint}
                 </p>
                 {["pose", "recording"].includes(trust.progress.stage) && (
-                  <>
-                    <PoseGuide challenge={trust.challenge} />
-                    <HeadMotionGuide
-                      challenge={trust.challenge}
-                      progress={trust.progress}
-                    />
-                  </>
+                  <PoseExample
+                    challenge={trust.challenge}
+                    progress={trust.progress}
+                  />
                 )}
                 <div
                   className={`trust-camera ${trust.cameraOn ? "is-live" : ""}`}
@@ -630,26 +541,33 @@ export function ProfilePhotoEditor({
                 </div>
                 {trust.cameraOn && (
                   <p className="trust-capture-tip">
-                    얼굴 전체를 타원 안에 맞춰 주세요. 손은 얼굴 옆에 두세요.
+                    얼굴 전체를 타원 안에 맞춰 주세요. 손은 화면 안 편한 위치에
+                    두고 얼굴은 가리지 마세요.
                   </p>
                 )}
                 <div className="trust-capture-controls">
                   {trust.active && trust.progress.stage === "centering" && (
-                    <PixelButton
-                      onClick={trust.confirmCenter}
-                      disabled={disabled || !trust.centerReady}
+                    <div
+                      className="trust-camera-progress"
+                      role="progressbar"
+                      aria-label="정면 3초 유지 진행"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={Math.round((trust.centerHold || 0) * 100)}
                     >
-                      {trust.centerReady
-                        ? "중앙 확인 · 다음으로"
-                        : "얼굴을 중앙에 맞춰 주세요"}
-                    </PixelButton>
+                      <span
+                        style={{
+                          transform: `scaleX(${trust.centerHold || 0})`,
+                        }}
+                      />
+                    </div>
                   )}
                   {trust.active && trust.progress.stage === "pose" && (
                     <PixelButton
                       onClick={trust.confirmPose}
                       disabled={disabled}
                     >
-                      포즈 준비 완료 · 촬영 시작
+                      따라 할 준비가 됐어요 · 촬영 시작
                     </PixelButton>
                   )}
                   {!trust.active && (
