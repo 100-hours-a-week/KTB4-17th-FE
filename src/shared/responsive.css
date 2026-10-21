@@ -84,12 +84,9 @@
 }
 
 .home-main,
-.chat-list-main {
-  top: calc(56px + env(safe-area-inset-top, 0px));
-}
-
+.chat-list-main,
 .my-main {
-  top: calc(48px + env(safe-area-inset-top, 0px));
+  top: calc(56px + env(safe-area-inset-top, 0px));
 }
 
 .likes-main {

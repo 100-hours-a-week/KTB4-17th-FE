@@ -169,10 +169,10 @@ section.practice-dialog button.practice-dialog-button,
 :is(.conversation-header, .simulation-screen-header) .chat-assistance summary {
   flex-direction: row;
   width: auto;
-  height: 32px;
-  min-height: 32px;
-  gap: 5px;
-  padding: 0 9px;
+  height: 28px;
+  min-height: 28px;
+  gap: 4px;
+  padding: 0 8px;
   border: 0;
   border-image: none;
   background: linear-gradient(135deg, #f2edff 0%, #ffe9f5 100%);

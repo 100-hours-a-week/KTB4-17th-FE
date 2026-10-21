@@ -34,15 +34,15 @@
   width: 100%;
 }
 
+/* 채팅방 목록: 화면 좌우 16px 여백을 대칭으로 두고 사진·글을 한 단계 작게 */
 .chat-list-item {
   width: 100%;
-  min-height: 84px;
-  padding: 14px 20px;
+  padding: 12px 16px;
   border: 0;
   background: var(--canvas);
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   text-align: left;
   color: var(--ink);
   cursor: pointer;
@@ -57,9 +57,9 @@
 
 .chat-room-avatar {
   display: block;
-  width: 56px;
-  height: 56px;
-  flex: 0 0 56px;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
   object-fit: cover;
 }
 
@@ -72,7 +72,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   flex: 1;
 }
 
@@ -93,7 +93,7 @@
 
 .chat-room-copy > small {
   display: block;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--muted);
   overflow: hidden;
   white-space: nowrap;
@@ -114,7 +114,7 @@
   align-items: flex-end;
   flex-direction: column;
   align-self: stretch;
-  padding-top: 3px;
+  padding-top: 6px;
   gap: 8px;
   color: var(--muted);
 }
@@ -779,9 +779,9 @@
 }
 
 .chat-room-partner-photo {
-  width: 34px;
-  height: 34px;
-  flex: 0 0 34px;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
   border-radius: 0;
   clip-path: var(--pixel-step-shape);
 }
@@ -789,6 +789,7 @@
 .chat-room-partner-name {
   min-width: 0;
   overflow: hidden;
+  font-size: 16px;
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1426,9 +1427,9 @@
   border: 0;
 }
 
-/* 상단바 → 첫 채팅방 간격을 채팅방 사이 간격(28px)과 같게 */
+/* 상단바 → 첫 채팅방 간격을 채팅방 사이 간격(24px)과 같게 */
 .chat-list-main .chat-list-items {
-  padding-top: 14px;
+  padding-top: 12px;
 }
 
 /* 모바일 반응형 (#218): 화면 크기별 여백·크기만 적용하고 색·그림자 등 현재 디자인은 그대로 둔다 */

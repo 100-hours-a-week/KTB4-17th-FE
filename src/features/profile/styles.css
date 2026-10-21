@@ -2,12 +2,8 @@
   font-size: 14px;
 }
 
-/* 마이 페이지는 알림 버튼 없이 로고만 헤더 가운데에 두고, 다른 헤더보다 조금 낮게 쓴다 */
-.brand-header.my-topbar {
-  justify-content: center;
-  height: calc(48px + env(safe-area-inset-top, 0px));
-  min-height: calc(48px + env(safe-area-inset-top, 0px));
-  padding-inline: 16px;
+.my-topbar {
+  justify-content: space-between;
 }
 
 .my-header-actions {
