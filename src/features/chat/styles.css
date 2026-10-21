@@ -693,23 +693,6 @@
   font-size: 30px;
 }
 
-.app-screen.app-screen-chat {
-  height: 100vh;
-  min-height: 0;
-}
-
-@supports (height: 100dvh) {
-  .app-screen.app-screen-chat {
-    height: 100dvh;
-  }
-}
-
-@media (width >= 600px) {
-  .app-screen.app-screen-chat {
-    height: min(844px, calc(100dvh - 48px));
-  }
-}
-
 .chat-room-view {
   position: absolute;
   inset: 0;

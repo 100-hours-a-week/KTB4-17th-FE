@@ -35,8 +35,7 @@
     padding: 0;
   }
 
-  .app-screen,
-  .app-screen.app-screen-chat {
+  .app-screen {
     height: var(--app-viewport-height, 100dvh);
   }
 
