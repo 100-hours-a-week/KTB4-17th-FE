@@ -2,8 +2,12 @@
   font-size: 14px;
 }
 
-.my-topbar {
-  justify-content: space-between;
+/* 마이 페이지는 알림 버튼 없이 로고만 헤더 가운데에 두고, 다른 헤더보다 조금 낮게 쓴다 */
+.brand-header.my-topbar {
+  justify-content: center;
+  height: calc(48px + env(safe-area-inset-top, 0px));
+  min-height: calc(48px + env(safe-area-inset-top, 0px));
+  padding-inline: 16px;
 }
 
 .my-header-actions {
@@ -290,6 +294,17 @@
   margin-left: auto;
   color: var(--muted);
   font-size: 12px;
+}
+
+/* 알림 메뉴: 읽지 않은 개수를 헤더 알림 버튼과 같은 뱃지로 표시 */
+.my-menu-trailing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.my-menu .my-menu-badge {
+  position: static;
 }
 
 .menu-glyph {
@@ -826,8 +841,6 @@
 
 .my-support {
   margin: 24px 16px 0;
-  padding-top: 16px;
-  border-top: 1px solid var(--line-soft);
 }
 
 .my-report-link {

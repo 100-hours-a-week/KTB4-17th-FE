@@ -300,8 +300,8 @@
 
 /* 좋아요 목록: 탭 바와 같은 좌우 16px, 탭 바 아래 · 카드 사이 모두 16px */
 .segmented-tabs.likes-seg + .likes-main {
-  /* 헤더 56 + 페이지 제목(#218) 40 + 탭 여백 16 + 탭 52 */
-  top: calc(164px + env(safe-area-inset-top, 0px) - 8px);
+  /* 헤더 56 + 탭 여백 16 + 탭 52 */
+  top: calc(124px + env(safe-area-inset-top, 0px));
   padding: 16px 16px 24px;
 }
 
@@ -385,16 +385,6 @@
 }
 
 /* #218에서 새로 추가된 요소 스타일 (최신 버전 유지) */
-.likes-page-title {
-  display: grid;
-  height: 28px;
-  place-items: center;
-  margin: 4px 0 8px;
-  color: var(--ink);
-  font-size: 18px;
-  line-height: 1;
-}
-
 .likes-tab-count {
   font-variant-numeric: tabular-nums;
   opacity: 0.8;

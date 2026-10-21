@@ -798,16 +798,16 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 4px;
 }
 
-/* 세로 ⋮ 메뉴: 아이콘을 버튼 오른쪽 끝에 붙여 뒤로가기(<)와 같은 16px 간격으로 대칭 (높이 44px 터치 영역 유지) */
+/* 세로 ⋮ 메뉴: 아이콘을 버튼 오른쪽 끝에 붙여 뒤로가기(<)와 같은 16px 간격·보라색으로 대칭 (높이 44px 터치 영역 유지) */
 .chat-header-actions .more-button {
   display: grid;
-  width: 24px;
+  width: 20px;
   height: 44px;
   padding: 0;
   place-items: center end;
+  color: var(--purple-deep);
   cursor: pointer;
 }
 

@@ -40,7 +40,13 @@ export function PixelButton({
   );
 }
 
-export function BrandHeader({ children, className = "", navigate, onBack }) {
+export function BrandHeader({
+  children,
+  className = "",
+  navigate,
+  onBack,
+  notificationAction = true,
+}) {
   return (
     <header className={`brand-header ${className}`}>
       {onBack && (
@@ -68,7 +74,7 @@ export function BrandHeader({ children, className = "", navigate, onBack }) {
         />
       </button>
       {children}
-      <NotificationButton />
+      {notificationAction && <NotificationButton />}
     </header>
   );
 }
