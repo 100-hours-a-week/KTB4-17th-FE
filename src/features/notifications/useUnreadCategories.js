@@ -19,7 +19,7 @@ export function useUnreadCategories({ subject, revision, count }) {
       })
       .catch(() => {
         // Keep the last confirmed dots during temporary errors; the provider
-        // invalidates this snapshot on resume, SSE arrivals and its periodic sync.
+        // invalidates this snapshot on mutations and polling snapshot changes.
       });
     return () => controller.abort();
   }, [subject, revision, knownEmpty]);
