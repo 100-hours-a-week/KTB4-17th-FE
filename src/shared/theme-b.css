@@ -199,12 +199,6 @@ section.practice-dialog button.practice-dialog-button,
   transform: rotate(90deg);
 }
 
-:is(.conversation-header, .simulation-screen-header)
-  .chat-assistance[open]
-  .chat-assistance-caret {
-  transform: rotate(-90deg);
-}
-
 @media (width < 360px) {
   :is(.conversation-header, .simulation-screen-header)
     .chat-assistance
@@ -262,6 +256,12 @@ section.practice-dialog button.practice-dialog-button,
 
 .chat-assistance[open] .chat-assistance-caret {
   transform: rotate(-90deg) scale(0.8);
+}
+
+:is(.conversation-header, .simulation-screen-header)
+  .chat-assistance[open]
+  .chat-assistance-caret {
+  transform: rotate(-90deg);
 }
 
 /* ---------- AI 아바타 (하루 · AI 연습대화 · 시뮬레이션 · 페르소나) ---------- */
