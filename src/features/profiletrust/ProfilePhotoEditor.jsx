@@ -192,9 +192,10 @@ export function ProfilePhotoEditor({
   const trust = useFaceVerification();
   const showHelp =
     !compactPose ||
-    !["camera", "failure"].includes(trust.phase) ||
-    !["pose", "recording", "analyzing", "recovering", "finalizing"].includes(
-      trust.progress.stage,
+    !(
+      (trust.phase === "camera" &&
+        ["pose", "recording"].includes(trust.progress.stage)) ||
+      (trust.phase === "failure" && trust.issue?.kind === "camera")
     );
   const { side: handGuideSide, unavailable: handGuideUnavailable } =
     useHandGuideSide({
