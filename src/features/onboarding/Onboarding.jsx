@@ -1561,6 +1561,7 @@ export function Onboarding({ navigate, toast }) {
               <ProfilePhotoEditor
                 initialPhotos={savedPhotos}
                 requireVerification
+                compactPose
                 disabled={photoSaving}
                 onChange={setPhotoState}
               />

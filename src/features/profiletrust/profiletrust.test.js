@@ -85,12 +85,93 @@ function dependencies(overrides = {}) {
   };
 }
 
-test("server step-up response changes only the next recording challenge", async () => {
+async function explicitlyRetryUntilClosed(initial, options) {
+  let session = initial;
+  for (let request = 0; request < 3 && session.status === "READY"; request++) {
+    const before = session.attemptsUsed;
+    session = await verifySequentially(session, options);
+    assert.equal(session.attemptsUsed, before + 1);
+  }
+  return session;
+}
+
+test("a failed hand check waits for explicit retry before recording again", async () => {
+  let recordings = 0;
+  const options = dependencies({
+    record: async () => ++recordings,
+    submit: async (_, number) =>
+      sessionWith(
+        Array.from({ length: number }, (_, index) =>
+          completed(index + 1, "RETRY", "HAND_NOT_DETECTED"),
+        ),
+      ),
+  });
+  const failed = await verifySequentially(ready(), options);
+  assert.equal(recordings, 1);
+  assert.equal(failed.status, "READY");
+  const issue = sessionIssue(failed);
+  assert.equal(issue.code, "HAND_NOT_DETECTED");
+  assert.equal(issue.actionLabel, "재시도");
+  assert.match(issue.notice, /자동으로.*촬영하지/);
+  const retried = await verifySequentially(failed, options);
+  assert.equal(recordings, 2);
+  assert.equal(retried.attemptsUsed, 2);
+});
+
+test("a retryable failure shows the latest reason instead of a previous face issue", () => {
+  const issue = sessionIssue(
+    sessionWith([
+      completed(1, "RETRY", "FACE_NOT_CENTERED"),
+      completed(2, "RETRY", "HAND_NOT_DETECTED"),
+    ]),
+  );
+  assert.equal(issue.code, "HAND_NOT_DETECTED");
+  assert.equal(issue.actionLabel, "재시도");
+  assert.match(issue.notice, /1회/);
+});
+
+test("a recovered failed attempt does not start another camera recording", async () => {
+  let recordings = 0;
+  const result = await verifySequentially(
+    sessionWith([
+      {
+        attemptNo: 1,
+        status: "PROCESSING",
+        decision: null,
+        reasonCodes: [],
+        errorCode: null,
+      },
+    ]),
+    dependencies({
+      record: async () => ++recordings,
+      getStatus: async () =>
+        sessionWith([completed(1, "RETRY", "HAND_NOT_DETECTED")]),
+    }),
+  );
+  assert.equal(recordings, 0);
+  assert.equal(result.status, "READY");
+  assert.equal(sessionIssue(result).actionLabel, "재시도");
+});
+
+test("exhausted hand checks offer a new session rather than another attempt", () => {
+  const issue = sessionIssue(
+    sessionWith(
+      Array.from({ length: 3 }, (_, index) =>
+        completed(index + 1, "RETRY", "HAND_NOT_DETECTED"),
+      ),
+    ),
+  );
+  assert.equal(issue.action, "restart");
+  assert.equal(issue.actionLabel, "인증 다시 시작");
+  assert.match(issue.notice, /모두 사용/);
+});
+
+test("explicit retry uses the server step-up challenge on the next recording", async () => {
   const basic = ["LOOK_STRAIGHT", "HAND_TWO", "HAND_DOWN"];
   const raised = [...basic, "TURN_RIGHT"];
   const seen = [];
   const additional = completed(1, "RETRY", "ADDITIONAL_CHALLENGE_REQUIRED");
-  const result = await verifySequentially(
+  const result = await explicitlyRetryUntilClosed(
     sessionWith([], { challenges: basic }),
     dependencies({
       record: async ({ challenges }) => {
@@ -107,11 +188,11 @@ test("server step-up response changes only the next recording challenge", async 
   assert.deepEqual(seen, [basic, raised]);
 });
 
-test("three attempts retain the same challenge returned by the server", async () => {
+test("explicit retries retain the same challenge returned by the server", async () => {
   const first = ["LOOK_STRAIGHT", "HAND_TWO", "HAND_UP", "LOOK_UP"];
   const second = [...first];
   const seen = [];
-  const result = await verifySequentially(
+  const result = await explicitlyRetryUntilClosed(
     sessionWith([], { challenges: first }),
     dependencies({
       record: async ({ attemptNo, challenges }) => {
@@ -143,11 +224,11 @@ for (const decisions of [
   Array(3).fill("NOT_VERIFIED"),
   ["NOT_VERIFIED", "RETRY", "RETRY"],
 ]) {
-  test(`${decisions.join("/")} submits three distinct clips in order in the same session`, async () => {
+  test(`${decisions.join("/")} submits distinct clips only across explicit retry requests`, async () => {
     const submitted = [];
     let recordings = 0;
     let inFlight = false;
-    const result = await verifySequentially(
+    const result = await explicitlyRetryUntilClosed(
       ready(),
       dependencies({
         record: async () => {
@@ -185,7 +266,7 @@ for (const successAt of [1, 2, 3]) {
       index % 2 ? "RETRY" : "NOT_VERIFIED",
     );
     decisions.push("VERIFIED");
-    const result = await verifySequentially(
+    const result = await explicitlyRetryUntilClosed(
       ready(),
       dependencies({
         record: async () => ++recordings,
@@ -227,9 +308,9 @@ test("lost POST response recovers PROCESSING then VERIFIED without resubmitting"
   assert.equal(polls, 2);
 });
 
-test("lost NOT_VERIFIED response resumes using the server's nextAttemptNo", async () => {
+test("explicit retry after a lost NOT_VERIFIED response uses the server's nextAttemptNo", async () => {
   const numbers = [];
-  const result = await verifySequentially(
+  const result = await explicitlyRetryUntilClosed(
     ready(1),
     dependencies({
       submit: async (_, number) => {
@@ -377,13 +458,13 @@ test("GET failures are surfaced without submitting another video", async () => {
   );
 });
 
-test("server validity, not a fixed 60-second timer, bounds sequential retries", async () => {
+test("server validity, not a fixed 60-second timer, bounds explicit retries", async () => {
   const originalNow = Date.now;
   let clock = originalNow();
   let submits = 0;
   Date.now = () => clock;
   try {
-    const result = await verifySequentially(
+    const result = await explicitlyRetryUntilClosed(
       ready(),
       dependencies({
         submit: async (_, number) => {
@@ -999,7 +1080,7 @@ test("recording progress starts at zero and only reaches completion for a usable
   assert.deepEqual(cancelled, [0]);
 });
 
-test("all bounded RETRY/NOT_VERIFIED decision sequences continue until success or three attempts", async () => {
+test("explicit retries handle all bounded failure sequences until success or three attempts", async () => {
   for (let length = 0; length <= 3; length++) {
     for (let mask = 0; mask < 2 ** length; mask++) {
       const decisions = Array.from({ length }, (_, index) =>
@@ -1007,7 +1088,7 @@ test("all bounded RETRY/NOT_VERIFIED decision sequences continue until success o
       );
       if (length < 3) decisions.push("VERIFIED");
       let submitted = 0;
-      const result = await verifySequentially(
+      const result = await explicitlyRetryUntilClosed(
         ready(),
         dependencies({
           submit: async (_, number) => {
