@@ -15,6 +15,7 @@ import { AiAvatar, PixelIcon } from "../../shared/ui/pixel.jsx";
 import { dateAge } from "../../shared/utils.js";
 import { ActivityRegionPicker } from "../activity-region/ActivityRegionPicker.jsx";
 import { useNotifications } from "../notifications/context.jsx";
+import { notificationBadge } from "../notifications/model.js";
 import { PagerIcon } from "../notifications/NotificationControls.jsx";
 import { savedPhotoItems } from "../profiletrust/model.js";
 import { ProfilePhotoEditor } from "../profiletrust/ProfilePhotoEditor.jsx";
@@ -116,7 +117,11 @@ export function MyPage({ navigate }) {
   const age = dateAge(profile.birthDate);
   return (
     <>
-      <BrandHeader navigate={navigate} className="my-topbar" />
+      <BrandHeader
+        navigate={navigate}
+        className="my-topbar"
+        notificationAction={false}
+      />
       <main id="main-content" tabIndex={-1} className="main-scroll my-main">
         <div
           className={`my-identity${isProfileLoading ? " my-identity-loading" : ""}`}
@@ -199,8 +204,14 @@ export function MyPage({ navigate }) {
           <button type="button" onClick={notifications.openInbox}>
             <PagerIcon />
             알림{" "}
-            <span>
-              {notifications.count || ""}　<PixelIcon name="chev" scale={1.5} />
+            <span className="my-menu-trailing">
+              {notificationBadge(notifications.count) && (
+                <span className="pager-badge my-menu-badge">
+                  {notificationBadge(notifications.count)}
+                  <span className="sr-only">개 읽지 않음</span>
+                </span>
+              )}
+              <PixelIcon name="chev" scale={1.5} />
             </span>
           </button>
           <button type="button" onClick={() => navigate("/preferences")}>

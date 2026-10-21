@@ -149,6 +149,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
+  margin-bottom: 18px;
 }
 
 .notification-heading h1 {
@@ -177,8 +178,9 @@
   height: 21px;
 }
 
+/* 제목(알림)과 같은 줄 오른쪽에 둔다 */
 .notification-intro {
-  margin: 8px 0 18px;
+  margin: 0 0 0 auto;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.7;
@@ -246,11 +248,10 @@
   display: flex;
   align-items: center;
 
-  /* 아이콘 좌우 여백을 맞추고 글과의 간격을 넓혀 균형을 잡는다 */
-  gap: 20px;
+  /* 카드를 타이트하게: 최소 높이 없이 여백·아이콘 간격을 줄인다 */
+  gap: 14px;
   width: 100%;
-  min-height: 88px;
-  padding: 14px 44px 14px 14px;
+  padding: 10px 40px 10px 12px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -258,21 +259,21 @@
 }
 
 .notification-open .notification-art {
-  --notification-art-size: 40px;
+  --notification-art-size: 36px;
 }
 
 .notification-copy {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
 }
 
 .notification-copy strong {
   font-size: 13px;
   font-weight: 700;
-  line-height: 1.5;
+  line-height: 1.4;
   word-break: keep-all;
   overflow-wrap: anywhere;
 }
@@ -280,7 +281,7 @@
 .notification-copy > span {
   color: var(--muted);
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.4;
   word-break: keep-all;
   overflow-wrap: anywhere;
 }
@@ -288,7 +289,7 @@
 .notification-copy time {
   color: var(--muted);
   font-size: 11px;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .notification-open .notification-unread-dot {
@@ -530,7 +531,7 @@
   }
 
   .notification-open {
-    gap: 14px;
+    gap: 12px;
     padding-left: 10px;
   }
 }
@@ -541,7 +542,7 @@
     padding-top: 12px;
   }
 
-  .notification-intro {
+  .notification-heading {
     margin-bottom: 10px;
   }
 

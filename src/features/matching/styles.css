@@ -29,7 +29,7 @@
 .like-card {
   border: 1px solid #d8c5e7;
   box-shadow: 3px 4px 0 #8758cf46;
-  padding: 15px 14px;
+  padding: 12px;
   background: var(--paper);
 }
 
@@ -100,12 +100,12 @@
 .like-actions {
   display: flex;
   gap: 10px;
-  margin-top: 14px;
+  margin-top: 12px;
 }
 
 .like-actions .pixel-button {
-  min-height: 44px;
-  padding: 7px;
+  min-height: 40px;
+  padding: 6px;
 }
 
 .like-status {
