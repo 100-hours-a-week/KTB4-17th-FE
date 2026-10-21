@@ -146,6 +146,17 @@
   padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
 }
 
+/* 저장하기 버튼은 화면 아래쪽에 붙이고, 내용이 길면 그대로 이어서 흐르게 한다 */
+.preferences-main > form {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.preferences-main .preferences-save {
+  margin-top: auto;
+}
+
 /* #218에서 새로 추가된 요소 스타일 (최신 버전 유지) */
 .screen-header.preferences-header.account-header {
   display: grid;
