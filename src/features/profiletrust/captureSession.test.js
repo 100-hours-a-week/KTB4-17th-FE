@@ -107,14 +107,14 @@ async function setup(t, options = {}) {
 
 test("each stage requires its own three-second hold, displays progress, and shares models", async (t) => {
   const run = await setup(t);
-  await run.advance(30);
+  await run.advance(28);
   assert.equal(run.completed, false);
   assert.equal(run.states.at(-1).stage, "centering");
   assert.ok(run.states.at(-1).progress > 0.8);
-  await run.advance(6);
+  await run.advance(4);
   assert.equal(run.states.at(-1).stage, "pose");
   assert.deepEqual(run.states.at(-1).completedStages, ["centering"]);
-  await run.advance(30);
+  await run.advance(26);
   assert.equal(run.completed, false);
   await run.advance(6);
   await run.waiting;
