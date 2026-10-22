@@ -369,11 +369,13 @@ export function ProfilePhotoEditor({
 
   const hasFrontalPhoto = items.some((item) => item.isFrontal);
   const canCancel = !requireVerification;
-  const faceCountdown =
-    trust.cameraOn &&
-    ["centering", "pose", "head"].includes(trust.progress.stage)
-      ? (trust.progress.remainingSeconds ?? 3)
-      : null;
+  // 촬영을 마친 뒤 서버 확인을 기다리는 동안 화면이 멈춘 것처럼 보이지 않게 한다.
+  const processingMessage =
+    trust.progress.stage === "finalizing"
+      ? "인증한 사진을 저장하고 있어요"
+      : ["analyzing", "recovering"].includes(trust.progress.stage)
+        ? "인증 결과를 확인하고 있어요"
+        : null;
   const verificationCancelLabel = hasFrontalPhoto
     ? "정면 사진 변경 취소"
     : "정면 사진 인증 취소";
@@ -564,19 +566,16 @@ export function ProfilePhotoEditor({
                       handSide={handGuideSide}
                     />
                   )}
-                  {faceCountdown != null && (
-                    <div
-                      className="trust-face-countdown"
-                      role="timer"
-                      aria-live="off"
-                      aria-label={`${faceCountdown}초 남음`}
-                    >
+                  {processingMessage && (
+                    <div className="trust-camera-processing" role="status">
                       <span
-                        className="trust-face-countdown-digit"
-                        key={faceCountdown}
-                      >
-                        {faceCountdown}
-                      </span>
+                        className="trust-camera-spinner"
+                        aria-hidden="true"
+                      />
+                      <strong className="trust-camera-processing-title">
+                        {processingMessage}
+                      </strong>
+                      <span>잠시만 기다려 주세요. 화면을 닫지 마세요.</span>
                     </div>
                   )}
                   {trust.cameraOn &&
