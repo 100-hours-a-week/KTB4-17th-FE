@@ -2,12 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { preparePrimaryPhoto } from "../profile/photoUpload.js";
 import * as api from "./api.js";
 import { openCamera, previewCamera, recordClip, stopCamera } from "./camera.js";
-import { waitForCenteredFace } from "./centering.js";
-import {
-  challengeInstruction,
-  parseChallenge,
-  recordingHint,
-} from "./challenge.js";
+import { prepareCaptureSession } from "./captureSession.js";
+import { parseChallenge } from "./challenge.js";
 import {
   latestAttempt,
   MAX_ATTEMPTS,
@@ -15,7 +11,6 @@ import {
   trustError,
   verificationIssue,
 } from "./model.js";
-import { waitForPoseHold } from "./poseHold.js";
 import {
   abortable,
   assertSession,
@@ -30,6 +25,7 @@ const initialProgress = () => ({
   completedAttempts: 0,
   maxAttempts: MAX_ATTEMPTS,
   clipProgress: 0,
+  live: null,
 });
 
 export function useFaceVerification() {
@@ -333,130 +329,63 @@ export function useFaceVerification() {
             }
           }
           updateStage({
-            stage: "centering",
+            stage: "preparing",
+            automatic: true,
             attemptNo,
             maxAttempts,
             clipProgress: 0,
           });
-          if (current()) {
-            setCenterReady(false);
-            setCenterHold(0);
-          }
-          if (!target.legacy && !target.head) {
-            const capture = new AbortController();
-            const captureSignal = AbortSignal.any([
-              signal,
-              run.cameraController.signal,
-              capture.signal,
-            ]);
+          const capture = new AbortController();
+          const captureSignal = AbortSignal.any([
+            signal,
+            run.cameraController.signal,
+            capture.signal,
+          ]);
+          let session;
+          try {
+            session = await prepareCaptureSession(videoRef.current, target, {
+              signal: captureSignal,
+              onState: (state) => {
+                if (!current()) return;
+                updateStage({
+                  stage: state.stage,
+                  automatic: true,
+                  attemptNo,
+                  maxAttempts,
+                  clipProgress: state.progress,
+                  live: state.live,
+                  stageIndex: state.stageIndex,
+                  stageCount: state.stageCount,
+                  completedStages: state.completedStages,
+                  matching: state.matching,
+                  paused: state.paused,
+                  remainingSeconds: state.remainingSeconds,
+                });
+                setCenterReady(state.stage === "centering" && state.matching);
+                setCenterHold(state.stage === "centering" ? state.progress : 0);
+                setHint(state.hint);
+              },
+            });
+            captureSignal.throwIfAborted();
             try {
               return await recordClip(run.stream, {
                 signal: captureSignal,
-                duration: 11_500,
-                until: async () => {
-                  await waitForCenteredFace(videoRef.current, {
-                    signal: captureSignal,
-                    onState: (state) => {
-                      if (!current()) return;
-                      setCenterReady(state.ready);
-                      setCenterHold(state.progress);
-                      setHint(state.hint);
-                    },
-                  });
-                  captureSignal.throwIfAborted();
-                  updateStage({
-                    stage: "pose",
-                    automatic: true,
-                    attemptNo,
-                    maxAttempts,
-                    clipProgress: 0,
-                  });
-                  if (current()) {
-                    setCenterReady(false);
-                    setHint(challengeInstruction(target));
-                  }
-                  await waitForPoseHold(videoRef.current, target, {
-                    signal: captureSignal,
-                    onState: (state) => {
-                      if (!current()) return;
-                      setProgress((previous) => ({
-                        ...previous,
-                        clipProgress: state.progress,
-                      }));
-                      setHint(
-                        state.progress > 0
-                          ? `좋아요. 손 모양을 그대로 유지해 주세요. ${Math.max(1, Math.ceil((1 - state.progress) * 3))}초 남았어요.`
-                          : challengeInstruction(target),
-                      );
-                    },
-                  });
-                },
+                duration: 17_500,
+                until: session.wait,
               });
-            } finally {
-              capture.abort();
+            } catch (error) {
+              if (error?.code === "CAMERA_ALIGNMENT_TIMEOUT")
+                Object.assign(error, session.stuck());
+              throw error;
             }
+          } finally {
+            capture.abort();
+            session?.close();
           }
-          updateStage({ stage: "centering", automatic: false });
-          await waitForCenteredFace(videoRef.current, {
-            signal,
-            onState: (state) => {
-              if (current()) {
-                setCenterReady(state.ready);
-                setCenterHold(state.progress);
-                setHint(state.hint);
-              }
-            },
-          });
-          signal.throwIfAborted();
-          if (current()) setCenterReady(false);
-          updateStage({ stage: "pose", attemptNo, maxAttempts });
-          if (current()) setHint(challengeInstruction(target));
-          await new Promise((resolve, reject) => {
-            const cleanup = () => {
-              clearTimeout(timer);
-              signal.removeEventListener("abort", abort);
-              run.confirmPose = null;
-            };
-            const abort = () => {
-              cleanup();
-              reject(signal.reason);
-            };
-            const remaining =
-              Date.parse(sessionRef.current?.expiresAt) - Date.now();
-            const timer = setTimeout(
-              () => {
-                cleanup();
-                reject(trustError("VERIFICATION_SESSION_EXPIRED"));
-              },
-              Number.isFinite(remaining) ? Math.max(0, remaining) : 60_000,
-            );
-            run.confirmPose = () => {
-              cleanup();
-              resolve();
-            };
-            signal.addEventListener("abort", abort, { once: true });
-            if (signal.aborted) abort();
-          });
-          signal.throwIfAborted();
-          updateStage({
-            stage: "recording",
-            attemptNo,
-            maxAttempts,
-            clipProgress: 0,
-          });
-          return recordClip(run.stream, {
-            signal: run.cameraController.signal,
-            onProgress: (clipProgress) => {
-              if (current()) {
-                setProgress((previous) => ({ ...previous, clipProgress }));
-                setHint(recordingHint(target, clipProgress));
-              }
-            },
-          });
         },
         onSession: updateSession,
         onStage: (next) => {
-          updateStage({ ...next, clipProgress: 0 });
+          updateStage({ ...next, clipProgress: 0, live: null });
           if (next.stage === "analyzing" && next.attemptNo === next.maxAttempts)
             run.closeCamera();
         },

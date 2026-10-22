@@ -25,8 +25,8 @@ export const PHOTO_REASONS = Object.freeze({
 
 const CAMERA_MESSAGES = Object.freeze({
   CAMERA_ALIGNMENT_TIMEOUT: [
-    "얼굴 중앙을 확인하지 못했어요",
-    "밝은 곳에서 얼굴 전체를 가이드 중앙에 맞추고 다시 시도해 주세요.",
+    "동작 유지 시간을 채우지 못했어요",
+    "영상을 전송하지 않았어요. 밝은 곳에서 각 자세를 3초씩 유지하며 다시 시도해 주세요.",
   ],
   CAMERA_MODEL_UNAVAILABLE: [
     "카메라 확인을 준비하지 못했어요",
@@ -223,6 +223,37 @@ const FACE_REASONS = Object.freeze({
   },
 });
 
+const STAGE_NAMES = Object.freeze({
+  centering: "정면",
+  pose: "손 포즈",
+  head: "고개",
+});
+
+const STUCK_MESSAGES = Object.freeze({
+  HAND_COVERS_FACE:
+    "손이 얼굴을 가리고 있었어요. 손을 얼굴 옆으로 조금 떨어뜨려 주세요.",
+  FACE_NOT_FRONTAL:
+    "얼굴이 정면이나 안내 영역을 벗어났어요. 카메라를 정면으로 봐 주세요.",
+  FACE_NOT_VISIBLE: "얼굴 전체가 화면에 보이지 않았어요.",
+  HAND_NOT_DETECTED:
+    "손이 인식되지 않았어요. 손 전체가 화면에 보이도록 들어 주세요.",
+  HAND_CROPPED:
+    "손 일부가 화면 밖으로 나갔어요. 손 전체가 화면 안에 들어오게 해 주세요.",
+  HAND_MISMATCH:
+    "손 모양이나 방향이 안내와 달랐어요. 예시와 같은 모양과 방향으로 맞춰 주세요.",
+  HEAD_NOT_MOVED:
+    "고개 움직임이 부족했어요. 안내한 방향으로 조금 더 움직여 유지해 주세요.",
+});
+
+function timeoutMessage(error, fallback) {
+  const stage = STAGE_NAMES[error?.stage];
+  if (!stage) return fallback;
+  const reason = Object.hasOwn(STUCK_MESSAGES, error.blocker)
+    ? ` ${STUCK_MESSAGES[error.blocker]}`
+    : "";
+  return `'${stage}' 단계에서 시간이 끝나 영상을 전송하지 않았어요.${reason}`;
+}
+
 function issueWithAction(issue) {
   return {
     details: [],
@@ -231,7 +262,7 @@ function issueWithAction(issue) {
       issue.kind === "photo"
         ? "정면 사진 다시 선택"
         : issue.kind === "camera"
-          ? "카메라 인증 다시 하기"
+          ? "재시도"
           : "다시 시도하기",
     ...issue,
   };
@@ -297,7 +328,15 @@ export function verificationIssue(error) {
     });
   if (Object.hasOwn(CAMERA_MESSAGES, code)) {
     const [title, message] = CAMERA_MESSAGES[code];
-    return issueWithAction({ kind: "camera", title, message, code });
+    return issueWithAction({
+      kind: "camera",
+      title,
+      message:
+        code === "CAMERA_ALIGNMENT_TIMEOUT"
+          ? timeoutMessage(error, message)
+          : message,
+      code,
+    });
   }
   if (
     ["VERIFICATION_SESSION_EXPIRED", "VERIFICATION_CHALLENGE_INVALID"].includes(
@@ -349,8 +388,10 @@ export function sessionIssue(session) {
     return verificationIssue(trustError("VERIFICATION_SESSION_EXPIRED"));
   const attempts = attemptHistory(session);
   const last = latestAttempt(session);
+  const relevantAttempts =
+    session?.status === "READY" && last ? [last] : attempts;
   const reasonCodes = new Set(
-    attempts
+    relevantAttempts
       .filter((attempt) => attempt.status !== "ERROR" && !attempt.errorCode)
       .flatMap((attempt) =>
         Array.isArray(attempt.reasonCodes) ? attempt.reasonCodes : [],
@@ -376,6 +417,20 @@ export function sessionIssue(session) {
       ...FACE_REASONS[reasons[0]],
       code: reasons[0],
       details: reasons.slice(1).map((code) => FACE_REASONS[code].message),
+      ...(FACE_REASONS[reasons[0]].kind === "camera"
+        ? session.canRetry
+          ? {
+              notice: `자동으로 다시 촬영하지 않아요. 재시도를 누르면 다시 촬영해요. 남은 재시도는 ${session.remainingAttempts}회예요.`,
+            }
+          : session.status === "EXHAUSTED"
+            ? {
+                action: "restart",
+                actionLabel: "인증 다시 시작",
+                notice:
+                  "이번 인증의 재시도 횟수를 모두 사용했어요. 인증 다시 시작을 누르면 새 인증을 진행해요.",
+              }
+            : {}
+        : {}),
     });
   return verificationIssue(trustError("VERIFICATION_RESPONSE_INVALID"));
 }

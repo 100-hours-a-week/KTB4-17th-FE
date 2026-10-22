@@ -1,6 +1,6 @@
 import { requiresHandDirection } from "./challenge.js";
-import { createHandTracker } from "./handGuide.js";
-import { trustError } from "./model.js";
+
+export { holdProgress as poseHoldProgress } from "./hold.js";
 
 const PATTERNS = {
   "00000": "HAND_FIST",
@@ -80,90 +80,4 @@ export function matchesPose(landmarks, target, width, height) {
   return (
     target.direction === (tilt <= 60 ? "UP" : tilt >= 120 ? "DOWN" : "SIDEWAYS")
   );
-}
-
-export function poseHoldProgress(previous, matching, timestamp) {
-  const continuous =
-    matching &&
-    (previous.last == null ||
-      (timestamp > previous.last && timestamp - previous.last <= 0.35));
-  const since = continuous ? (previous.since ?? timestamp) : null;
-  const elapsed = since == null ? 0 : timestamp - since;
-  // 서버 샘플 경계의 오차를 고려해 조금 더 유지한다.
-  return {
-    since,
-    last: timestamp,
-    progress: Math.min(elapsed / 3.2, 1),
-    done: elapsed >= 3.2,
-  };
-}
-
-export function waitForPoseHold(
-  video,
-  target,
-  { signal, onState = () => {}, create = createHandTracker },
-) {
-  return new Promise((resolve, reject) => {
-    let tracker,
-      timer,
-      settled = false,
-      lastFrame = -1,
-      hold = { since: null, last: null };
-    const finish = (error) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      signal.removeEventListener("abort", abort);
-      try {
-        tracker?.close();
-      } catch {
-        /* Best effort cleanup. */
-      }
-      if (error) reject(error);
-      else resolve();
-    };
-    const abort = () =>
-      finish(signal.reason || trustError("CAMERA_INTERRUPTED"));
-    const tick = () => {
-      if (settled) return;
-      try {
-        if (!video || video.readyState < 2)
-          throw trustError("CAMERA_INTERRUPTED");
-        if (video.currentTime !== lastFrame) {
-          lastFrame = video.currentTime;
-          const result = tracker.detectForVideo(video, performance.now());
-          const matching = (result.landmarks || []).some((points) =>
-            matchesPose(points, target, video.videoWidth, video.videoHeight),
-          );
-          hold = poseHoldProgress(hold, matching, lastFrame);
-          onState(hold);
-          if (hold.done) {
-            finish();
-            return;
-          }
-        }
-        timer = setTimeout(tick, 100);
-      } catch (error) {
-        finish(error);
-      }
-    };
-    signal.addEventListener("abort", abort, { once: true });
-    if (signal.aborted) {
-      abort();
-      return;
-    }
-    Promise.resolve()
-      .then(create)
-      .then(
-        (created) => {
-          if (settled) {
-            created.close();
-            return;
-          }
-          tracker = created;
-          tick();
-        },
-        () => finish(trustError("CAMERA_MODEL_UNAVAILABLE")),
-      );
-  });
 }

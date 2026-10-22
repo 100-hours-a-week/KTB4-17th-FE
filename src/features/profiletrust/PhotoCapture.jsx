@@ -10,7 +10,12 @@ import {
 } from "./camera.js";
 import { cameraError, trustError, verificationIssue } from "./model.js";
 
-export function PhotoCapture({ onCapture, onCancel, disabled }) {
+export function PhotoCapture({
+  onCapture,
+  onCancel,
+  disabled,
+  showHelp = true,
+}) {
   const video = useRef(null);
   const run = useRef(null);
   const capturing = useRef(false);
@@ -99,10 +104,12 @@ export function PhotoCapture({ onCapture, onCancel, disabled }) {
   return (
     <>
       <h1>정면 사진을 촬영해 주세요</h1>
-      <p className="trust-subcopy">
-        밝은 곳에서 편하게 정면을 바라봐주세요. 실루엣에 정확히 맞추지 않아도
-        돼요.
-      </p>
+      {showHelp && (
+        <p className="trust-subcopy">
+          밝은 곳에서 편하게 정면을 바라봐주세요. 실루엣에 정확히 맞추지 않아도
+          돼요.
+        </p>
+      )}
       <div
         className="trust-camera trust-photo-camera"
         style={{ aspectRatio: cameraAspect }}
@@ -149,10 +156,12 @@ export function PhotoCapture({ onCapture, onCancel, disabled }) {
       >
         촬영 취소 · 사진 선택으로 돌아가기
       </button>
-      <p className="trust-subcopy trust-small">
-        카메라가 열리지 않으면 사이트 설정에서 카메라 권한을 허용해 주세요. 앱
-        안에서 접속했다면 Safari 또는 Chrome으로 열어 주세요.
-      </p>
+      {showHelp && (
+        <p className="trust-subcopy trust-small">
+          카메라가 열리지 않으면 사이트 설정에서 카메라 권한을 허용해 주세요. 앱
+          안에서 접속했다면 Safari 또는 Chrome으로 열어 주세요.
+        </p>
+      )}
     </>
   );
 }

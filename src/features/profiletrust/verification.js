@@ -187,7 +187,6 @@ export async function verifySequentially(
   },
 ) {
   let session = assertSession(initial);
-  let sent = 0;
   const stage = (
     name,
     attemptNo = session.nextAttemptNo ?? session.attemptsUsed,
@@ -199,85 +198,83 @@ export async function verifySequentially(
       attemptsUsed: session.attemptsUsed,
     });
   onSession(session);
-  while (true) {
-    signal.throwIfAborted();
-    if (session.status === "PROCESSING") {
-      stage("recovering");
-      session = await reconcileSession(session, {
+  signal.throwIfAborted();
+  if (session.status === "PROCESSING") {
+    stage("recovering");
+    session = await reconcileSession(session, {
+      getStatus,
+      signal,
+      onSession,
+      pause,
+    });
+    if (session.status !== "VERIFIED" && latestAttempt(session)?.errorCode)
+      throw trustError(latestAttempt(session).errorCode);
+    return session;
+  }
+  if (session.status !== "READY") return session;
+  if (session.expiresAt && Date.parse(session.expiresAt) <= Date.now())
+    throw trustError("VERIFICATION_SESSION_EXPIRED");
+  const attemptNo = session.nextAttemptNo;
+  const before = session.attemptsUsed;
+  stage("recording", attemptNo);
+  onHint(captureHint(session));
+  let video = await record({
+    attemptNo,
+    maxAttempts: session.maxAttempts,
+    challenges: session.challenges,
+  });
+  signal.throwIfAborted();
+  stage("analyzing", attemptNo);
+  try {
+    let next;
+    try {
+      next = assertSession(
+        await submit(session.sessionId, attemptNo, video, signal),
+        session.sessionId,
+      );
+      if (
+        next.attemptsUsed !== attemptNo ||
+        next.maxAttempts !== session.maxAttempts
+      )
+        throw trustError("VERIFICATION_RESPONSE_INVALID");
+    } catch (error) {
+      if (signal.aborted) throw error;
+      if (
+        error?.code?.startsWith("PRIMARY_PHOTO_") ||
+        [
+          "VERIFICATION_RESPONSE_INVALID",
+          "VERIFICATION_SESSION_EXPIRED",
+          "VERIFICATION_SESSION_NOT_FOUND",
+          "VIDEO_TYPE_NOT_ALLOWED",
+          "VIDEO_TOO_LARGE",
+          "VERIFICATION_CHALLENGE_INVALID",
+          "AUTH_REQUIRED",
+          "AUTH_TOKEN_MISSING",
+        ].includes(error?.code)
+      )
+        throw error;
+      stage("recovering", attemptNo);
+      next = await reconcileSession(session, {
         getStatus,
         signal,
         onSession,
         pause,
       });
-      if (session.status !== "VERIFIED" && latestAttempt(session)?.errorCode)
-        throw trustError(latestAttempt(session).errorCode);
+      if (next.status !== "VERIFIED" && next.attemptsUsed === before)
+        throw error;
+      if (
+        next.attemptsUsed !== attemptNo ||
+        next.maxAttempts !== session.maxAttempts
+      )
+        throw trustError("VERIFICATION_RESPONSE_INVALID");
     }
-    if (session.status !== "READY") return session;
-    if (sent >= MAX_ATTEMPTS) throw trustError("VERIFICATION_RESPONSE_INVALID");
-    if (session.expiresAt && Date.parse(session.expiresAt) <= Date.now())
-      throw trustError("VERIFICATION_SESSION_EXPIRED");
-    const attemptNo = session.nextAttemptNo;
-    const before = session.attemptsUsed;
-    stage("recording", attemptNo);
-    onHint(captureHint(session));
-    let video = await record({
-      attemptNo,
-      maxAttempts: session.maxAttempts,
-      challenges: session.challenges,
-    });
     signal.throwIfAborted();
-    sent++;
-    stage("analyzing", attemptNo);
-    try {
-      let next;
-      try {
-        next = assertSession(
-          await submit(session.sessionId, attemptNo, video, signal),
-          session.sessionId,
-        );
-        if (
-          next.attemptsUsed !== attemptNo ||
-          next.maxAttempts !== session.maxAttempts
-        )
-          throw trustError("VERIFICATION_RESPONSE_INVALID");
-      } catch (error) {
-        if (signal.aborted) throw error;
-        if (
-          error?.code?.startsWith("PRIMARY_PHOTO_") ||
-          [
-            "VERIFICATION_RESPONSE_INVALID",
-            "VERIFICATION_SESSION_EXPIRED",
-            "VERIFICATION_SESSION_NOT_FOUND",
-            "VIDEO_TYPE_NOT_ALLOWED",
-            "VIDEO_TOO_LARGE",
-            "VERIFICATION_CHALLENGE_INVALID",
-            "AUTH_REQUIRED",
-            "AUTH_TOKEN_MISSING",
-          ].includes(error?.code)
-        )
-          throw error;
-        stage("recovering", attemptNo);
-        next = await reconcileSession(session, {
-          getStatus,
-          signal,
-          onSession,
-          pause,
-        });
-        if (next.status !== "VERIFIED" && next.attemptsUsed === before)
-          throw error;
-        if (
-          next.attemptsUsed !== attemptNo ||
-          next.maxAttempts !== session.maxAttempts
-        )
-          throw trustError("VERIFICATION_RESPONSE_INVALID");
-      }
-      signal.throwIfAborted();
-      session = next;
-      onSession(session);
-      if (session.status !== "VERIFIED" && latestAttempt(session)?.errorCode)
-        throw trustError(latestAttempt(session).errorCode);
-    } finally {
-      video = null;
-    }
+    session = next;
+    onSession(session);
+    if (session.status !== "VERIFIED" && latestAttempt(session)?.errorCode)
+      throw trustError(latestAttempt(session).errorCode);
+    return session;
+  } finally {
+    video = null;
   }
 }
