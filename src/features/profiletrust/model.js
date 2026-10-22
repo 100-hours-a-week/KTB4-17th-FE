@@ -223,6 +223,37 @@ const FACE_REASONS = Object.freeze({
   },
 });
 
+const STAGE_NAMES = Object.freeze({
+  centering: "정면",
+  pose: "손 포즈",
+  head: "고개",
+});
+
+const STUCK_MESSAGES = Object.freeze({
+  HAND_COVERS_FACE:
+    "손이 얼굴을 가리고 있었어요. 손을 얼굴 옆으로 조금 떨어뜨려 주세요.",
+  FACE_NOT_FRONTAL:
+    "얼굴이 정면이나 안내 영역을 벗어났어요. 카메라를 정면으로 봐 주세요.",
+  FACE_NOT_VISIBLE: "얼굴 전체가 화면에 보이지 않았어요.",
+  HAND_NOT_DETECTED:
+    "손이 인식되지 않았어요. 손 전체가 화면에 보이도록 들어 주세요.",
+  HAND_CROPPED:
+    "손 일부가 화면 밖으로 나갔어요. 손 전체가 화면 안에 들어오게 해 주세요.",
+  HAND_MISMATCH:
+    "손 모양이나 방향이 안내와 달랐어요. 예시와 같은 모양과 방향으로 맞춰 주세요.",
+  HEAD_NOT_MOVED:
+    "고개 움직임이 부족했어요. 안내한 방향으로 조금 더 움직여 유지해 주세요.",
+});
+
+function timeoutMessage(error, fallback) {
+  const stage = STAGE_NAMES[error?.stage];
+  if (!stage) return fallback;
+  const reason = Object.hasOwn(STUCK_MESSAGES, error.blocker)
+    ? ` ${STUCK_MESSAGES[error.blocker]}`
+    : "";
+  return `'${stage}' 단계에서 시간이 끝나 영상을 전송하지 않았어요.${reason}`;
+}
+
 function issueWithAction(issue) {
   return {
     details: [],
@@ -297,7 +328,15 @@ export function verificationIssue(error) {
     });
   if (Object.hasOwn(CAMERA_MESSAGES, code)) {
     const [title, message] = CAMERA_MESSAGES[code];
-    return issueWithAction({ kind: "camera", title, message, code });
+    return issueWithAction({
+      kind: "camera",
+      title,
+      message:
+        code === "CAMERA_ALIGNMENT_TIMEOUT"
+          ? timeoutMessage(error, message)
+          : message,
+      code,
+    });
   }
   if (
     ["VERIFICATION_SESSION_EXPIRED", "VERIFICATION_CHALLENGE_INVALID"].includes(

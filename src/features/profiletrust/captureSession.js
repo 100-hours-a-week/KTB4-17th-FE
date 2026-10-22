@@ -91,6 +91,8 @@ export async function prepareCaptureSession(
   }
   let finishWaiting = null;
   let closed = false;
+  // 제한 시간이 끝났을 때 어느 단계에서 무엇 때문에 멈췄는지 알려 준다.
+  let stuck = { stage: null, blocker: null };
   const close = () => {
     if (closed) return;
     closed = true;
@@ -102,6 +104,7 @@ export async function prepareCaptureSession(
     : ["centering", "pose", ...(target.head ? ["head"] : [])];
   return {
     close,
+    stuck: () => ({ ...stuck }),
     wait: () =>
       new Promise((resolve, reject) => {
         if (closed || signal.aborted) {
@@ -116,6 +119,7 @@ export async function prepareCaptureSession(
           hold = {};
         let baselineSum = 0,
           baselineCount = 0;
+        let blockers = new Map();
         const completedStages = [];
         const finish = (error) => {
           if (settled) return;
@@ -180,6 +184,31 @@ export async function prepareCaptureSession(
                     ? frontal && handMatched
                     : faceVisible && delta >= 12;
               hold = holdProgress(hold, matching, timestamp);
+              const cropped = landmarks.some((points) =>
+                points?.some(({ x, y }) => x < 0 || x > 1 || y < 0 || y > 1),
+              );
+              const blocker = matching
+                ? null
+                : covered
+                  ? "HAND_COVERS_FACE"
+                  : stage === "head"
+                    ? faceVisible
+                      ? "HEAD_NOT_MOVED"
+                      : "FACE_NOT_VISIBLE"
+                    : !frontal
+                      ? "FACE_NOT_FRONTAL"
+                      : !landmarks.length
+                        ? "HAND_NOT_DETECTED"
+                        : cropped
+                          ? "HAND_CROPPED"
+                          : "HAND_MISMATCH";
+              if (blocker)
+                blockers.set(blocker, (blockers.get(blocker) || 0) + 1);
+              stuck = {
+                stage,
+                blocker:
+                  [...blockers].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null,
+              };
               if (stage === "centering" && matching) {
                 if (hold.elapsed === 0) {
                   baselineSum = 0;
@@ -235,6 +264,7 @@ export async function prepareCaptureSession(
                   return;
                 }
                 hold = {};
+                blockers = new Map();
               }
             }
             timer = setTimeout(tick, 100);

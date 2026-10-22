@@ -367,11 +367,17 @@ export function useFaceVerification() {
               },
             });
             captureSignal.throwIfAborted();
-            return await recordClip(run.stream, {
-              signal: captureSignal,
-              duration: 17_500,
-              until: session.wait,
-            });
+            try {
+              return await recordClip(run.stream, {
+                signal: captureSignal,
+                duration: 17_500,
+                until: session.wait,
+              });
+            } catch (error) {
+              if (error?.code === "CAMERA_ALIGNMENT_TIMEOUT")
+                Object.assign(error, session.stuck());
+              throw error;
+            }
           } finally {
             capture.abort();
             session?.close();
