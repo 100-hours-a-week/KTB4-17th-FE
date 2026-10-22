@@ -499,42 +499,7 @@ export function ProfilePhotoEditor({
               <span className="trust-kicker">
                 <PixelIcon name="lock" /> CAMERA CHECK
               </span>
-              <h1 ref={heading} tabIndex={-1}>
-                {["analyzing", "recovering", "finalizing"].includes(
-                  trust.progress.stage,
-                ) ? (
-                  "인증 결과를 확인하고 있어요"
-                ) : ["pose", "head"].includes(trust.progress.stage) ? (
-                  <>
-                    {trust.progress.stage === "head"
-                      ? "안내된 고개 자세를"
-                      : "안내된 손 모양을"}
-                    <br />
-                    <em>3초 유지해 주세요</em>
-                  </>
-                ) : (
-                  <>
-                    카메라를 보고
-                    <br />
-                    <em>정면</em>을 바라봐주세요
-                  </>
-                )}
-              </h1>
               <div className="trust-capture-workspace">
-                <p
-                  className="trust-camera-hint"
-                  role="status"
-                  aria-live="polite"
-                  aria-atomic="true"
-                >
-                  {["analyzing", "recovering", "finalizing"].includes(
-                    trust.progress.stage,
-                  )
-                    ? trust.cameraOn
-                      ? "촬영한 영상을 확인하고 있어요. 다음 촬영을 위해 정면을 유지해 주세요."
-                      : "카메라를 껐어요. 결과 확인이 끝날 때까지 기다려 주세요."
-                    : trust.hint}
-                </p>
                 {trust.cameraOn && trust.challenge?.hand && (
                   <div className="trust-face-visibility-note" role="note">
                     <PixelIcon
