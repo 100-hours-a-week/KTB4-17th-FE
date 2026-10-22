@@ -1143,7 +1143,6 @@
   }
 }
 
-
 .trust-step-list {
   display: flex;
   gap: 8px;
@@ -1176,7 +1175,6 @@
   margin: 8px 0;
   font-variant-numeric: tabular-nums;
 }
-
 
 .trust-camera-hold {
   position: absolute;
