@@ -150,9 +150,9 @@ function VerificationProgress({ progress, showHelp }) {
           </div>
           {showHelp && (
             <small>
-              {stage === "pose"
+              {automatic
                 ? "손 모양이 달라지면 유지 시간을 다시 세요."
-                : "정면 확인 후 손 모양과 고개 동작을 따라 하면 자동으로 완료돼요."}
+                : `추가 확인을 위해 약 ${CLIP_SECONDS}초 동안 정면 → 고개 동작 → 정면 복귀 순서로 따라주세요.`}
             </small>
           )}
         </>
