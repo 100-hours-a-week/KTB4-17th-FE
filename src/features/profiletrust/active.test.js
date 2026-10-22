@@ -4,6 +4,7 @@ import {
   centerHoldProgress,
   centerProgress,
   facePosition,
+  headTurnProgress,
   waitForCenteredFace,
 } from "./centering.js";
 import {
@@ -27,7 +28,7 @@ const neutral = () => ({
   ],
 });
 
-test("all 120 challenge combinations preserve hand, up/down/sideways and head direction", () => {
+test("all 60 challenge combinations preserve hand, up/down/sideways and vertical head direction", () => {
   let count = 0;
   for (const hand of Object.keys(HAND_NAMES)) {
     for (const direction of ["UP", "DOWN", "SIDEWAYS"]) {
@@ -58,7 +59,7 @@ test("all 120 challenge combinations preserve hand, up/down/sideways and head di
       }
     }
   }
-  assert.equal(count, 120);
+  assert.equal(count, 60);
 });
 
 test("invalid challenges are rejected rather than becoming a fixed pose", () => {
@@ -83,9 +84,10 @@ test("centering requires one face, suitable distance, location and frontal pose"
   multiple.faceLandmarks.push(multiple.faceLandmarks[0]);
   assert.equal(facePosition(multiple).issue, "MULTIPLE_FACES");
   const shifted = neutral();
-  shifted.faceLandmarks[0].forEach((point) => {
-    point.x -= 0.2;
-  });
+  shifted.faceLandmarks[0] = [
+    { x: 0.0, y: 0.23 },
+    { x: 0.15, y: 0.73 },
+  ];
   assert.equal(facePosition(shifted).issue, "LEFT");
   const up = neutral();
   up.facialTransformationMatrixes[0].data[5] = Math.cos(Math.PI / 6);
@@ -96,6 +98,49 @@ test("centering requires one face, suitable distance, location and frontal pose"
   const bad = neutral();
   bad.facialTransformationMatrixes[0].data.fill(0);
   assert.equal(facePosition(bad).issue, "INVALID_POSE");
+});
+
+test("a photo-approved pose stays frontal during camera verification", () => {
+  const frame = neutral();
+  const radians = (18 * Math.PI) / 180;
+  frame.facialTransformationMatrixes[0].data[5] = Math.cos(radians);
+  frame.facialTransformationMatrixes[0].data[6] = Math.sin(radians);
+  frame.facialTransformationMatrixes[0].data[9] = -Math.sin(radians);
+  frame.facialTransformationMatrixes[0].data[10] = Math.cos(radians);
+  let hold = { history: [], since: null };
+  for (let index = 0; index <= 20; index++) {
+    hold = centerHoldProgress(hold, frame, index * 100);
+  }
+  assert.equal(hold.done, true);
+});
+
+test("guide overlap tolerates offsets and size changes until over half is outside", () => {
+  for (const [left, top, right, bottom, expected] of [
+    [0.47, 0.23, 0.77, 0.73, null],
+    [0.23, 0.23, 0.53, 0.73, null],
+    [0.35, 0.35, 0.65, 0.85, null],
+    [0.35, 0.03, 0.65, 0.53, null],
+    [0.23, 0.05, 0.77, 0.95, null],
+    [0.54, 0.23, 0.84, 0.73, null],
+    [0.16, 0.23, 0.46, 0.73, null],
+    [0.35, 0.55, 0.65, 1, null],
+    [0.35, 0.6, 0.65, 1, null],
+    [0.85, 0.23, 1.0, 0.73, "RIGHT"],
+    [0.0, 0.23, 0.15, 0.73, "LEFT"],
+    [0.35, 0.89, 0.65, 1, "UP"],
+    [0.85, 0.55, 1.0, 1, "RIGHT"],
+  ]) {
+    const frame = neutral();
+    frame.faceLandmarks[0] = [
+      { x: left, y: top },
+      { x: right, y: bottom },
+    ];
+    assert.equal(
+      facePosition(frame).issue,
+      expected,
+      `${left},${top},${right},${bottom}`,
+    );
+  }
 });
 
 test("fifteen stable frames are required and loss of face resets readiness", () => {
@@ -206,7 +251,7 @@ test("cancelled model loading cannot leave a camera-analysis model alive", async
   assert.equal(closed, 1);
 });
 
-test("recording guidance starts neutral, moves once and returns neutral", () => {
+test("recording guidance starts neutral, moves once and completes without return", () => {
   const target = parseChallenge([
     "LOOK_STRAIGHT",
     "HAND_TWO",
@@ -215,7 +260,7 @@ test("recording guidance starts neutral, moves once and returns neutral", () => 
   ]);
   assert.ok(recordingHint(target, 0).includes("먼저"));
   assert.ok(recordingHint(target, 0.5).includes("위로"));
-  assert.ok(recordingHint(target, 0.9).includes("다시 정면"));
+  assert.ok(recordingHint(target, 0.9).includes("확인됐어요"));
 });
 
 test("head guide and spoken instructions change together at recording boundaries", () => {
@@ -223,7 +268,7 @@ test("head guide and spoken instructions change together at recording boundaries
     "LOOK_STRAIGHT",
     "HAND_TWO",
     "HAND_UP",
-    "TURN_LEFT",
+    "LOOK_DOWN",
   ]);
   assert.equal(headGuideStep("pose", 1), 0);
   for (const progress of [0, 0.179]) {
@@ -232,11 +277,11 @@ test("head guide and spoken instructions change together at recording boundaries
   }
   for (const progress of [0.18, 0.719]) {
     assert.equal(headGuideStep("recording", progress), 1);
-    assert.ok(recordingHint(challenge, progress).includes("본인 기준 왼쪽"));
+    assert.ok(recordingHint(challenge, progress).includes("아래로"));
   }
   for (const progress of [0.72, 1]) {
     assert.equal(headGuideStep("recording", progress), 2);
-    assert.ok(recordingHint(challenge, progress).includes("다시 정면"));
+    assert.ok(recordingHint(challenge, progress).includes("확인됐어요"));
   }
 });
 
@@ -271,4 +316,68 @@ test("unstable movement resets the automatic hold even within the guide", () => 
   }
   assert.equal(state.done, false);
   assert.equal(state.progress, 0);
+});
+
+test("real-time head turn recognition tracks baseline, 12-degree turn and return to center", () => {
+  const challenge = parseChallenge([
+    "LOOK_STRAIGHT",
+    "HAND_TWO",
+    "HAND_UP",
+    "LOOK_DOWN",
+  ]);
+  let state = {};
+  for (let index = 0; index < 3; index++) {
+    state = headTurnProgress(state, neutral(), "LOOK_DOWN");
+  }
+  assert.equal(state.step, 1);
+  assert.equal(state.completedTurn, false);
+  const partialDown = neutral();
+  const rad8 = (8 * Math.PI) / 180;
+  partialDown.facialTransformationMatrixes[0].data[6] = Math.sin(rad8);
+  partialDown.facialTransformationMatrixes[0].data[10] = Math.cos(rad8);
+  state = headTurnProgress(state, partialDown, "LOOK_DOWN");
+  assert.equal(state.completedTurn, false);
+  assert.equal(state.delta, 8);
+  assert.match(
+    recordingHint(challenge, 0.3, {
+      headStep: state.step,
+      headDelta: state.delta,
+      headCompleted: state.completedTurn,
+      headReturned: state.returned,
+    }),
+    /8° \/ 12°/,
+  );
+  const fullDown = neutral();
+  const rad15 = (15 * Math.PI) / 180;
+  fullDown.facialTransformationMatrixes[0].data[6] = Math.sin(rad15);
+  fullDown.facialTransformationMatrixes[0].data[10] = Math.cos(rad15);
+  state = headTurnProgress(state, fullDown, "LOOK_DOWN");
+  state = headTurnProgress(state, fullDown, "LOOK_DOWN");
+  assert.equal(state.completedTurn, true);
+  assert.equal(state.returned, true);
+  assert.equal(state.step, 2);
+  assert.equal(
+    headGuideStep("recording", 0.35, {
+      headStep: state.step,
+      headCompleted: state.completedTurn,
+    }),
+    2,
+  );
+  assert.match(
+    recordingHint(challenge, 0.35, {
+      headStep: state.step,
+      headCompleted: state.completedTurn,
+      headReturned: state.returned,
+    }),
+    /고개 동작이 확인됐어요/,
+  );
+  assert.match(
+    recordingHint(challenge, 0.6, {
+      handMatched: true,
+      headStep: state.step,
+      headCompleted: state.completedTurn,
+      headReturned: state.returned,
+    }),
+    /모두 확인됐어요/,
+  );
 });

@@ -9,6 +9,7 @@ import {
   profilePhotoErrorMessage,
 } from "../profile/photoUpload.js";
 import { CameraSilhouette } from "./CameraSilhouette.jsx";
+import { HEAD_MOTIONS } from "./challenge.js";
 import {
   CLIP_DURATION_MS,
   reorderPhotos,
@@ -102,27 +103,20 @@ function CaptureGuide() {
   );
 }
 
-function VerificationProgress({ progress, active }) {
-  const {
-    stage,
-    attemptNo,
-    completedAttempts,
-    maxAttempts,
-    clipProgress,
-    automatic,
-  } = progress;
+function VerificationProgress({ progress, showHelp }) {
+  const { stage, attemptNo, clipProgress, automatic } = progress;
   const waiting = ["analyzing", "recovering", "finalizing"].includes(stage);
   const message =
     stage === "recording"
-      ? `${attemptNo}/${maxAttempts}번째 얼굴 확인을 위해 촬영하고 있어요.`
+      ? `${attemptNo}번째 인증 시도를 촬영하고 있어요.`
       : stage === "analyzing"
-        ? `${attemptNo}/${maxAttempts}번째 영상을 확인하고 있어요.`
+        ? `${attemptNo}번째 촬영 결과를 확인하고 있어요.`
         : stage === "recovering"
           ? "전달한 영상의 인증 결과를 다시 확인하고 있어요."
           : stage === "finalizing"
             ? "얼굴 인증을 마쳤어요. 사진을 저장하고 있어요."
             : stage === "centering"
-              ? "먼저 얼굴을 중앙에 맞추고 정면을 확인해 주세요."
+              ? "편하게 정면을 봐 주세요. 가이드에 정확히 맞추지 않아도 돼요."
               : stage === "pose"
                 ? automatic
                   ? "안내된 손 모양을 3초 유지하면 자동으로 완료돼요."
@@ -133,33 +127,11 @@ function VerificationProgress({ progress, active }) {
   return (
     <div className="trust-camera-guidance">
       <p role="status">{message}</p>
-      <div
-        className="trust-attempt-progress"
-        role="progressbar"
-        aria-label="얼굴 확인 진행 횟수"
-        aria-valuemin={0}
-        aria-valuemax={maxAttempts}
-        aria-valuenow={completedAttempts}
-        aria-valuetext={`${maxAttempts}회 중 ${completedAttempts}회 진행`}
-      >
-        {Array.from({ length: maxAttempts }, (_, index) => index + 1).map(
-          (number) => (
-            <span
-              key={`attempt-${number}`}
-              data-state={
-                number <= completedAttempts
-                  ? "done"
-                  : active && number === attemptNo
-                    ? "current"
-                    : "pending"
-              }
-            />
-          ),
-        )}
-      </div>
-      <small>
-        {completedAttempts}/{maxAttempts}회 진행
-      </small>
+      {showHelp && (
+        <small>
+          한 번 성공하면 완료돼요. 실패하면 재시도를 선택할 수 있어요.
+        </small>
+      )}
       {(stage === "recording" || (stage === "pose" && automatic)) && (
         <>
           <div
@@ -176,11 +148,13 @@ function VerificationProgress({ progress, active }) {
           >
             <span style={{ transform: `scaleX(${clipProgress})` }} />
           </div>
-          <small>
-            {automatic
-              ? "손 모양이 달라지면 유지 시간을 다시 세요."
-              : `추가 확인을 위해 약 ${CLIP_SECONDS}초 동안 정면 → 고개 동작 → 정면 복귀 순서로 따라주세요.`}
-          </small>
+          {showHelp && (
+            <small>
+              {stage === "pose"
+                ? "손 모양이 달라지면 유지 시간을 다시 세요."
+                : "정면 확인 후 손 모양과 고개 동작을 따라 하면 자동으로 완료돼요."}
+            </small>
+          )}
         </>
       )}
       {waiting && (
@@ -188,11 +162,82 @@ function VerificationProgress({ progress, active }) {
           <span aria-hidden="true">…</span> 확인 중이에요. 잠시만 기다려 주세요…
         </div>
       )}
-      <small>
-        한 번만 인증에 성공하면 바로 완료돼요. 실패한 경우에만 최대{" "}
-        {maxAttempts}회 시도해요. 전송과 분석 시간은 연결 상태에 따라 달라질 수
-        있어요.
-      </small>
+      {showHelp && (
+        <small>전송과 분석 시간은 연결 상태에 따라 달라질 수 있어요.</small>
+      )}
+    </div>
+  );
+}
+
+function LiveRecognitionStatus({ challenge, progress }) {
+  const { stage, automatic, live } = progress;
+  if (
+    !challenge ||
+    challenge.legacy ||
+    !(stage === "recording" || (stage === "pose" && automatic)) ||
+    !live
+  ) {
+    return null;
+  }
+  const handState = live.handMatched
+    ? "matched"
+    : live.handDetected
+      ? "detected"
+      : "waiting";
+  const handText = live.handMatched
+    ? "✓ 손 모양 인식됨"
+    : live.handDetected
+      ? "! 손 모양·방향을 맞춰 주세요"
+      : "손을 화면에 올려 주세요";
+  const motion = HEAD_MOTIONS[challenge.head];
+  let headState = "waiting";
+  let headText = "";
+  if (motion && stage === "recording") {
+    if (live.headCompleted) {
+      headState = "matched";
+      headText = "✓ 고개 동작 완료!";
+    } else if (live.headStep >= 1) {
+      headState = live.headDelta > 0 ? "detected" : "waiting";
+      headText = `${motion.label} (${live.headDelta || 0}° / 12°)`;
+    } else {
+      headState = "waiting";
+      headText = "1단계 · 정면 확인 중";
+    }
+  }
+  return (
+    <div
+      className="trust-live-recognition"
+      role="status"
+      aria-live="polite"
+      aria-label="실시간 동작 인식 상태"
+    >
+      <div className="trust-live-badges">
+        <span className="trust-live-badge" data-state={handState}>
+          {handText}
+        </span>
+        {motion && stage === "recording" && (
+          <span className="trust-live-badge" data-state={headState}>
+            {headText}
+          </span>
+        )}
+      </div>
+      {motion && stage === "recording" && !live.headCompleted && (
+        <div
+          className="trust-head-meter"
+          role="progressbar"
+          aria-label="고개 각도 인식 진행률"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round((live.headTurnProgress || 0) * 100)}
+        >
+          <span
+            className="trust-head-meter-bar"
+            style={{
+              transform: `scaleX(${Math.min(1, Math.max(0, live.headTurnProgress || 0))})`,
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -204,6 +249,7 @@ const EMPTY_PHOTOS = [];
 export function ProfilePhotoEditor({
   initialPhotos = EMPTY_PHOTOS,
   requireVerification = false,
+  compactPose = false,
   disabled = false,
   onChange,
 }) {
@@ -218,6 +264,7 @@ export function ProfilePhotoEditor({
   const dragged = useRef(null);
   const heading = useRef(null);
   const trust = useFaceVerification();
+  const showHelp = !compactPose || !verifying || trust.phase === "photo";
   const { side: handGuideSide, unavailable: handGuideUnavailable } =
     useHandGuideSide({
       videoRef: trust.videoRef,
@@ -353,6 +400,16 @@ export function ProfilePhotoEditor({
 
   const hasFrontalPhoto = items.some((item) => item.isFrontal);
   const canCancel = !requireVerification;
+  const activeProgress =
+    trust.progress.stage === "centering"
+      ? trust.centerHold || 0
+      : ["pose", "recording"].includes(trust.progress.stage)
+        ? trust.progress.clipProgress || 0
+        : 0;
+  const faceCountdown =
+    trust.cameraOn && activeProgress > 0 && activeProgress < 1
+      ? Math.max(1, Math.min(3, Math.ceil((1 - activeProgress) * 3)))
+      : null;
   const verificationCancelLabel = hasFrontalPhoto
     ? "정면 사진 변경 취소"
     : "정면 사진 인증 취소";
@@ -381,21 +438,25 @@ export function ProfilePhotoEditor({
                 <br />
                 <em>정면 사진</em>을 골라주세요
               </h1>
-              <p className="trust-subcopy">
-                사진 속 얼굴과 카메라 속 얼굴을 비교해요.
-              </p>
+              {showHelp && (
+                <p className="trust-subcopy">
+                  사진 속 얼굴과 카메라 속 얼굴을 비교해요.
+                </p>
+              )}
               <div className="trust-photo-intro">
                 <GuidePortrait />
-                <span>내 얼굴이 잘 보이는 사진 한 장</span>
+                {showHelp && <span>내 얼굴이 잘 보이는 사진 한 장</span>}
               </div>
-              <div className="trust-note">
-                <strong>프로필 사진은 나중에 더할 수 있어요</strong>
-                <p>
-                  이 사진은 본인 확인에 사용해요. 인증 후 사진을 추가하고 순서를
-                  바꿔 대표사진을 정할 수 있어요. 정면 사진 자체를 교체할 때는
-                  다시 인증해요.
-                </p>
-              </div>
+              {showHelp && (
+                <div className="trust-note">
+                  <strong>프로필 사진은 나중에 더할 수 있어요</strong>
+                  <p>
+                    이 사진은 본인 확인에 사용해요. 인증 후 사진을 추가하고
+                    순서를 바꿔 대표사진을 정할 수 있어요. 정면 사진 자체를
+                    교체할 때는 다시 인증해요.
+                  </p>
+                </div>
+              )}
               <div className="trust-actions">
                 <PhotoPicker
                   className="trust-primary-picker"
@@ -413,15 +474,20 @@ export function ProfilePhotoEditor({
                   카메라로 사진 촬영
                 </button>
               </div>
-              <small className="trust-formats">
-                JPG · PNG · WEBP · HEIC / 최대 30MB
-              </small>
-              <CaptureGuide />
+              {showHelp && (
+                <>
+                  <small className="trust-formats">
+                    JPG · PNG · WEBP · HEIC / 최대 30MB
+                  </small>
+                  <CaptureGuide />
+                </>
+              )}
             </>
           )}
           {trust.phase === "photo" && takingPhoto && (
             <PhotoCapture
               disabled={disabled}
+              showHelp={showHelp}
               onCancel={() => setTakingPhoto(false)}
               onCapture={(file) => {
                 setTakingPhoto(false);
@@ -448,10 +514,12 @@ export function ProfilePhotoEditor({
                   alt="확인 중인 정면 사진"
                 />
               )}
-              <p className="trust-subcopy" role="status">
-                얼굴이 정면인지, 직접 촬영한 사진인지 확인하고 있어요. 확인을
-                마치면 카메라 인증을 시작할 수 있어요.
-              </p>
+              {showHelp && (
+                <p className="trust-subcopy" role="status">
+                  얼굴이 정면인지, 직접 촬영한 사진인지 확인하고 있어요. 확인을
+                  마치면 카메라 인증을 시작할 수 있어요.
+                </p>
+              )}
               <button
                 type="button"
                 className="trust-text-button"
@@ -523,7 +591,9 @@ export function ProfilePhotoEditor({
                     />
                     <div>
                       <strong>손으로 얼굴을 가리지 마세요</strong>
-                      <p>손은 얼굴 옆에, 눈·코·입은 모두 보이게 해 주세요.</p>
+                      {showHelp && (
+                        <p>손은 얼굴 옆에, 눈·코·입은 모두 보이게 해 주세요.</p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -531,6 +601,7 @@ export function ProfilePhotoEditor({
                   <PoseExample
                     challenge={trust.challenge}
                     progress={trust.progress}
+                    showHelp={showHelp}
                   />
                 )}
                 <div
@@ -571,6 +642,21 @@ export function ProfilePhotoEditor({
                       handSide={handGuideSide}
                     />
                   )}
+                  {faceCountdown != null && (
+                    <div
+                      className="trust-face-countdown"
+                      role="timer"
+                      aria-live="assertive"
+                      aria-label={`${faceCountdown}초 남음`}
+                    >
+                      <span
+                        className="trust-face-countdown-digit"
+                        key={faceCountdown}
+                      >
+                        {faceCountdown}
+                      </span>
+                    </div>
+                  )}
                   {trust.cameraOn && (
                     <span className="trust-live">
                       <i />{" "}
@@ -594,12 +680,19 @@ export function ProfilePhotoEditor({
                   )}
                 </div>
                 {trust.cameraOn && (
+                  <LiveRecognitionStatus
+                    challenge={trust.challenge}
+                    progress={trust.progress}
+                  />
+                )}
+                {showHelp && trust.cameraOn && (
                   <p className="trust-capture-tip">
                     얼굴과 어깨를 실루엣에 맞춰 주세요. 손 가이드는 위치
                     예시예요. 손은 얼굴 옆으로 올려 주세요.
                   </p>
                 )}
-                {trust.cameraOn &&
+                {showHelp &&
+                  trust.cameraOn &&
                   ["pose", "recording"].includes(trust.progress.stage) &&
                   !trust.challenge?.legacy && (
                     <p className="trust-hand-guide-status" role="status">
@@ -627,16 +720,6 @@ export function ProfilePhotoEditor({
                       />
                     </div>
                   )}
-                  {trust.active &&
-                    trust.progress.stage === "pose" &&
-                    !trust.progress.automatic && (
-                      <PixelButton
-                        onClick={trust.confirmPose}
-                        disabled={disabled}
-                      >
-                        따라 할 준비가 됐어요 · 촬영 시작
-                      </PixelButton>
-                    )}
                   {!trust.active && (
                     <PixelButton
                       onClick={() => void trust.start()}
@@ -651,20 +734,24 @@ export function ProfilePhotoEditor({
               </div>
               <VerificationProgress
                 progress={trust.progress}
-                active={trust.active}
+                showHelp={showHelp}
               />
-              <p className="trust-privacy">
-                <PixelIcon name="lock" /> 인증을 위해 짧은 영상을 전송해요.
-                영상은 백엔드에 저장하지 않아요.
-              </p>
-              <CaptureGuide />
-              <details className="trust-permission-help">
-                <summary>카메라가 열리지 않나요?</summary>
-                <p>
-                  주소창의 사이트 설정에서 카메라를 허용해 주세요. 앱 안에서
-                  접속했다면 메뉴에서 Safari 또는 Chrome으로 열어 주세요.
-                </p>
-              </details>
+              {showHelp && (
+                <>
+                  <p className="trust-privacy">
+                    <PixelIcon name="lock" /> 인증을 위해 짧은 영상을 전송해요.
+                    영상은 백엔드에 저장하지 않아요.
+                  </p>
+                  <CaptureGuide />
+                  <details className="trust-permission-help">
+                    <summary>카메라가 열리지 않나요?</summary>
+                    <p>
+                      주소창의 사이트 설정에서 카메라를 허용해 주세요. 앱 안에서
+                      접속했다면 메뉴에서 Safari 또는 Chrome으로 열어 주세요.
+                    </p>
+                  </details>
+                </>
+              )}
               <button
                 type="button"
                 className="trust-text-button"
@@ -696,7 +783,12 @@ export function ProfilePhotoEditor({
               <p className="trust-failure-message" role="alert">
                 {trust.issue?.message}
               </p>
-              {trust.issue?.kind === "system" && (
+              {showHelp &&
+                trust.issue?.kind === "camera" &&
+                trust.issue.notice && (
+                  <p className="trust-subcopy">{trust.issue.notice}</p>
+                )}
+              {showHelp && trust.issue?.kind === "system" && (
                 <p className="trust-subcopy">
                   {trust.issue.notice ||
                     "서비스 또는 연결 상태를 확인해야 해요. 이 오류만으로 사진이나 얼굴의 일치 여부를 판단하지 않아요."}
@@ -738,8 +830,8 @@ export function ProfilePhotoEditor({
                   </ul>
                 </details>
               )}
-              {trust.issue?.kind !== "system" && <CaptureGuide />}
-              {trust.issue?.kind === "camera" && (
+              {showHelp && trust.issue?.kind !== "system" && <CaptureGuide />}
+              {showHelp && trust.issue?.kind === "camera" && (
                 <details className="trust-permission-help">
                   <summary>카메라 권한 안내</summary>
                   <p>
@@ -770,14 +862,20 @@ export function ProfilePhotoEditor({
                   alt="본인 인증 성공"
                 />
               </div>
-              <p className="trust-subcopy">이제 사진으로 나를 소개해볼까요?</p>
-              <div className="trust-note">
-                <strong>나를 보여줄 사진을 더해보세요</strong>
-                <p>
-                  인증한 사진에는 정면 사진 표시가 붙어요. 사진 순서를 바꿔 추천
-                  피드에 보여줄 대표사진을 정할 수 있어요.
-                </p>
-              </div>
+              {showHelp && (
+                <>
+                  <p className="trust-subcopy">
+                    이제 사진으로 나를 소개해볼까요?
+                  </p>
+                  <div className="trust-note">
+                    <strong>나를 보여줄 사진을 더해보세요</strong>
+                    <p>
+                      인증한 사진에는 정면 사진 표시가 붙어요. 사진 순서를 바꿔
+                      추천 피드에 보여줄 대표사진을 정할 수 있어요.
+                    </p>
+                  </div>
+                </>
+              )}
               <PixelButton onClick={acceptVerifiedPhoto} disabled={disabled}>
                 프로필 사진 설정하기
               </PixelButton>
@@ -804,7 +902,11 @@ export function ProfilePhotoEditor({
             <PixelIcon name="spark" /> MY PHOTOS
           </span>
           <h2>사진으로 나를 소개해 주세요</h2>
-          <p className="trust-subcopy">사진은 최대 6장까지 등록할 수 있어요.</p>
+          {showHelp && (
+            <p className="trust-subcopy">
+              사진은 최대 6장까지 등록할 수 있어요.
+            </p>
+          )}
           <section className="trust-photo-grid" aria-label="프로필 사진 목록">
             {items.map((item, index) => (
               <article
@@ -901,13 +1003,15 @@ export function ProfilePhotoEditor({
               </PhotoPicker>
             )}
           </section>
-          <div className="trust-note">
-            <strong>첫 번째 사진이 추천 피드에 노출돼요</strong>
-            <p>
-              화살표 버튼이나 드래그로 대표사진과 사진 순서를 정해 주세요. 정면
-              사진도 이동할 수 있고, 인증 표시는 그대로 유지돼요.
-            </p>
-          </div>
+          {showHelp && (
+            <div className="trust-note">
+              <strong>첫 번째 사진이 추천 피드에 노출돼요</strong>
+              <p>
+                화살표 버튼이나 드래그로 대표사진과 사진 순서를 정해 주세요.
+                정면 사진도 이동할 수 있고, 인증 표시는 그대로 유지돼요.
+              </p>
+            </div>
+          )}
           <button
             type="button"
             className="trust-replace"
@@ -916,7 +1020,9 @@ export function ProfilePhotoEditor({
           >
             {frontalPhotoAction}
           </button>
-          <p className="trust-subcopy trust-small">{frontalPhotoHelp}</p>
+          {showHelp && (
+            <p className="trust-subcopy trust-small">{frontalPhotoHelp}</p>
+          )}
           {error && (
             <p className="field-error" role="alert">
               {error}

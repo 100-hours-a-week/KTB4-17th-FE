@@ -12,18 +12,19 @@ export function CameraSilhouette({
     challenge &&
     !challenge.legacy &&
     ["pose", "recording"].includes(progress?.stage);
+  const live = progress?.live;
+  const handMatched = Boolean(live?.handMatched);
+  const headDone = Boolean(live?.headCompleted);
   const step = showPose
-    ? headGuideStep(progress.stage, progress.clipProgress)
+    ? headGuideStep(progress.stage, progress.clipProgress, live)
     : 0;
   const arrows = {
-    TURN_LEFT: "M90 90H58m10-10L58 90l10 10",
-    TURN_RIGHT: "M150 90h32m-10-10 10 10-10 10",
     LOOK_UP: "M120 106V72m-10 10 10-10 10 10",
     LOOK_DOWN: "M120 72v34m-10-10 10 10 10-10",
   };
   return (
     <div
-      className={`trust-camera-silhouette${ready ? " is-ready" : ""}${recording ? " is-recording" : ""}${showPose && !handSide ? " is-seeking-hand" : ""}`}
+      className={`trust-camera-silhouette${ready || headDone ? " is-ready" : ""}${recording ? " is-recording" : ""}${showPose && !handSide ? " is-seeking-hand" : ""}${handMatched ? " is-hand-matched" : ""}`}
       aria-hidden="true"
     >
       <svg

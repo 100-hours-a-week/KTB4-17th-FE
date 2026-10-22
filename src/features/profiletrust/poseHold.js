@@ -1,3 +1,4 @@
+import { createFaceTracker, headTurnProgress } from "./centering.js";
 import { requiresHandDirection } from "./challenge.js";
 import { createHandTracker } from "./handGuide.js";
 import { trustError } from "./model.js";
@@ -132,10 +133,16 @@ export function waitForPoseHold(
         if (video.currentTime !== lastFrame) {
           lastFrame = video.currentTime;
           const result = tracker.detectForVideo(video, performance.now());
-          const matching = (result.landmarks || []).some((points) =>
+          const landmarks = result.landmarks || [];
+          const handDetected = landmarks.length > 0;
+          const matching = landmarks.some((points) =>
             matchesPose(points, target, video.videoWidth, video.videoHeight),
           );
-          hold = poseHoldProgress(hold, matching, lastFrame);
+          hold = {
+            ...poseHoldProgress(hold, matching, lastFrame),
+            handDetected,
+            handMatched: matching,
+          };
           onState(hold);
           if (hold.done) {
             finish();
@@ -166,4 +173,108 @@ export function waitForPoseHold(
         () => finish(trustError("CAMERA_MODEL_UNAVAILABLE")),
       );
   });
+}
+
+export function watchLiveChallenge(
+  video,
+  target,
+  {
+    signal,
+    onState = () => {},
+    createFace = createFaceTracker,
+    createHand = createHandTracker,
+  } = {},
+) {
+  let faceTracker,
+    handTracker,
+    timer,
+    closed = false,
+    lastFrame = -1,
+    head = {};
+  const cleanup = () => {
+    if (closed) return;
+    closed = true;
+    clearTimeout(timer);
+    signal?.removeEventListener("abort", cleanup);
+    try {
+      faceTracker?.close();
+    } catch {
+      /* Best effort cleanup. */
+    }
+    try {
+      handTracker?.close();
+    } catch {
+      /* Best effort cleanup. */
+    }
+  };
+  const tick = () => {
+    if (closed) return;
+    try {
+      if (video && video.readyState >= 2 && video.currentTime !== lastFrame) {
+        lastFrame = video.currentTime;
+        const now = performance.now();
+        let handDetected = false;
+        let handMatched = false;
+        if (handTracker && target?.hand) {
+          const handResult = handTracker.detectForVideo(video, now);
+          const landmarks = handResult?.landmarks || [];
+          handDetected = landmarks.length > 0;
+          handMatched = landmarks.some((points) =>
+            matchesPose(points, target, video.videoWidth, video.videoHeight),
+          );
+        }
+        if (faceTracker && target?.head) {
+          head = headTurnProgress(
+            head,
+            faceTracker.detectForVideo(video, now),
+            target.head,
+          );
+        }
+        onState({
+          handDetected,
+          handMatched,
+          headStep: head.step ?? 0,
+          headDelta: head.delta ?? 0,
+          headTurnProgress: head.turnProgress ?? 0,
+          headCompleted: Boolean(head.completedTurn),
+          headReturned: Boolean(head.returned),
+          faceDetected: Boolean(head.faceDetected),
+        });
+      }
+      if (!closed) timer = setTimeout(tick, 110);
+    } catch {
+      cleanup();
+    }
+  };
+  signal?.addEventListener("abort", cleanup, { once: true });
+  if (signal?.aborted) {
+    cleanup();
+    return cleanup;
+  }
+  void Promise.all([
+    target?.head
+      ? Promise.resolve()
+          .then(createFace)
+          .catch(() => null)
+      : Promise.resolve(null),
+    target?.hand
+      ? Promise.resolve()
+          .then(createHand)
+          .catch(() => null)
+      : Promise.resolve(null),
+  ]).then(([createdFace, createdHand]) => {
+    if (closed) {
+      try {
+        createdFace?.close();
+      } catch {}
+      try {
+        createdHand?.close();
+      } catch {}
+      return;
+    }
+    faceTracker = createdFace;
+    handTracker = createdHand;
+    if (faceTracker || handTracker) tick();
+  });
+  return cleanup;
 }

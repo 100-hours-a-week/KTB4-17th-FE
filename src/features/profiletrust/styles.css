@@ -1028,8 +1028,117 @@
   width: min(100%, calc(min(26dvh, 210px) * var(--trust-camera-aspect)));
 }
 
+.trust-head-steps li[data-done="true"] {
+  border-color: #1e9c62;
+  background: #e8faf0;
+  color: #136f45;
+  font-weight: 700;
+}
+
+.trust-camera-silhouette.is-hand-matched .trust-silhouette-hand {
+  color: #a4efbb;
+}
+
+.trust-live-recognition {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--lavender);
+  background: #faf7ff;
+}
+
+.trust-live-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.trust-live-badge {
+  display: inline-flex;
+  align-items: center;
+  flex: 1 1 140px;
+  justify-content: center;
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 1px solid var(--lavender);
+  background: var(--paper, #fff);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.trust-live-badge[data-state="detected"] {
+  border-color: #b86a17;
+  background: #fff3d6;
+  color: #633407;
+}
+
+.trust-live-badge[data-state="matched"] {
+  border-color: #1e9c62;
+  background: #e8faf0;
+  color: #136f45;
+}
+
+.trust-head-meter {
+  height: 7px;
+  overflow: hidden;
+  border: 1px solid var(--lavender);
+  background: var(--soft-lavender);
+}
+
+.trust-head-meter-bar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #987bff 0%, #1e9c62 100%);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 100ms linear;
+}
+
+.trust-face-countdown {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.trust-face-countdown-digit {
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  border: 3px solid #a4efbb;
+  border-radius: 50%;
+  background: rgb(27 20 48 / 72%);
+  color: #fff;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 2px 6px rgb(0 0 0 / 80%);
+  animation: trust-countdown-pop 300ms ease-out;
+}
+
+@keyframes trust-countdown-pop {
+  0% {
+    opacity: 0.4;
+    transform: scale(1.25);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .trust-example-head {
+  .trust-example-head,
+  .trust-head-meter-bar,
+  .trust-face-countdown-digit {
+    animation: none;
     transition: none;
   }
 }

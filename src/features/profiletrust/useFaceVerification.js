@@ -15,7 +15,7 @@ import {
   trustError,
   verificationIssue,
 } from "./model.js";
-import { waitForPoseHold } from "./poseHold.js";
+import { waitForPoseHold, watchLiveChallenge } from "./poseHold.js";
 import {
   abortable,
   assertSession,
@@ -30,6 +30,7 @@ const initialProgress = () => ({
   completedAttempts: 0,
   maxAttempts: MAX_ATTEMPTS,
   clipProgress: 0,
+  live: null,
 });
 
 export function useFaceVerification() {
@@ -370,6 +371,7 @@ export function useFaceVerification() {
                     attemptNo,
                     maxAttempts,
                     clipProgress: 0,
+                    live: null,
                   });
                   if (current()) {
                     setCenterReady(false);
@@ -379,14 +381,26 @@ export function useFaceVerification() {
                     signal: captureSignal,
                     onState: (state) => {
                       if (!current()) return;
+                      const live = {
+                        handDetected: Boolean(state.handDetected),
+                        handMatched: Boolean(state.handMatched),
+                        headStep: 0,
+                        headDelta: 0,
+                        headTurnProgress: 0,
+                        headCompleted: false,
+                        headReturned: false,
+                      };
                       setProgress((previous) => ({
                         ...previous,
                         clipProgress: state.progress,
+                        live,
                       }));
                       setHint(
                         state.progress > 0
                           ? `좋아요. 손 모양을 그대로 유지해 주세요. ${Math.max(1, Math.ceil((1 - state.progress) * 3))}초 남았어요.`
-                          : challengeInstruction(target),
+                          : state.handDetected
+                            ? "손이 감지됐어요! 안내된 손 모양과 방향에 맞게 조금만 조정해 주세요."
+                            : challengeInstruction(target),
                       );
                     },
                   });
@@ -396,7 +410,7 @@ export function useFaceVerification() {
               capture.abort();
             }
           }
-          updateStage({ stage: "centering", automatic: false });
+          updateStage({ stage: "centering", automatic: true, live: null });
           await waitForCenteredFace(videoRef.current, {
             signal,
             onState: (state) => {
@@ -409,54 +423,50 @@ export function useFaceVerification() {
           });
           signal.throwIfAborted();
           if (current()) setCenterReady(false);
-          updateStage({ stage: "pose", attemptNo, maxAttempts });
-          if (current()) setHint(challengeInstruction(target));
-          await new Promise((resolve, reject) => {
-            const cleanup = () => {
-              clearTimeout(timer);
-              signal.removeEventListener("abort", abort);
-              run.confirmPose = null;
-            };
-            const abort = () => {
-              cleanup();
-              reject(signal.reason);
-            };
-            const remaining =
-              Date.parse(sessionRef.current?.expiresAt) - Date.now();
-            const timer = setTimeout(
-              () => {
-                cleanup();
-                reject(trustError("VERIFICATION_SESSION_EXPIRED"));
-              },
-              Number.isFinite(remaining) ? Math.max(0, remaining) : 60_000,
-            );
-            run.confirmPose = () => {
-              cleanup();
-              resolve();
-            };
-            signal.addEventListener("abort", abort, { once: true });
-            if (signal.aborted) abort();
-          });
-          signal.throwIfAborted();
           updateStage({
             stage: "recording",
+            automatic: true,
             attemptNo,
             maxAttempts,
             clipProgress: 0,
+            live: null,
           });
-          return recordClip(run.stream, {
-            signal: run.cameraController.signal,
-            onProgress: (clipProgress) => {
-              if (current()) {
-                setProgress((previous) => ({ ...previous, clipProgress }));
-                setHint(recordingHint(target, clipProgress));
-              }
+          const liveController = new AbortController();
+          const liveSignal = AbortSignal.any([
+            signal,
+            run.cameraController.signal,
+            liveController.signal,
+          ]);
+          let latestClipProgress = 0;
+          let latestLive = null;
+          const stopWatching = watchLiveChallenge(videoRef.current, target, {
+            signal: liveSignal,
+            onState: (live) => {
+              if (!current()) return;
+              latestLive = live;
+              setProgress((previous) => ({ ...previous, live }));
+              setHint(recordingHint(target, latestClipProgress, live));
             },
           });
+          try {
+            return await recordClip(run.stream, {
+              signal: run.cameraController.signal,
+              onProgress: (clipProgress) => {
+                latestClipProgress = clipProgress;
+                if (current()) {
+                  setProgress((previous) => ({ ...previous, clipProgress }));
+                  setHint(recordingHint(target, clipProgress, latestLive));
+                }
+              },
+            });
+          } finally {
+            liveController.abort();
+            stopWatching();
+          }
         },
         onSession: updateSession,
         onStage: (next) => {
-          updateStage({ ...next, clipProgress: 0 });
+          updateStage({ ...next, clipProgress: 0, live: null });
           if (next.stage === "analyzing" && next.attemptNo === next.maxAttempts)
             run.closeCamera();
         },
