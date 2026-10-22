@@ -108,7 +108,7 @@ test("a photo-approved pose stays frontal during camera verification", () => {
   frame.facialTransformationMatrixes[0].data[9] = -Math.sin(radians);
   frame.facialTransformationMatrixes[0].data[10] = Math.cos(radians);
   let hold = { history: [], since: null };
-  for (let index = 0; index <= 20; index++) {
+  for (let index = 0; index <= 30; index++) {
     hold = centerHoldProgress(hold, frame, index * 100);
   }
   assert.equal(hold.done, true);
@@ -193,7 +193,7 @@ test("moving inside the guide still cannot confirm a center", () => {
   assert.equal(state.ready, false);
 });
 
-test("the camera advances automatically after two seconds and releases the local model", async () => {
+test("the camera advances automatically after three seconds and releases the local model", async () => {
   const signal = new AbortController().signal;
   let frames = 0,
     closed = 0,
@@ -218,7 +218,7 @@ test("the camera advances automatically after two seconds and releases the local
     },
   );
   await waiting;
-  assert.ok(performance.now() - started >= 2000);
+  assert.ok(performance.now() - started >= 3000);
   assert.ok(frames >= 15);
   assert.equal(closed, 1);
   assert.equal(lastProgress, 1);
@@ -251,41 +251,23 @@ test("cancelled model loading cannot leave a camera-analysis model alive", async
   assert.equal(closed, 1);
 });
 
-test("recording guidance starts neutral, moves once and completes without return", () => {
+test("guidance never reports head completion from elapsed recording time", () => {
   const target = parseChallenge([
     "LOOK_STRAIGHT",
     "HAND_TWO",
-    "HAND_DOWN",
+    "HAND_UP",
     "LOOK_UP",
   ]);
-  assert.ok(recordingHint(target, 0).includes("먼저"));
-  assert.ok(recordingHint(target, 0.5).includes("위로"));
-  assert.ok(recordingHint(target, 0.9).includes("확인됐어요"));
-});
-
-test("head guide and spoken instructions change together at recording boundaries", () => {
-  const challenge = parseChallenge([
-    "LOOK_STRAIGHT",
-    "HAND_TWO",
-    "HAND_UP",
-    "LOOK_DOWN",
-  ]);
-  assert.equal(headGuideStep("pose", 1), 0);
-  for (const progress of [0, 0.179]) {
+  for (const progress of [0, 0.5, 0.9, 1]) {
     assert.equal(headGuideStep("recording", progress), 0);
-    assert.ok(recordingHint(challenge, progress).includes("먼저"));
+    assert.ok(!recordingHint(target, progress).includes("확인됐어요"));
   }
-  for (const progress of [0.18, 0.719]) {
-    assert.equal(headGuideStep("recording", progress), 1);
-    assert.ok(recordingHint(challenge, progress).includes("아래로"));
-  }
-  for (const progress of [0.72, 1]) {
-    assert.equal(headGuideStep("recording", progress), 2);
-    assert.ok(recordingHint(challenge, progress).includes("확인됐어요"));
-  }
+  assert.equal(headGuideStep("head", 0), 1);
+  assert.equal(headGuideStep("head", 1, { headCompleted: true }), 2);
+  assert.match(challengeInstruction(target), /3초 유지/);
 });
 
-test("two-second hold resets when the face is lost or no longer frontal", () => {
+test("three-second hold resets when the face is lost or no longer frontal", () => {
   let state = { history: [], since: null };
   for (let time = 0; time <= 1900; time += 100)
     state = centerHoldProgress(state, neutral(), time);
@@ -296,11 +278,11 @@ test("two-second hold resets when the face is lost or no longer frontal", () => 
   for (let time = 4100; time <= 6000; time += 100)
     state = centerHoldProgress(state, neutral(), time);
   assert.equal(state.done, false);
-  state = centerHoldProgress(state, neutral(), 6100);
+  state = centerHoldProgress(state, neutral(), 7100);
   assert.equal(state.done, true);
   const turned = neutral();
   turned.facialTransformationMatrixes[0].data[2] = Math.sin(Math.PI / 4);
-  state = centerHoldProgress(state, turned, 6200);
+  state = centerHoldProgress(state, turned, 7200);
   assert.equal(state.done, false);
   assert.equal(state.progress, 0);
 });

@@ -19,7 +19,7 @@
     "test:matching": "node --test src/features/matching/matching.test.js",
     "test:recommendation": "node --test src/features/recommendation/recommendation.test.js",
     "test:preferences": "node --test src/features/preferences/preferences.test.js",
-    "test:profiletrust": "node --test src/features/profiletrust/profiletrust.test.js src/features/profiletrust/active.test.js src/features/profiletrust/handGuide.test.js src/features/profiletrust/poseHold.test.js",
+    "test:profiletrust": "node --test src/features/profiletrust/profiletrust.test.js src/features/profiletrust/active.test.js src/features/profiletrust/handGuide.test.js src/features/profiletrust/poseHold.test.js src/features/profiletrust/captureSession.test.js",
     "prepare:vision": "node scripts/prepare-vision-assets.mjs",
     "predev": "npm run prepare:vision",
     "prebuild": "npm run prepare:vision"

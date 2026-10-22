@@ -25,8 +25,8 @@ export const PHOTO_REASONS = Object.freeze({
 
 const CAMERA_MESSAGES = Object.freeze({
   CAMERA_ALIGNMENT_TIMEOUT: [
-    "얼굴 중앙을 확인하지 못했어요",
-    "밝은 곳에서 얼굴 전체를 가이드 중앙에 맞추고 다시 시도해 주세요.",
+    "동작 유지 시간을 채우지 못했어요",
+    "영상을 전송하지 않았어요. 밝은 곳에서 각 자세를 3초씩 유지하며 다시 시도해 주세요.",
   ],
   CAMERA_MODEL_UNAVAILABLE: [
     "카메라 확인을 준비하지 못했어요",

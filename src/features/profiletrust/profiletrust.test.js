@@ -1235,3 +1235,13 @@ test("backend session, video and request rejection codes provide explicit restar
     "VERIFICATION_RESPONSE_INVALID",
   );
 });
+
+test("an unfinished hold times out without returning a video for submission", async () => {
+  await assert.rejects(
+    recordClip(
+      {},
+      { Recorder, duration: 1, until: () => new Promise(() => {}) },
+    ),
+    { code: "CAMERA_ALIGNMENT_TIMEOUT" },
+  );
+});

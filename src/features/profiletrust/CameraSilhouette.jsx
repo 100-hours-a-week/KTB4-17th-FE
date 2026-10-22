@@ -11,7 +11,7 @@ export function CameraSilhouette({
   const showPose =
     challenge &&
     !challenge.legacy &&
-    ["pose", "recording"].includes(progress?.stage);
+    ["pose", "head", "recording"].includes(progress?.stage);
   const live = progress?.live;
   const handMatched = Boolean(live?.handMatched);
   const headDone = Boolean(live?.headCompleted);

@@ -258,6 +258,10 @@ export function recordClip(
         100,
       );
       stopTimer = setTimeout(() => {
+        if (until) {
+          finish(trustError("CAMERA_ALIGNMENT_TIMEOUT"));
+          return;
+        }
         try {
           if (recorder.state !== "inactive") recorder.stop();
         } catch {

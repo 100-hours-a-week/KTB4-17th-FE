@@ -3,7 +3,6 @@ import {
   HAND_DIRECTION_NAMES,
   HAND_NAMES,
   HEAD_MOTIONS,
-  headGuideStep,
   requiresHandDirection,
 } from "./challenge.js";
 import { HandGlyph, HandShape } from "./HandShape.jsx";
@@ -250,7 +249,7 @@ function HaruPose({ challenge, moving }) {
 export function PoseExample({ challenge, progress, showHelp = true }) {
   const [demoStep, setDemoStep] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const recording = progress.stage === "recording";
+  const recording = ["centering", "pose", "head"].includes(progress.stage);
   const key = challenge
     ? `${challenge.hand}-${challenge.direction}-${challenge.head}`
     : "";
@@ -275,23 +274,12 @@ export function PoseExample({ challenge, progress, showHelp = true }) {
   }, [playing, recording, challenge?.head]);
   if (!challenge || challenge.legacy) return null;
   const motion = HEAD_MOTIONS[challenge.head];
-  const live = progress?.live;
-  const step = !motion
-    ? progress.stage === "centering"
-      ? 0
-      : 1
-    : recording
-      ? headGuideStep(progress.stage, progress.clipProgress, live)
-      : demoStep;
-  const stepDone = (index) => {
-    if (!recording || !motion || !live) return false;
-    if (index === 0) return live.headStep >= 1 || live.headCompleted;
-    if (index === 1) return Boolean(live.headCompleted);
-    return Boolean(live.headReturned);
-  };
+  const step = recording ? (progress.stageIndex ?? 0) : demoStep;
+  const stepDone = (index) =>
+    Boolean(recording && index < (progress.stageIndex ?? 0));
   const labels = motion
-    ? ["정면 확인", motion.label, "자동 완료"]
-    : ["정면 2초", "포즈 3초", "자동 완료"];
+    ? ["정면 3초", "손 포즈 3초", "고개 3초"]
+    : ["정면 3초", "손 포즈 3초"];
   return (
     <section className="trust-pose-example" aria-label="하루의 포즈 예시">
       <div className="trust-example-heading">
@@ -313,7 +301,10 @@ export function PoseExample({ challenge, progress, showHelp = true }) {
       <div className="trust-example-preview">
         <HaruPose
           challenge={challenge}
-          moving={Boolean(motion) && step === 1}
+          moving={
+            Boolean(motion) &&
+            (recording ? progress.stage === "head" : step === 1)
+          }
         />
         <div className="trust-example-copy">
           <strong>{HAND_NAMES[challenge.hand]}</strong>
@@ -401,11 +392,11 @@ export function PoseExample({ challenge, progress, showHelp = true }) {
         <small>
           {!motion
             ? "정면과 손 모양이 확인되면 자동으로 촬영을 마쳐요."
-            : step === 1
-              ? motion.detail
+            : step === 2
+              ? `${motion.detail} 그 자세를 3초 유지해 주세요.`
               : step === 0
                 ? "먼저 정면을 바라봐 주세요."
-                : "고개 동작이 확인되면 자동으로 완료돼요."}{" "}
+                : "안내된 손 포즈를 3초 유지해 주세요."}{" "}
           좌우는 내 몸 기준이에요.{" "}
           {!requiresHandDirection(challenge.hand, challenge.direction)
             ? "손 모양만 맞추고 방향에 상관없이 편한 위치에 두세요."
