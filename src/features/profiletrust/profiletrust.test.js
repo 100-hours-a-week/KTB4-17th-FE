@@ -1245,6 +1245,21 @@ test("backend session, video and request rejection codes provide explicit restar
   );
 });
 
+test("an alignment timeout names the stalled stage and its blocker", () => {
+  const issue = verificationIssue(
+    trustError("CAMERA_ALIGNMENT_TIMEOUT", {
+      stage: "pose",
+      blocker: "HAND_COVERS_FACE",
+    }),
+  );
+  assert.match(issue.message, /'손 포즈' 단계에서 시간이 끝나/);
+  assert.match(issue.message, /손이 얼굴을 가리고/);
+  assert.equal(
+    verificationIssue(trustError("CAMERA_ALIGNMENT_TIMEOUT")).message,
+    "영상을 전송하지 않았어요. 밝은 곳에서 각 자세를 3초씩 유지하며 다시 시도해 주세요.",
+  );
+});
+
 test("an unfinished hold times out without returning a video for submission", async () => {
   await assert.rejects(
     recordClip(

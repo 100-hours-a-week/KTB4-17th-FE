@@ -220,3 +220,20 @@ test("model preparation has a deadline before recording starts", async (t) => {
   t.mock.timers.tick(30_000);
   await rejected;
 });
+
+test("a stalled pose stage reports the most frequent blocker", async (t) => {
+  const cropped = hand.map((point, index) =>
+    index === 8 ? { ...point, y: -0.05 } : point,
+  );
+  let stalled = false;
+  const run = await setup(t, { hands: () => (stalled ? [cropped] : [hand]) });
+  await run.advance(36);
+  assert.equal(run.states.at(-1).stage, "pose");
+  stalled = true;
+  await run.advance(10);
+  assert.deepEqual(run.session.stuck(), {
+    stage: "pose",
+    blocker: "HAND_CROPPED",
+  });
+  run.controller.abort();
+});
