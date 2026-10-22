@@ -5,6 +5,11 @@ import {
   trustError,
 } from "./model.js";
 
+// 서버 프록시가 요청 본문을 1MB 안팎으로 막아도 최대 17.5초 영상이 들어가게 한다.
+// 서버는 최대 48장만 샘플링하므로 15fps면 단계 유지 판정에 충분하다.
+export const RECORDING_BITS_PER_SECOND = 400_000;
+export const RECORDING_FRAME_RATE = 15;
+
 const VIDEO_TYPES = [
   "video/mp4;codecs=avc1.42E01E",
   "video/mp4",
@@ -17,7 +22,7 @@ export function recorderOptions(Recorder = globalThis.MediaRecorder) {
     throw trustError("CAMERA_NOT_SUPPORTED");
   const mimeType = VIDEO_TYPES.find((type) => Recorder.isTypeSupported(type));
   if (!mimeType) throw trustError("VIDEO_TYPE_NOT_ALLOWED");
-  return { mimeType, videoBitsPerSecond: 1_000_000 };
+  return { mimeType, videoBitsPerSecond: RECORDING_BITS_PER_SECOND };
 }
 
 export function stopCamera(stream) {
@@ -64,7 +69,7 @@ export function openCamera(signal, { recordVideo = true } = {}) {
             facingMode: { ideal: "user" },
             width: { ideal: 640 },
             height: { ideal: 480 },
-            frameRate: { ideal: 24 },
+            frameRate: { ideal: RECORDING_FRAME_RATE },
           },
         }),
       ).then(

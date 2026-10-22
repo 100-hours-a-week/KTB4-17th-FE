@@ -7,6 +7,7 @@ import {
 import {
   openCamera,
   previewCamera,
+  RECORDING_BITS_PER_SECOND,
   recordClip,
   recorderOptions,
   stopCamera,
@@ -696,6 +697,14 @@ test("WebM is selected when MP4 is unsupported; unsupported browsers fail explic
     code: "VIDEO_TYPE_NOT_ALLOWED",
   });
   assert.throws(() => recorderOptions(null), { code: "CAMERA_NOT_SUPPORTED" });
+});
+
+test("recording bitrate keeps the longest clip under 1MB", () => {
+  const { videoBitsPerSecond } = recorderOptions({
+    isTypeSupported: (type) => type === "video/mp4",
+  });
+  assert.equal(videoBitsPerSecond, RECORDING_BITS_PER_SECOND);
+  assert.ok((videoBitsPerSecond / 8) * 17.5 < 1_000_000);
 });
 
 test("aborting a clip stops its recorder and camera cleanup stops all tracks", async () => {
