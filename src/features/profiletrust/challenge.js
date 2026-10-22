@@ -57,7 +57,7 @@ export function parseChallenge(codes) {
 export function challengeInstruction(challenge) {
   if (challenge.legacy) return "촬영하는 동안 정면을 유지해 주세요.";
   const head = challenge.head
-    ? `고개는 ${HEAD_NAMES[challenge.head]} 살짝 움직이면 자동으로 촬영을 마쳐요.`
+    ? `손 포즈 확인 후 고개를 ${HEAD_NAMES[challenge.head]} 움직여 3초 유지해 주세요.`
     : "정면을 바라보며 손 모양을 3초 유지하면 자동으로 촬영을 마쳐요.";
   if (!requiresHandDirection(challenge.hand, challenge.direction))
     return `${HAND_NAMES[challenge.hand]} 모양은 방향에 상관없이 화면 안 편한 위치에 유지하세요. 왼손·오른손, 손바닥·손등 모두 괜찮아요. 얼굴은 가리지 마세요. ${head}`;
@@ -66,14 +66,12 @@ export function challengeInstruction(challenge) {
   return `${HAND_NAMES[challenge.hand]} 모양이 ${direction} 향하도록 화면 안 편한 위치에 유지하세요. 왼손·오른손, 손바닥·손등 모두 괜찮아요. 얼굴은 가리지 마세요. ${head}`;
 }
 
-// 실시간 인식 결과가 있으면 실제 동작 단계를 우선 반영하고, 없으면 촬영 시간 기준으로 안내한다.
-export function headGuideStep(stage, progress = 0, live = null) {
-  if (stage !== "recording") return 0;
+// 단계·실제 인식 결과로만 안내한다. 촬영 시간만으로 완료를 추정하지 않는다.
+export function headGuideStep(stage, _progress = 0, live = null) {
   if (live?.headCompleted) return 2;
-  if (live && typeof live.headStep === "number" && live.headStep > 0) {
-    return live.headStep;
-  }
-  return progress < 0.18 ? 0 : progress < 0.72 ? 1 : 2;
+  if (stage === "head") return 1;
+  if (stage !== "recording") return 0;
+  return live?.headStep > 0 ? live.headStep : 0;
 }
 
 export const HEAD_MOTIONS = Object.freeze({

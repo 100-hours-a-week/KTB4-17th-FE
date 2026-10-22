@@ -1,7 +1,7 @@
 import { trustError } from "./model.js";
 
 const REQUIRED_FRAMES = 15;
-export const CENTER_HOLD_MS = 2_000;
+export const CENTER_HOLD_MS = 3_000;
 const MAX_POSITION_DEVIATION = 0.05;
 const GUIDE_BOUNDS = { left: 0.08, right: 0.92, top: 0.06, bottom: 0.94 };
 const MIN_FACE_WIDTH = 0.05;
@@ -294,7 +294,7 @@ export function waitForCenteredFace(
         if (
           mediaTime != null &&
           lastFrame != null &&
-          (mediaTime <= lastFrame || mediaTime - lastFrame > 0.35)
+          (mediaTime <= lastFrame || mediaTime - lastFrame > 0.75)
         ) {
           hold = { history: [], since: null };
         }

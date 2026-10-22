@@ -2,12 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { preparePrimaryPhoto } from "../profile/photoUpload.js";
 import * as api from "./api.js";
 import { openCamera, previewCamera, recordClip, stopCamera } from "./camera.js";
-import { waitForCenteredFace } from "./centering.js";
-import {
-  challengeInstruction,
-  parseChallenge,
-  recordingHint,
-} from "./challenge.js";
+import { prepareCaptureSession } from "./captureSession.js";
+import { parseChallenge } from "./challenge.js";
 import {
   latestAttempt,
   MAX_ATTEMPTS,
@@ -15,7 +11,6 @@ import {
   trustError,
   verificationIssue,
 } from "./model.js";
-import { waitForPoseHold, watchLiveChallenge } from "./poseHold.js";
 import {
   abortable,
   assertSession,
@@ -334,134 +329,52 @@ export function useFaceVerification() {
             }
           }
           updateStage({
-            stage: "centering",
-            attemptNo,
-            maxAttempts,
-            clipProgress: 0,
-          });
-          if (current()) {
-            setCenterReady(false);
-            setCenterHold(0);
-          }
-          if (!target.legacy && !target.head) {
-            const capture = new AbortController();
-            const captureSignal = AbortSignal.any([
-              signal,
-              run.cameraController.signal,
-              capture.signal,
-            ]);
-            try {
-              return await recordClip(run.stream, {
-                signal: captureSignal,
-                duration: 11_500,
-                until: async () => {
-                  await waitForCenteredFace(videoRef.current, {
-                    signal: captureSignal,
-                    onState: (state) => {
-                      if (!current()) return;
-                      setCenterReady(state.ready);
-                      setCenterHold(state.progress);
-                      setHint(state.hint);
-                    },
-                  });
-                  captureSignal.throwIfAborted();
-                  updateStage({
-                    stage: "pose",
-                    automatic: true,
-                    attemptNo,
-                    maxAttempts,
-                    clipProgress: 0,
-                    live: null,
-                  });
-                  if (current()) {
-                    setCenterReady(false);
-                    setHint(challengeInstruction(target));
-                  }
-                  await waitForPoseHold(videoRef.current, target, {
-                    signal: captureSignal,
-                    onState: (state) => {
-                      if (!current()) return;
-                      const live = {
-                        handDetected: Boolean(state.handDetected),
-                        handMatched: Boolean(state.handMatched),
-                        headStep: 0,
-                        headDelta: 0,
-                        headTurnProgress: 0,
-                        headCompleted: false,
-                        headReturned: false,
-                      };
-                      setProgress((previous) => ({
-                        ...previous,
-                        clipProgress: state.progress,
-                        live,
-                      }));
-                      setHint(
-                        state.progress > 0
-                          ? `좋아요. 손 모양을 그대로 유지해 주세요. ${Math.max(1, Math.ceil((1 - state.progress) * 3))}초 남았어요.`
-                          : state.handDetected
-                            ? "손이 감지됐어요! 안내된 손 모양과 방향에 맞게 조금만 조정해 주세요."
-                            : challengeInstruction(target),
-                      );
-                    },
-                  });
-                },
-              });
-            } finally {
-              capture.abort();
-            }
-          }
-          updateStage({ stage: "centering", automatic: true, live: null });
-          await waitForCenteredFace(videoRef.current, {
-            signal,
-            onState: (state) => {
-              if (current()) {
-                setCenterReady(state.ready);
-                setCenterHold(state.progress);
-                setHint(state.hint);
-              }
-            },
-          });
-          signal.throwIfAborted();
-          if (current()) setCenterReady(false);
-          updateStage({
-            stage: "recording",
+            stage: "preparing",
             automatic: true,
             attemptNo,
             maxAttempts,
             clipProgress: 0,
-            live: null,
           });
-          const liveController = new AbortController();
-          const liveSignal = AbortSignal.any([
+          const capture = new AbortController();
+          const captureSignal = AbortSignal.any([
             signal,
             run.cameraController.signal,
-            liveController.signal,
+            capture.signal,
           ]);
-          let latestClipProgress = 0;
-          let latestLive = null;
-          const stopWatching = watchLiveChallenge(videoRef.current, target, {
-            signal: liveSignal,
-            onState: (live) => {
-              if (!current()) return;
-              latestLive = live;
-              setProgress((previous) => ({ ...previous, live }));
-              setHint(recordingHint(target, latestClipProgress, live));
-            },
-          });
+          let session;
           try {
-            return await recordClip(run.stream, {
-              signal: run.cameraController.signal,
-              onProgress: (clipProgress) => {
-                latestClipProgress = clipProgress;
-                if (current()) {
-                  setProgress((previous) => ({ ...previous, clipProgress }));
-                  setHint(recordingHint(target, clipProgress, latestLive));
-                }
+            session = await prepareCaptureSession(videoRef.current, target, {
+              signal: captureSignal,
+              onState: (state) => {
+                if (!current()) return;
+                updateStage({
+                  stage: state.stage,
+                  automatic: true,
+                  attemptNo,
+                  maxAttempts,
+                  clipProgress: state.progress,
+                  live: state.live,
+                  stageIndex: state.stageIndex,
+                  stageCount: state.stageCount,
+                  completedStages: state.completedStages,
+                  matching: state.matching,
+                  paused: state.paused,
+                  remainingSeconds: state.remainingSeconds,
+                });
+                setCenterReady(state.stage === "centering" && state.matching);
+                setCenterHold(state.stage === "centering" ? state.progress : 0);
+                setHint(state.hint);
               },
             });
+            captureSignal.throwIfAborted();
+            return await recordClip(run.stream, {
+              signal: captureSignal,
+              duration: 17_500,
+              until: session.wait,
+            });
           } finally {
-            liveController.abort();
-            stopWatching();
+            capture.abort();
+            session?.close();
           }
         },
         onSession: updateSession,
