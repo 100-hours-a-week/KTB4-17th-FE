@@ -2,9 +2,16 @@ import { trustError } from "./model.js";
 
 const REQUIRED_FRAMES = 15;
 export const CENTER_HOLD_MS = 2_000;
-const MAX_POSITION_DEVIATION = 0.02;
-const GUIDE_BOUNDS = { left: 0.31, right: 0.69, top: 0.16, bottom: 0.8 };
+const MAX_POSITION_DEVIATION = 0.05;
+const GUIDE_BOUNDS = { left: 0.08, right: 0.92, top: 0.06, bottom: 0.94 };
+const MIN_FACE_WIDTH = 0.05;
+const MIN_FACE_HEIGHT = 0.05;
+const MAX_FACE_RATIO = 0.88;
 const MAX_FRONTAL_ANGLE = 25;
+export const HEAD_TURN_MIN_DELTA_DEG = 12;
+export const HEAD_RETURN_MAX_DELTA_DEG = 6;
+const HEAD_BASELINE_FRAMES = 3;
+const HEAD_MIN_TURNED_FRAMES = 2;
 export const CENTER_HINTS = Object.freeze({
   NO_FACE: "얼굴 전체가 화면에 보이도록 맞춰 주세요.",
   MULTIPLE_FACES: "혼자 화면에 들어와 주세요.",
@@ -68,7 +75,10 @@ export function facePosition(result) {
     overlapWidth * overlapHeight < face.width * face.height * 0.5 - 1e-9;
   let issue = null;
   if (left < 0 || top < 0 || right > 1 || bottom > 1) issue = "CROPPED";
-  else if (face.width < 0.18 || face.height < 0.3) issue = "CLOSER";
+  else if (face.width < MIN_FACE_WIDTH || face.height < MIN_FACE_HEIGHT)
+    issue = "CLOSER";
+  else if (face.width >= MAX_FACE_RATIO && face.height >= MAX_FACE_RATIO)
+    issue = "BACK";
   else if (outsideGuide) {
     if (face.x < GUIDE_BOUNDS.left) issue = "LEFT";
     else if (face.x > GUIDE_BOUNDS.right) issue = "RIGHT";
@@ -82,6 +92,94 @@ export function facePosition(result) {
     issue = "FRONTAL";
   else if (Math.abs(roll) > MAX_FRONTAL_ANGLE) issue = "LEVEL";
   return { ...face, issue };
+}
+
+function median(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2
+    ? sorted[middle]
+    : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+export function headTurnProgress(previous = {}, result, targetHead) {
+  const state = {
+    baselineSamples: previous.baselineSamples ?? [],
+    baseline: previous.baseline ?? null,
+    turnedFrames: previous.turnedFrames ?? 0,
+    completedTurn: previous.completedTurn ?? false,
+    returnFrames: previous.returnFrames ?? 0,
+    returned: previous.returned ?? false,
+    delta: previous.delta ?? 0,
+    returnDelta: previous.returnDelta ?? null,
+    turnProgress: previous.turnProgress ?? 0,
+    faceDetected: false,
+    step: previous.completedTurn ? 2 : previous.baseline ? 1 : 0,
+  };
+  if (!targetHead) return state;
+  const face = facePosition(result);
+  if (
+    !Number.isFinite(face.yaw) ||
+    !Number.isFinite(face.pitch) ||
+    ["NO_FACE", "MULTIPLE_FACES", "INVALID_POSE", "CROPPED"].includes(
+      face.issue,
+    )
+  ) {
+    return {
+      ...state,
+      turnedFrames: 0,
+      returnFrames: 0,
+    };
+  }
+  state.faceDetected = true;
+  if (!state.baseline) {
+    if (
+      Math.abs(face.yaw) <= MAX_FRONTAL_ANGLE &&
+      Math.abs(face.pitch) <= MAX_FRONTAL_ANGLE &&
+      Math.abs(face.roll) <= MAX_FRONTAL_ANGLE
+    ) {
+      const baselineSamples = [
+        ...state.baselineSamples,
+        { yaw: face.yaw, pitch: face.pitch },
+      ].slice(-HEAD_BASELINE_FRAMES);
+      const baseline =
+        baselineSamples.length >= HEAD_BASELINE_FRAMES
+          ? {
+              yaw: median(baselineSamples.map((item) => item.yaw)),
+              pitch: median(baselineSamples.map((item) => item.pitch)),
+            }
+          : null;
+      return {
+        ...state,
+        baselineSamples,
+        baseline,
+        step: baseline ? 1 : 0,
+      };
+    }
+    return state;
+  }
+  const dpitch = face.pitch - state.baseline.pitch;
+  const delta = targetHead === "LOOK_UP" ? -dpitch : dpitch;
+  const returnDelta = Math.abs(dpitch);
+  const turnedFrames =
+    delta >= HEAD_TURN_MIN_DELTA_DEG ? state.turnedFrames + 1 : 0;
+  const completedTurn =
+    state.completedTurn || turnedFrames >= HEAD_MIN_TURNED_FRAMES;
+  const returned = completedTurn;
+  const turnProgress = completedTurn
+    ? 1
+    : Math.min(1, Math.max(0, delta) / HEAD_TURN_MIN_DELTA_DEG);
+  return {
+    ...state,
+    turnedFrames,
+    completedTurn,
+    returnFrames: completedTurn ? HEAD_MIN_TURNED_FRAMES : 0,
+    returned,
+    delta: Math.max(0, Math.round(delta)),
+    returnDelta: Math.round(returnDelta),
+    turnProgress,
+    step: completedTurn ? 2 : 1,
+  };
 }
 
 export function centerProgress(history, result) {
@@ -131,7 +229,7 @@ export function centerHoldProgress(previous, result, now) {
   };
 }
 
-async function createTracker() {
+export async function createFaceTracker() {
   const { FaceLandmarker, FilesetResolver } = await import(
     "@mediapipe/tasks-vision"
   );
@@ -153,7 +251,7 @@ async function createTracker() {
 
 export function waitForCenteredFace(
   video,
-  { signal, onState, create = createTracker },
+  { signal, onState, create = createFaceTracker },
 ) {
   return new Promise((resolve, reject) => {
     let tracker,

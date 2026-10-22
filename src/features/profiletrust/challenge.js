@@ -13,8 +13,6 @@ export const HAND_NAMES = Object.freeze({
   HAND_CALL_ME: "엄지·새끼 펴기",
 });
 export const HEAD_NAMES = Object.freeze({
-  TURN_LEFT: "본인 기준 왼쪽으로",
-  TURN_RIGHT: "본인 기준 오른쪽으로",
   LOOK_UP: "위로",
   LOOK_DOWN: "아래로",
 });
@@ -59,7 +57,7 @@ export function parseChallenge(codes) {
 export function challengeInstruction(challenge) {
   if (challenge.legacy) return "촬영하는 동안 정면을 유지해 주세요.";
   const head = challenge.head
-    ? `고개는 ${HEAD_NAMES[challenge.head]} 살짝 움직였다가 정면으로 돌아오세요.`
+    ? `고개는 ${HEAD_NAMES[challenge.head]} 살짝 움직이면 자동으로 촬영을 마쳐요.`
     : "정면을 바라보며 손 모양을 3초 유지하면 자동으로 촬영을 마쳐요.";
   if (!requiresHandDirection(challenge.hand, challenge.direction))
     return `${HAND_NAMES[challenge.hand]} 모양은 방향에 상관없이 화면 안 편한 위치에 유지하세요. 왼손·오른손, 손바닥·손등 모두 괜찮아요. 얼굴은 가리지 마세요. ${head}`;
@@ -68,23 +66,17 @@ export function challengeInstruction(challenge) {
   return `${HAND_NAMES[challenge.hand]} 모양이 ${direction} 향하도록 화면 안 편한 위치에 유지하세요. 왼손·오른손, 손바닥·손등 모두 괜찮아요. 얼굴은 가리지 마세요. ${head}`;
 }
 
-// 안내 단계는 촬영 시간 기준이며 자세 인식 성공 여부를 뜻하지 않는다.
-export function headGuideStep(stage, progress = 0) {
+// 실시간 인식 결과가 있으면 실제 동작 단계를 우선 반영하고, 없으면 촬영 시간 기준으로 안내한다.
+export function headGuideStep(stage, progress = 0, live = null) {
   if (stage !== "recording") return 0;
+  if (live?.headCompleted) return 2;
+  if (live && typeof live.headStep === "number" && live.headStep > 0) {
+    return live.headStep;
+  }
   return progress < 0.18 ? 0 : progress < 0.72 ? 1 : 2;
 }
 
 export const HEAD_MOTIONS = Object.freeze({
-  TURN_LEFT: {
-    label: "왼쪽으로 고개 돌리기",
-    detail: "어깨는 그대로 두고 고개만 왼쪽으로 천천히 돌려 주세요.",
-    icon: "arrowLeft",
-  },
-  TURN_RIGHT: {
-    label: "오른쪽으로 고개 돌리기",
-    detail: "어깨는 그대로 두고 고개만 오른쪽으로 천천히 돌려 주세요.",
-    icon: "arrowRight",
-  },
   LOOK_UP: {
     label: "고개 위로 들기",
     detail: "몸은 그대로 두고 턱을 살짝 들어 위로 바라봐 주세요.",
@@ -97,14 +89,23 @@ export const HEAD_MOTIONS = Object.freeze({
   },
 });
 
-export function recordingHint(challenge, progress) {
+export function recordingHint(challenge, progress, live = null) {
   if (challenge.legacy) return "정면을 유지해 주세요.";
   if (!challenge.head)
     return "정면을 바라보며 안내된 손 모양을 3초 유지해 주세요.";
-  const step = headGuideStep("recording", progress);
+  if (live?.headCompleted) {
+    return live.handMatched
+      ? "고개 동작과 손 모양이 모두 확인됐어요! 잠시만 그대로 유지해 주세요."
+      : "고개 동작이 확인됐어요! 안내된 손 모양을 맞춰 주세요.";
+  }
+  const step = headGuideStep("recording", progress, live);
   if (step === 0)
     return "손 모양을 유지하고, 먼저 카메라를 정면으로 봐 주세요.";
-  if (step === 1)
+  if (step === 1) {
+    if (live?.headDelta > 0) {
+      return `손은 그대로, 고개를 ${HEAD_NAMES[challenge.head]} 조금만 더 움직여 주세요. (${live.headDelta}° / 12°)`;
+    }
     return `손은 그대로, 고개를 ${HEAD_NAMES[challenge.head]} 살짝 움직여 주세요.`;
-  return "손 모양을 유지하면서 다시 정면을 봐 주세요.";
+  }
+  return "고개 동작이 확인됐어요! 잠시만 그대로 유지해 주세요.";
 }

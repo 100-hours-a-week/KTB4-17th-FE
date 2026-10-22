@@ -206,12 +206,6 @@ function HaruPose({ challenge, moving }) {
     frame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frame);
   }, [moving]);
-  const horizontal =
-    challenge.head === "TURN_LEFT"
-      ? -1
-      : challenge.head === "TURN_RIGHT"
-        ? 1
-        : 0;
   const vertical =
     challenge.head === "LOOK_UP" ? -1 : challenge.head === "LOOK_DOWN" ? 1 : 0;
   return (
@@ -239,18 +233,10 @@ function HaruPose({ challenge, moving }) {
         stroke="#3b2466"
         strokeWidth="2"
       />
-      <RobotHead yaw={horizontal * turn * 48} pitch={-vertical * turn * 28} />
+      <RobotHead yaw={0} pitch={-vertical * turn * 28} />
       {moving && (
         <path
-          d={
-            horizontal > 0
-              ? "M109 28h25m-6-6 6 6-6 6"
-              : horizontal < 0
-                ? "M32 28H13m6-6-6 6 6 6"
-                : vertical < 0
-                  ? "M24 49V25m-6 6 6-6 6 6"
-                  : "M24 25v24m-6-6 6 6 6-6"
-          }
+          d={vertical < 0 ? "M24 49V25m-6 6 6-6 6 6" : "M24 25v24m-6-6 6 6 6-6"}
           fill="none"
           stroke="#7c5cfa"
           strokeWidth="3"
@@ -289,15 +275,22 @@ export function PoseExample({ challenge, progress, showHelp = true }) {
   }, [playing, recording, challenge?.head]);
   if (!challenge || challenge.legacy) return null;
   const motion = HEAD_MOTIONS[challenge.head];
+  const live = progress?.live;
   const step = !motion
     ? progress.stage === "centering"
       ? 0
       : 1
     : recording
-      ? headGuideStep(progress.stage, progress.clipProgress)
+      ? headGuideStep(progress.stage, progress.clipProgress, live)
       : demoStep;
+  const stepDone = (index) => {
+    if (!recording || !motion || !live) return false;
+    if (index === 0) return live.headStep >= 1 || live.headCompleted;
+    if (index === 1) return Boolean(live.headCompleted);
+    return Boolean(live.headReturned);
+  };
   const labels = motion
-    ? ["정면 보기", motion.label, "다시 정면"]
+    ? ["정면 확인", motion.label, "자동 완료"]
     : ["정면 2초", "포즈 3초", "자동 완료"];
   return (
     <section className="trust-pose-example" aria-label="하루의 포즈 예시">
@@ -375,26 +368,34 @@ export function PoseExample({ challenge, progress, showHelp = true }) {
           </p>
         )}
       <ol className="trust-head-steps">
-        {labels.map((label, index) => (
-          <li key={label} aria-current={index === step ? "step" : undefined}>
-            {recording || !motion ? (
-              <span>
-                {index + 1}. {label}
-              </span>
-            ) : (
-              <button
-                type="button"
-                aria-pressed={index === step}
-                onClick={() => {
-                  setPlaying(false);
-                  setDemoStep(index);
-                }}
-              >
-                {index + 1}. {label}
-              </button>
-            )}
-          </li>
-        ))}
+        {labels.map((label, index) => {
+          const done = stepDone(index);
+          return (
+            <li
+              key={label}
+              aria-current={index === step ? "step" : undefined}
+              data-done={done ? "true" : undefined}
+            >
+              {recording || !motion ? (
+                <span>
+                  {done ? "✓ " : `${index + 1}. `}
+                  {label}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  aria-pressed={index === step}
+                  onClick={() => {
+                    setPlaying(false);
+                    setDemoStep(index);
+                  }}
+                >
+                  {index + 1}. {label}
+                </button>
+              )}
+            </li>
+          );
+        })}
       </ol>
       {showHelp && (
         <small>
@@ -404,7 +405,7 @@ export function PoseExample({ challenge, progress, showHelp = true }) {
               ? motion.detail
               : step === 0
                 ? "먼저 정면을 바라봐 주세요."
-                : "정면으로 돌아와 그대로 유지해 주세요."}{" "}
+                : "고개 동작이 확인되면 자동으로 완료돼요."}{" "}
           좌우는 내 몸 기준이에요.{" "}
           {!requiresHandDirection(challenge.hand, challenge.direction)
             ? "손 모양만 맞추고 방향에 상관없이 편한 위치에 두세요."

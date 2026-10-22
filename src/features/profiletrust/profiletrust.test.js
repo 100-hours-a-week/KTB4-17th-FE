@@ -168,7 +168,7 @@ test("exhausted hand checks offer a new session rather than another attempt", ()
 
 test("explicit retry uses the server step-up challenge on the next recording", async () => {
   const basic = ["LOOK_STRAIGHT", "HAND_TWO", "HAND_DOWN"];
-  const raised = [...basic, "TURN_RIGHT"];
+  const raised = [...basic, "LOOK_DOWN"];
   const seen = [];
   const additional = completed(1, "RETRY", "ADDITIONAL_CHALLENGE_REQUIRED");
   const result = await explicitlyRetryUntilClosed(
