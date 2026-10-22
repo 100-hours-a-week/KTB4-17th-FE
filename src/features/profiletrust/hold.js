@@ -1,6 +1,5 @@
+// 화면 안내와 같은 3초를 채우면 다음 단계로 넘어간다. 서버 샘플 경계 오차는 서버가 허용한다.
 export const HOLD_SECONDS = 3;
-// 균등 서버 샘플의 양 끝 경계 오차를 흡수한다. 화면에는 3초 유지로 안내한다.
-export const CAPTURE_HOLD_SECONDS = 3.4;
 export const MAX_SAMPLE_GAP_SECONDS = 0.75;
 export const DETECTION_GRACE_SECONDS = 0.8;
 
@@ -8,7 +7,7 @@ export function holdProgress(
   previous = {},
   matching,
   timestamp,
-  seconds = CAPTURE_HOLD_SECONDS,
+  seconds = HOLD_SECONDS,
 ) {
   let elapsed = previous.elapsed ?? 0;
   let lastMatch = previous.lastMatch ?? null;
