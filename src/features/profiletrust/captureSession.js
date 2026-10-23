@@ -99,6 +99,7 @@ export async function prepareCaptureSession(
     signal.removeEventListener("abort", abortLoading);
   }
   let finishWaiting = null;
+  let cancelWaiting = null;
   let closed = false;
   // 제한 시간이 끝났을 때 어느 단계에서 무엇 때문에 멈췄는지 알려 준다.
   let stuck = { stage: null, blocker: null };
@@ -114,6 +115,11 @@ export async function prepareCaptureSession(
   return {
     close,
     stuck: () => ({ ...stuck }),
+    // 시간 초과 뒤 다시 촬영할 때 쓴다. 진행 중인 판정만 멈추고 모델은 닫지 않아 다음 wait()가 정면부터 바로 시작한다.
+    restart: () => {
+      cancelWaiting?.();
+      stuck = { stage: null, blocker: null };
+    },
     wait: () =>
       new Promise((resolve, reject) => {
         if (closed || signal.aborted) {
@@ -136,12 +142,22 @@ export async function prepareCaptureSession(
           clearTimeout(timer);
           signal.removeEventListener("abort", abort);
           finishWaiting = null;
+          cancelWaiting = null;
           closed = true;
           dispose();
           if (error) reject(error);
           else resolve();
         };
         finishWaiting = finish;
+        cancelWaiting = () => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          signal.removeEventListener("abort", abort);
+          finishWaiting = null;
+          cancelWaiting = null;
+          reject(trustError("CAMERA_ALIGNMENT_TIMEOUT"));
+        };
         const abort = () =>
           finish(signal.reason || trustError("CAMERA_INTERRUPTED"));
         const tick = () => {
@@ -295,4 +311,26 @@ export async function prepareCaptureSession(
         tick();
       }),
   };
+}
+
+// 한 번 녹화(17.5초) 안에 단계를 다 못 채우면 실패 화면 대신 카메라를 켠 채 정면부터 다시 녹화한다.
+// 영상을 보내지 않으므로 서버 시도 횟수는 쓰지 않는다. 자리를 비운 채 카메라가 계속 켜져 있지 않도록 횟수 상한을 둔다.
+export const MAX_AUTO_RESTARTS = 4;
+
+export async function recordWithRestarts(
+  record,
+  session,
+  { maxRestarts = MAX_AUTO_RESTARTS, onRestart = () => {} } = {},
+) {
+  for (let restarts = 0; ; restarts++) {
+    try {
+      return await record();
+    } catch (error) {
+      if (error?.code !== "CAMERA_ALIGNMENT_TIMEOUT") throw error;
+      const stuck = session.stuck();
+      if (restarts >= maxRestarts) throw Object.assign(error, stuck);
+      session.restart();
+      onRestart(stuck, restarts + 1);
+    }
+  }
 }

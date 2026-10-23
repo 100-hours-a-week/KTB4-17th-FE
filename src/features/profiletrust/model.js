@@ -245,6 +245,15 @@ const STUCK_MESSAGES = Object.freeze({
     "고개 움직임이 부족했어요. 안내한 방향으로 조금 더 움직여 유지해 주세요.",
 });
 
+// 시간이 끝나 자동으로 다시 촬영할 때, 멈췄던 단계와 원인을 다음 촬영 안내 앞에 보여 준다.
+export function restartNotice({ stage, blocker } = {}) {
+  const name = STAGE_NAMES[stage];
+  const reason = Object.hasOwn(STUCK_MESSAGES, blocker)
+    ? ` ${STUCK_MESSAGES[blocker]}`
+    : "";
+  return `${name ? `'${name}' 단계에서 ` : ""}시간이 지나 정면부터 다시 촬영해요.${reason}`;
+}
+
 function timeoutMessage(error, fallback) {
   const stage = STAGE_NAMES[error?.stage];
   if (!stage) return fallback;
