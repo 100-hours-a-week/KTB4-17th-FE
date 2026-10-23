@@ -17,15 +17,10 @@ export function SwipeGuide({ direction, canRetreat = false }) {
   return (
     <div className={`home-swipe-guide is-${direction}`} aria-hidden="true">
       <div className="home-swipe-guide-track">
-        <span className="home-swipe-guide-arrow">
-          <PixelIcon name="arrowDown" scale={2} />
-        </span>
-        <span className="home-swipe-guide-hand">
-          <PixelIcon
-            name="swipeHand"
-            scale={2}
-            colors={{ X: "#f4edff", W: "#b8a4df" }}
-          />
+        <span className="home-swipe-guide-arrows">
+          {[0, 1, 2].map((index) => (
+            <PixelIcon key={index} name="back" scale={2} />
+          ))}
         </span>
       </div>
       <span className="home-swipe-guide-label">
