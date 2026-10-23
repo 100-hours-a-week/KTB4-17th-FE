@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { asset } from "../../shared/assets.js";
-import { PixelButton } from "../../shared/ui/components.jsx";
+import {
+  BugReportLink,
+  FACE_VERIFICATION_REPORT_URL,
+  PixelButton,
+} from "../../shared/ui/components.jsx";
 import { AiAvatar, PixelIcon } from "../../shared/ui/pixel.jsx";
 import { uploadProfileImage } from "../profile/api.js";
 import {
@@ -768,6 +772,12 @@ export function ProfilePhotoEditor({
                   </p>
                 </details>
               )}
+              <BugReportLink
+                href={FACE_VERIFICATION_REPORT_URL}
+                className="trust-report-link"
+                title="인증이 계속 안 되나요?"
+                description="버그 리포트로 알려주시면 확인할게요 · 새 탭으로 열림"
+              />
             </>
           )}
           {trust.phase === "success" && (

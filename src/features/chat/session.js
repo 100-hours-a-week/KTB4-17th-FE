@@ -2,6 +2,7 @@ import {
   AUTH_SESSION_CLEARED_EVENT,
   getAuthSessionSubject,
 } from "../../shared/api/authToken.js";
+import { isDelegationActionRestricted } from "./delegation.js";
 
 const sessions = new Map();
 let owner = null;
@@ -131,6 +132,7 @@ export function canUseAiForRoom(room, pending = false) {
   return (
     !pending &&
     room?.status === "ACTIVE" &&
+    !isDelegationActionRestricted(room?.delegation?.status) &&
     !room?.blockedByMe &&
     Number.isSafeInteger(userId) &&
     userId > 0

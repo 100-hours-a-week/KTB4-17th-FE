@@ -1,4 +1,5 @@
 import { createMessageId } from "../../shared/messageId.js";
+import { CHAT_DELEGATION_REFRESH_EVENT } from "./delegation.js";
 import {
   chatSendErrorMessage,
   mapChatMessage,
@@ -193,6 +194,22 @@ export async function processOutbox(entry, api) {
                   });
               }
             }
+          } else if (error?.code === "CHAT_DELEGATION_ACTION_NOT_ALLOWED") {
+            for (const pending of entry.batches) {
+              pending.requested = false;
+              for (const waiting of pending.tasks) {
+                if (!waiting.complete)
+                  patchMessage(entry, waiting, {
+                    status: "FAILED",
+                    error: chatSendErrorMessage(error),
+                  });
+              }
+            }
+            window.dispatchEvent(
+              new CustomEvent(CHAT_DELEGATION_REFRESH_EVENT, {
+                detail: { chatRoomId: entry.roomId },
+              }),
+            );
           }
           break;
         }

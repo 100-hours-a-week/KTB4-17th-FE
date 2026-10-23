@@ -19,6 +19,12 @@ import * as chatApi from "./api.js";
 import { ChatDetailMenu } from "./ChatDetailMenu.jsx";
 import { ChatImage } from "./ChatImage.jsx";
 import { ChatModeMenu } from "./ChatModeMenu.jsx";
+import {
+  delegationPathForRoom,
+  delegationSelectionPath,
+  isDelegationActionRestricted,
+  isDelegationDraftStatus,
+} from "./delegation.js";
 import { MessageBubble } from "./MessageBubble.jsx";
 import {
   formatFileSize,
@@ -203,7 +209,11 @@ function ChatRoomContent({
   const imageInputRef = useRef(null);
   const viewerOpenerRef = useRef(null);
   const scroll = useChatScroll({ ...room, viewingImage });
-  const canSend = Boolean(visit) && state.room?.status === "ACTIVE";
+  const delegationRestricted = isDelegationActionRestricted(
+    state.room?.delegation?.status,
+  );
+  const canSend =
+    Boolean(visit) && state.room?.status === "ACTIVE" && !delegationRestricted;
   useRoomMatchRead(roomId, Boolean(visit && state.room && !error));
   useComposerAutofocus(
     inputRef,
@@ -217,7 +227,7 @@ function ChatRoomContent({
     !state.room?.blockedByMe &&
     Number.isSafeInteger(parsedTargetUserId) &&
     parsedTargetUserId > 0;
-  const canEndChat = Boolean(visit && state.room);
+  const canEndChat = Boolean(visit && state.room && !delegationRestricted);
   const aiDisabled = !canUseAiForRoom(state.room, blocking || endingChat);
   const closeViewer = useCallback(() => setViewingImage(null), []);
   const openViewer = useCallback((message, opener) => {
@@ -225,6 +235,12 @@ function ChatRoomContent({
     setViewingImage({ message, opener });
   }, []);
   useKeyboardViewport(rootRef, scroll.preservePosition);
+
+  useEffect(() => {
+    if (!visit || !state.room?.delegation) return;
+    if (isDelegationDraftStatus(state.room.delegation.status)) return;
+    navigate(delegationPathForRoom(state.room), { replace: true });
+  }, [navigate, state.room, visit]);
 
   useEffect(
     () => () => {
@@ -333,13 +349,16 @@ function ChatRoomContent({
       if (
         requestError.name !== "AbortError" &&
         blockRequestRef.current === controller
-      )
+      ) {
+        if (requestError.code === "CHAT_DELEGATION_ACTION_NOT_ALLOWED")
+          void sync();
         toast(
           apiErrorMessage(
             requestError,
             "회원을 차단하지 못했어요. 잠시 후 다시 시도해 주세요.",
           ),
         );
+      }
     } finally {
       if (blockRequestRef.current === controller) {
         blockRequestRef.current = null;
@@ -373,13 +392,16 @@ function ChatRoomContent({
       if (
         requestError.name !== "AbortError" &&
         endChatRequestRef.current === controller
-      )
+      ) {
+        if (requestError.code === "CHAT_DELEGATION_ACTION_NOT_ALLOWED")
+          void sync();
         toast(
           apiErrorMessage(
             requestError,
             "채팅을 종료하지 못했어요. 잠시 후 다시 시도해 주세요.",
           ),
         );
+      }
     } finally {
       if (endChatRequestRef.current === controller) {
         endChatRequestRef.current = null;
@@ -461,11 +483,24 @@ function ChatRoomContent({
               <ChatDetailMenu
                 canBlock={canBlockUser && !endingChat}
                 canEndChat={canEndChat}
-                canEndWithAi={state.room?.status === "ACTIVE"}
+                canEndWithAi={
+                  state.room?.status === "ACTIVE" &&
+                  (!state.room?.delegation ||
+                    isDelegationDraftStatus(state.room.delegation.status)) &&
+                  !blocking &&
+                  !endingChat
+                }
                 blocking={blocking}
                 endingChat={endingChat}
                 onBlock={() => setBlockDialogOpen(true)}
                 onEndChat={() => setEndChatDialogOpen(true)}
+                onEndWithAi={() =>
+                  navigate(
+                    state.room?.delegation
+                      ? delegationPathForRoom(state.room)
+                      : delegationSelectionPath(roomId),
+                  )
+                }
                 toast={toast}
               />
             </div>
@@ -646,7 +681,9 @@ function ChatRoomContent({
         >
           {state.loaded && !canSend && (
             <p className="chat-ended-notice" role="status">
-              대화가 종료되어 메시지를 보낼 수 없어요.
+              {delegationRestricted
+                ? "AI가 대화를 마무리하는 동안 직접 메시지를 보낼 수 없어요."
+                : "대화가 종료되어 메시지를 보낼 수 없어요."}
             </p>
           )}
           {preparingImage && (
