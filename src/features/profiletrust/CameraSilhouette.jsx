@@ -60,6 +60,7 @@ export function CameraSilhouette({
             className={`trust-silhouette-hand is-${side}`}
             hand={challenge.hand}
             direction={challenge.direction}
+            screenSide={side}
             mirror={side === "left"}
             outline
           />
