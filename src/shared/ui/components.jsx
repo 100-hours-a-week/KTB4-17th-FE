@@ -360,3 +360,32 @@ export function PhotoSegments({ person, index, onSelect, className = "" }) {
     </nav>
   );
 }
+
+export const BUG_REPORT_URL =
+  "https://docs.google.com/forms/d/e/1FAIpQLSd53OE0upA39gbNQs91djxpZDn1MaEnpM38UMmVXwFUeevYxw/viewform?usp=header";
+
+export const FACE_VERIFICATION_REPORT_URL =
+  "https://docs.google.com/forms/d/e/1FAIpQLSeLX4Dr9bpF5j6u_cSL-qqnOSbTThk2cA2fI_h4N3WmyoQQlw/viewform";
+
+export function BugReportLink({
+  href = BUG_REPORT_URL,
+  title = "버그 리포트 · 신고",
+  description = "불편한 점이나 오류를 알려주세요 · 새 탭으로 열림",
+  className = "",
+}) {
+  return (
+    <a
+      className={`bug-report-link ${className}`}
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <PixelIcon name="alert" scale={3} />
+      <span>
+        <strong>{title}</strong>
+        <small>{description}</small>
+      </span>
+      <PixelIcon name="arrowUpRight" scale={2} />
+    </a>
+  );
+}
