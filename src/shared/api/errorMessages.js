@@ -134,6 +134,37 @@ export const API_ERROR_MESSAGES = Object.freeze({
     "메시지 전송 정보가 기존 메시지와 달라요. 대화 내역을 다시 확인해 주세요.",
   TOO_MANY_MESSAGE_REQUESTS:
     "메시지를 너무 빠르게 보내고 있어요. 잠시 후 다시 보내 주세요.",
+  CHAT_DELEGATION_ALREADY_EXISTS:
+    "이미 진행 중인 대화 정리가 있어요. 현재 상태를 다시 확인해 주세요.",
+  CHAT_DELEGATION_CONVERSATION_REQUIRED:
+    "대화를 조금 더 나눈 뒤 대화 정리를 시작해 주세요.",
+  CHAT_DELEGATION_NOT_FOUND:
+    "대화 정리 정보를 찾을 수 없어요. 채팅 목록을 다시 확인해 주세요.",
+  CHAT_DELEGATION_INVALID_STATUS:
+    "대화 정리 상태가 변경됐어요. 현재 상태를 다시 확인해 주세요.",
+  CHAT_DELEGATION_ACTION_NOT_ALLOWED:
+    "AI가 대화를 마무리하는 동안에는 직접 메시지를 보내거나 나갈 수 없어요.",
+  CHAT_DELEGATION_DRAFT_MISMATCH:
+    "대화 정리 초안이 변경됐어요. 초안을 다시 확인해 주세요.",
+  CHAT_DELEGATION_AI_NOT_CONFIGURED:
+    "AI 대화 정리를 준비하고 있어요. 잠시 후 다시 시도해 주세요.",
+  CHAT_DELEGATION_AI_UNAVAILABLE:
+    "AI 대화 정리에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.",
+  CHAT_DELEGATION_AI_REQUEST_REJECTED:
+    "이 대화로는 정리 초안을 만들 수 없어요. 내용을 확인해 주세요.",
+  CHAT_DELEGATION_AI_RESPONSE_INVALID:
+    "대화 정리 결과를 확인하지 못했어요. 잠시 후 다시 시도해 주세요.",
+  CHAT_DELEGATION_RESPONSE_INVALID:
+    "대화 정리 상태를 확인하지 못했어요. 다시 시도해 주세요.",
+  CHAT_DELEGATION_REQUEST_FAILED:
+    "잠시 후 다시 시도하거나 채팅으로 돌아가 주세요.",
+  CHAT_DELEGATION_DRAFT_STATUS_UNAVAILABLE:
+    "초안 상태를 확인하지 못했어요. 잠시 후 다시 확인해 주세요.",
+  CHAT_DELEGATION_PROGRESS_UNAVAILABLE:
+    "대화 정리 상태를 확인하지 못했어요. 잠시 후 다시 확인해 주세요.",
+  CHAT_DELEGATION_RETRY_FAILED:
+    "대화 정리를 다시 시작하지 못했어요. 다시 시도해 주세요.",
+  CHAT_DELEGATION_EXIT_FAILED: "채팅방을 나가지 못했어요. 다시 시도해 주세요.",
 
   TARGET_USER_NOT_FOUND: "상대 회원 정보를 찾을 수 없어요.",
   TARGET_USER_UNAVAILABLE: "현재 이 상대와 AI 연습대화를 시작할 수 없어요.",

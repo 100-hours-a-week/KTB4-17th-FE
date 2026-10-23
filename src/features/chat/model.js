@@ -1,4 +1,8 @@
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
+import {
+  normalizeDelegation,
+  preservesDelegationPreview,
+} from "./delegation.js";
 
 const CHAT_TIME_ZONE = "Asia/Seoul";
 const CHAT_CLOCK_FORMATTER = new Intl.DateTimeFormat("ko-KR", {
@@ -139,6 +143,8 @@ export function chatSendErrorMessage(error) {
     return "종료된 대화에는 메시지를 보낼 수 없어요.";
   if (error?.code === "CHAT_ACCESS_DENIED")
     return "이 채팅방에 메시지를 보낼 수 없어요.";
+  if (error?.code === "CHAT_DELEGATION_ACTION_NOT_ALLOWED")
+    return "AI가 대화를 마무리하는 동안 직접 메시지를 보낼 수 없어요.";
   if (error?.code === "FILE_TOO_LARGE")
     return "사진은 10MB 이하로 첨부할 수 있어요.";
   if (error?.code === "FILE_TYPE_NOT_ALLOWED")
@@ -182,6 +188,7 @@ export function mapChatRoom(item) {
     activityTimestamp,
     syncedActivityTimestamp: activityTimestamp,
     chatNotification: item.chatNotification,
+    delegation: normalizeDelegation(item.delegation),
     unread: Number(item.unreadCount) || 0,
   };
 }
@@ -195,10 +202,11 @@ export function applyRoomMessageEvent(room, event) {
     event.messageType === "IMAGE"
       ? "사진"
       : event.textContent || "아직 대화가 없어요.";
+  const preservePreview = preservesDelegationPreview(room.delegation?.status);
 
   return {
     ...room,
-    last: isNewerPreview ? preview : room.last,
+    last: isNewerPreview && !preservePreview ? preview : room.last,
     time: isNewerPreview ? formatChatActivity(event.createdAt) : room.time,
     activityAt: isNewerPreview ? event.createdAt : room.activityAt,
     activityTimestamp: Math.max(room.activityTimestamp, eventTimestamp),
@@ -215,6 +223,9 @@ export function mergeRefreshedChatRoom(room, localRoom) {
     userId: room.userId,
     name: room.name,
     image: room.image,
+    ...(Object.hasOwn(room, "delegation") && {
+      delegation: room.delegation,
+    }),
     syncedActivityTimestamp: room.syncedActivityTimestamp,
   };
 }

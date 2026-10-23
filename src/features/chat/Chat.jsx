@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { asset } from "../../shared/assets.js";
 import { BrandHeader, PixelButton } from "../../shared/ui/components.jsx";
 import * as chatApi from "./api.js";
+import { delegationPathForRoom } from "./delegation.js";
 import {
   applyRoomMessageEvent,
   chatListErrorMessage,
@@ -198,7 +199,7 @@ export function ChatList({ navigate }) {
 
   function openRoom(room) {
     reuserRoom(room);
-    navigate(`/chats/${room.id}`);
+    navigate(delegationPathForRoom(room));
   }
 
   return (

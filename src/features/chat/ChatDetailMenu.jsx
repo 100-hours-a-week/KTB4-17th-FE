@@ -11,6 +11,7 @@ export function ChatDetailMenu({
   endingChat,
   onBlock,
   onEndChat,
+  onEndWithAi,
   toast,
 }) {
   const menuRef = useRef(null);
@@ -63,10 +64,9 @@ export function ChatDetailMenu({
         </button>
         <button
           type="button"
-          className={`chat-detail-menu-item chat-detail-unavailable${!canEndWithAi ? " chat-detail-menu-disabled" : ""}`}
-          aria-disabled="true"
+          className={`chat-detail-menu-item${!canEndWithAi ? " chat-detail-menu-disabled" : ""}`}
           disabled={!canEndWithAi}
-          onClick={() => select(unavailable)}
+          onClick={() => select(onEndWithAi)}
         >
           <span>AI로 대화 종료</span>
         </button>

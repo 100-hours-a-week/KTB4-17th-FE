@@ -77,4 +77,53 @@ export const leaveChatRoom = (chatRoomId, { signal } = {}) =>
     cache: "no-store",
   });
 
+export const createDelegationDraft = (chatRoomId, endType, { signal } = {}) =>
+  apiRequest(`/api/v1/chat-rooms/${chatRoomId}/delegations`, {
+    method: "POST",
+    body: { endType },
+    signal,
+  });
+
+export const regenerateDelegationDraft = (
+  chatRoomId,
+  delegationId,
+  endType,
+  { signal } = {},
+) =>
+  apiRequest(
+    `/api/v1/chat-rooms/${chatRoomId}/delegations/${delegationId}/drafts`,
+    {
+      method: "POST",
+      body: { endType },
+      signal,
+    },
+  );
+
+export const confirmDelegationDraft = (
+  chatRoomId,
+  delegationId,
+  draftId,
+  { signal } = {},
+) =>
+  apiRequest(
+    `/api/v1/chat-rooms/${chatRoomId}/delegations/${delegationId}/confirm`,
+    {
+      method: "POST",
+      body: { draftId },
+      signal,
+    },
+  );
+
+export const delegationProgress = (chatRoomId, delegationId, { signal } = {}) =>
+  apiRequest(`/api/v1/chat-rooms/${chatRoomId}/delegations/${delegationId}`, {
+    signal,
+    cache: "no-store",
+  });
+
+export const retryDelegation = (chatRoomId, delegationId, { signal } = {}) =>
+  apiRequest(
+    `/api/v1/chat-rooms/${chatRoomId}/delegations/${delegationId}/retry`,
+    { method: "POST", signal },
+  );
+
 export const uploadChatImage = uploadFile;

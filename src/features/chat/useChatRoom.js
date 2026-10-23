@@ -7,6 +7,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import * as chatApi from "./api.js";
+import { CHAT_DELEGATION_REFRESH_EVENT } from "./delegation.js";
 import {
   chatRoomErrorMessage,
   mapChatMessage,
@@ -238,10 +239,14 @@ export function useChatRoom(roomId) {
       }
     };
     const offline = () => setConnection("offline");
+    const refreshDelegation = (event) => {
+      if (Number(event.detail?.chatRoomId) === roomId) void sync();
+    };
     document.addEventListener("visibilitychange", resume);
     window.addEventListener("online", resume);
     window.addEventListener("offline", offline);
     window.addEventListener("pageshow", resume);
+    window.addEventListener(CHAT_DELEGATION_REFRESH_EVENT, refreshDelegation);
     return () => {
       aliveRef.current = false;
       controller.abort();
@@ -253,6 +258,10 @@ export function useChatRoom(roomId) {
       window.removeEventListener("online", resume);
       window.removeEventListener("offline", offline);
       window.removeEventListener("pageshow", resume);
+      window.removeEventListener(
+        CHAT_DELEGATION_REFRESH_EVENT,
+        refreshDelegation,
+      );
     };
   }, [entry, roomId, sync]);
 

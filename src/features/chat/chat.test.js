@@ -225,6 +225,14 @@ test("AI modes are available only for active unblocked room users", () => {
   assert.equal(canUseAiForRoom({ ...room, status: "ENDED" }), false);
   assert.equal(canUseAiForRoom({ ...room, blockedByMe: true }), false);
   assert.equal(canUseAiForRoom({ ...room, userId: null }), false);
+  for (const status of ["IN_PROGRESS", "RETRY_REQUIRED", "FAILED"])
+    assert.equal(
+      canUseAiForRoom({
+        ...room,
+        delegation: { delegationId: 20, status, endType: "GENTLE" },
+      }),
+      false,
+    );
 });
 
 test("server participant masking wins over a newer local room preview", () => {
@@ -619,6 +627,27 @@ test("room closure stops later queued transmissions and retains the next draft",
   assert.equal(calls.length, 1);
   assert.equal(entry.snapshot.room.status, "ENDED");
   assert.equal(entry.snapshot.draft, "작성 중");
+  assert.ok(entry.snapshot.messages.every((item) => item.status === "FAILED"));
+});
+
+test("delegation restriction stops queued retries without ending the room", async () => {
+  const entry = activeEntry();
+  let calls = 0;
+  const { api } = apiFixture();
+  api.sendMessage = async () => {
+    calls += 1;
+    const error = new Error("Delegated");
+    error.code = "CHAT_DELEGATION_ACTION_NOT_ALLOWED";
+    throw error;
+  };
+
+  enqueueMessages(entry, "첫 글", null, api);
+  enqueueMessages(entry, "다음 글", null, api);
+  await settled(entry);
+
+  assert.equal(calls, 1);
+  assert.equal(entry.snapshot.room.status, "ACTIVE");
+  assert.ok(entry.batches.every((batch) => batch.requested === false));
   assert.ok(entry.snapshot.messages.every((item) => item.status === "FAILED"));
 });
 

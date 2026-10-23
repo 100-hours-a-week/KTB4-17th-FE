@@ -16,6 +16,11 @@ import {
 } from "../features/auth/pages.jsx";
 import { useLocalTestLogin } from "../features/auth/useLocalTestLogin.js";
 import { ChatList, ChatRoom } from "../features/chat/Chat.jsx";
+import {
+  ChatDelegationDraft,
+  ChatDelegationProgress,
+  ChatDelegationStart,
+} from "../features/chat/ChatDelegation.jsx";
 import { useUnreadMessageCount } from "../features/chat/useUnreadMessageCount.js";
 import { LandingPage } from "../features/landing/LandingPage.jsx";
 import { Likes } from "../features/matching/Likes.jsx";
@@ -380,6 +385,13 @@ function AppRouter() {
       : null;
   const simulationRoute = path.match(/^\/ai\/simulations\/(\d+)(?:\/report)?$/);
   const simulationId = simulationRoute ? Number(simulationRoute[1]) : null;
+  const delegationStartRoute = path.match(/^\/chats\/(\d+)\/delegation$/);
+  const delegationDraftRoute = path.match(
+    /^\/chats\/(\d+)\/delegations\/(\d+)\/draft$/,
+  );
+  const delegationProgressRoute = path.match(
+    /^\/chats\/(\d+)\/delegations\/(\d+)$/,
+  );
   const showNav =
     data.onboarded &&
     ["/", "/home", "/likes", "/chats", "/my", "/notifications"].includes(path);
@@ -468,6 +480,29 @@ function AppRouter() {
       />
     );
   else if (path === "/chats") page = <ChatList navigate={navigate} />;
+  else if (delegationStartRoute)
+    page = (
+      <ChatDelegationStart
+        chatRoomId={Number(delegationStartRoute[1])}
+        navigate={navigate}
+      />
+    );
+  else if (delegationDraftRoute)
+    page = (
+      <ChatDelegationDraft
+        chatRoomId={Number(delegationDraftRoute[1])}
+        delegationId={Number(delegationDraftRoute[2])}
+        navigate={navigate}
+      />
+    );
+  else if (delegationProgressRoute)
+    page = (
+      <ChatDelegationProgress
+        chatRoomId={Number(delegationProgressRoute[1])}
+        delegationId={Number(delegationProgressRoute[2])}
+        navigate={navigate}
+      />
+    );
   else if (path.startsWith("/chats/"))
     page = (
       <ChatRoom
