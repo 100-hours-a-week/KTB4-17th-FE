@@ -1208,3 +1208,54 @@
 .trust-hold-status[data-matching="true"] {
   color: #9ce4b6;
 }
+
+/* 휴대폰 세로 카메라는 화면비가 0.75라 높이 기준 크기 계산에서 폭이 130px 안팎까지 줄고,
+   유지 상태 카드가 여러 줄로 접혀 얼굴을 덮었다. 예시는 줄이고 카메라에 높이를 더 주며 오버레이는 한 줄로 둔다. */
+@media (width <= 480px) {
+  .trust-capture-workspace .trust-camera,
+  .trust-capture-workspace:has(.trust-head-guide) .trust-camera,
+  .trust-capture-workspace:has(.trust-pose-example) .trust-camera {
+    width: min(100%, calc(40dvh * var(--trust-camera-aspect)));
+  }
+
+  .trust-capture-workspace .trust-example-art {
+    flex-basis: 110px;
+    width: 110px;
+    height: 72px;
+  }
+
+  .trust-pose-example .trust-head-steps button,
+  .trust-pose-example .trust-head-steps li > span {
+    min-height: 36px;
+  }
+
+  .trust-capture-workspace .trust-camera-hold {
+    right: 6px;
+    bottom: 6px;
+    left: 6px;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 4px 8px;
+    padding: 6px 8px 8px;
+    border-radius: 8px;
+    background: rgb(27 20 48 / 70%);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .trust-capture-workspace .trust-hold-bar {
+    position: absolute;
+    right: 8px;
+    bottom: 3px;
+    left: 8px;
+    height: 3px;
+  }
+
+  .trust-capture-workspace .trust-live {
+    top: 6px;
+    left: 6px;
+    gap: 6px;
+    padding: 4px 6px;
+    font-size: 10px;
+  }
+}

@@ -3,15 +3,24 @@ import { HEAD_NAMES } from "./challenge.js";
 import { createHandTracker, visibleHandSide } from "./handGuide.js";
 import { holdProgress } from "./hold.js";
 import { trustError } from "./model.js";
-import { matchesPose } from "./poseHold.js";
+import { insideFrame, matchesPose } from "./poseHold.js";
 
-export function handCoversFace(face, landmarks) {
+// 손·고개 단계는 얼굴 가운데(눈·코·입)만 가림으로 본다. 휴대폰은 얼굴이 화면을 크게 차지해
+// 손을 얼굴 옆에 두면 뺨 쪽과 겹치기 쉽다. 서버(active_liveness.py)와 같은 비율을 쓴다.
+const FACE_CENTER_WIDTH_RATIO = 0.6;
+const FACE_CENTER_HEIGHT_RATIO = 0.7;
+// 얼굴이 화면 폭의 이 비율 이상이면 옆에 손이 들어갈 자리가 거의 없다.
+const CLOSE_FACE_WIDTH_RATIO = 0.45;
+
+export function handCoversFace(face, landmarks, { centerOnly = false } = {}) {
   if (![face.x, face.y, face.width, face.height].every(Number.isFinite))
     return true;
-  const left = face.x - face.width / 2,
-    right = face.x + face.width / 2;
-  const top = face.y - face.height / 2,
-    bottom = face.y + face.height / 2;
+  const width = face.width * (centerOnly ? FACE_CENTER_WIDTH_RATIO : 1);
+  const height = face.height * (centerOnly ? FACE_CENTER_HEIGHT_RATIO : 1);
+  const left = face.x - width / 2,
+    right = face.x + width / 2;
+  const top = face.y - height / 2,
+    bottom = face.y + height / 2;
   return landmarks.some((points) => {
     if (!points?.length) return false;
     const xs = points.map((p) => p.x),
@@ -25,7 +34,7 @@ export function handCoversFace(face, landmarks) {
         0,
         Math.min(bottom, Math.max(...ys)) - Math.max(top, Math.min(...ys)),
       );
-    return intersection > face.width * face.height * 0.2;
+    return intersection > width * height * 0.2;
   });
 }
 
@@ -153,7 +162,11 @@ export async function prepareCaptureSession(
                 landmarks: [],
               };
               const landmarks = handResult.landmarks || [];
-              const covered = handCoversFace(face, landmarks);
+              // 정면 단계는 동일인 비교 사진을 고르므로 얼굴 박스 전체 기준을 유지한다.
+              const covered =
+                stages[stageIndex] === "centering"
+                  ? handCoversFace(face, landmarks)
+                  : handCoversFace(face, landmarks, { centerOnly: true });
               const frontal = face.issue == null && !covered;
               const handMatched = landmarks.some((points) =>
                 matchesPose(
@@ -185,7 +198,7 @@ export async function prepareCaptureSession(
                     : faceVisible && delta >= 12;
               hold = holdProgress(hold, matching, timestamp);
               const cropped = landmarks.some((points) =>
-                points?.some(({ x, y }) => x < 0 || x > 1 || y < 0 || y > 1),
+                points?.some((point) => !insideFrame(point)),
               );
               const blocker = matching
                 ? null
@@ -223,17 +236,23 @@ export async function prepareCaptureSession(
                   : stage === "pose"
                     ? "손 포즈"
                     : `고개 ${HEAD_NAMES[target.head]}`;
-              const issue = covered
-                ? "손을 얼굴 옆으로 옮겨 주세요."
-                : !faceVisible
-                  ? "얼굴 전체가 보이도록 카메라를 봐 주세요."
-                  : stage === "pose" && !frontal
-                    ? "손은 그대로 두고 카메라를 정면으로 봐 주세요."
-                    : stage === "pose"
-                      ? "안내된 손 모양과 방향을 맞춰 주세요."
-                      : stage === "head"
-                        ? `고개를 ${HEAD_NAMES[target.head]} 조금 움직여 그대로 유지해 주세요.`
-                        : "카메라를 정면으로 봐 주세요.";
+              const noRoom =
+                stage === "pose" &&
+                (covered || cropped) &&
+                face.width >= CLOSE_FACE_WIDTH_RATIO;
+              const issue = noRoom
+                ? "휴대폰을 조금 더 멀리 들어 손이 얼굴 옆에 들어갈 자리를 만들어 주세요."
+                : covered
+                  ? "손을 얼굴 옆으로 옮겨 주세요."
+                  : !faceVisible
+                    ? "얼굴 전체가 보이도록 카메라를 봐 주세요."
+                    : stage === "pose" && !frontal
+                      ? "손은 그대로 두고 카메라를 정면으로 봐 주세요."
+                      : stage === "pose"
+                        ? "안내된 손 모양과 방향을 맞춰 주세요."
+                        : stage === "head"
+                          ? `고개를 ${HEAD_NAMES[target.head]} 조금 움직여 그대로 유지해 주세요.`
+                          : "카메라를 정면으로 봐 주세요.";
               onState({
                 stage,
                 stageIndex,

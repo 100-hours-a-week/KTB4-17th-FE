@@ -25,13 +25,24 @@ const angle = (a, b) => {
     : 0;
 };
 
+// 손가락 끝마디 정도가 화면 밖으로 나간 것은 허용한다. 모델이 잘린 부분의 위치도 추정하고,
+// 휴대폰은 얼굴 옆 공간이 좁아 손끝이 가장자리에 걸리기 쉽다. 서버는 화면 안 조건을 따로 보지 않는다.
+export const HAND_FRAME_MARGIN = 0.08;
+
+export function insideFrame({ x, y }) {
+  const low = -HAND_FRAME_MARGIN,
+    high = 1 + HAND_FRAME_MARGIN;
+  return x >= low && x <= high && y >= low && y <= high;
+}
+
 // 서버와 같은 손가락 굽힘·엄지 뻗음·방향 조건을 사용한다. 최종 판정은 서버에서 수행한다.
 export function matchesPose(landmarks, target, width, height) {
   if (landmarks?.length !== 21 || !width || !height) return false;
   if (
     landmarks.some(
-      ({ x, y, z }) =>
-        ![x, y, z].every(Number.isFinite) || x < 0 || x > 1 || y < 0 || y > 1,
+      (point) =>
+        ![point.x, point.y, point.z].every(Number.isFinite) ||
+        !insideFrame(point),
     )
   )
     return false;
