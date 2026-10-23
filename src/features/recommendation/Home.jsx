@@ -679,10 +679,13 @@ export function Home({
               />
               <SwipeGuide
                 enabled={
-                  !actionBusy && !isCardSettling && !recommendationRefreshing
+                  !actionBusy &&
+                  !isCardSettling &&
+                  !isContinuing &&
+                  !recommendationRefreshing
                 }
                 consumed={swipeGuideConsumed}
-                canAdvance={Boolean(nextPerson || hasNext)}
+                canAdvance={Boolean(nextPerson || hasNext || nextBatchReady)}
                 canRetreat={Boolean(previousPerson)}
               />
               <div className="recommendation-gradient" />

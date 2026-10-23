@@ -52,6 +52,7 @@ export function watchIdleSwipeGuide({
   arm();
   return () => {
     hide();
-    for (const event of events) page.removeEventListener(event, activity, true);
+    for (const event of events)
+      page.removeEventListener(event, activity, { capture: true });
   };
 }
