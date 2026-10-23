@@ -263,7 +263,8 @@ const createFeedHook = new Function(
 function feedHarness(api) {
   const slots = [];
   let cursor = 0;
-  const useState = (initial) => {
+  // This test harness intentionally provides hook implementations outside React.
+  const stateSlot = (initial) => {
     const index = cursor++;
     if (!(index in slots))
       slots[index] = typeof initial === "function" ? initial() : initial;
@@ -280,14 +281,14 @@ function feedHarness(api) {
       useCallback: (callback) => callback,
       useEffect: () => {},
       useReducer: (reducer, initial) => {
-        const [state, setState] = useState(initial);
+        const [state, setState] = stateSlot(initial);
         return [
           state,
           (action) => setState((previous) => reducer(previous, action)),
         ];
       },
-      useRef: (initial) => useState(() => ({ current: initial }))[0],
-      useState,
+      useRef: (initial) => stateSlot(() => ({ current: initial }))[0],
+      useState: stateSlot,
     },
     apiErrorMessage,
     api,
@@ -586,10 +587,12 @@ test("an old pagination response neither appends old users nor unlocks new pagin
   const newLoading = harness.render().loadMore();
   oldPage.resolve(feedPage([12]));
   assert.equal(await oldLoading, false);
-  assert.equal(await harness.render().loadMore(), false);
+  const duplicateNewLoading = harness.render().loadMore();
+  assert.equal(duplicateNewLoading, newLoading);
   assert.equal(newPageRequests, 1);
   newPage.resolve(feedPage([22]));
   assert.equal(await newLoading, true);
+  assert.equal(await duplicateNewLoading, true);
   assert.deepEqual(
     harness.render().recommendations.map(({ id }) => id),
     [21, 22],
@@ -623,6 +626,128 @@ test("initial loading still creates a batch when one does not exist", async () =
   assert.deepEqual(
     harness.render().recommendations.map(({ id }) => id),
     [31],
+  );
+});
+
+test("a regenerated batch reuses another eligible user when every candidate was already shown", async () => {
+  const harness = feedHarness({
+    activeBatch: async () => ({ batchId: 1 }),
+    createRecommendationBatch: async () => ({ batchId: 2 }),
+    recommendationItems: async () => feedPage([11, 12]),
+  });
+  await harness.render().load();
+  harness.render().advance();
+
+  assert.equal(await harness.render().prepareNextBatch(), true);
+  assert.equal(harness.render().nextBatchReady, true);
+  assert.equal(harness.render().activatePreparedBatch(), true);
+
+  const feed = harness.render();
+  assert.deepEqual(
+    feed.recommendations.map(({ id }) => id),
+    [11],
+  );
+  assert.equal(feed.recommendations[feed.currentIndex].id, 11);
+  assert.equal(feed.exhausted, false);
+});
+
+test("an empty regenerated batch cycles through previously loaded eligible users", async () => {
+  const harness = feedHarness({
+    activeBatch: async () => ({ batchId: 1 }),
+    createRecommendationBatch: async () => null,
+    recommendationItems: async () => feedPage([11, 12]),
+  });
+  await harness.render().load();
+  harness.render().advance();
+
+  assert.equal(await harness.render().prepareNextBatch(), true);
+  assert.equal(harness.render().activatePreparedBatch(), true);
+  assert.deepEqual(
+    harness.render().recommendations.map(({ id }) => id),
+    [11],
+  );
+
+  assert.equal(await harness.render().prepareNextBatch(), true);
+  assert.equal(harness.render().activatePreparedBatch(), true);
+  assert.deepEqual(
+    harness.render().recommendations.map(({ id }) => id),
+    [12],
+  );
+});
+
+test("an empty regenerated batch remains exhausted when no alternate eligible user exists", async () => {
+  const harness = feedHarness({
+    activeBatch: async () => ({ batchId: 1 }),
+    createRecommendationBatch: async () => null,
+    recommendationItems: async () => feedPage([11]),
+  });
+  await harness.render().load();
+
+  assert.equal(await harness.render().prepareNextBatch(), true);
+  assert.equal(harness.render().activatePreparedBatch(), true);
+
+  const feed = harness.render();
+  assert.deepEqual(feed.recommendations, []);
+  assert.equal(feed.exhausted, true);
+});
+
+test("a regenerated batch searches later pages for unseen candidates before cycling", async () => {
+  const requests = [];
+  const harness = feedHarness({
+    activeBatch: async () => ({ batchId: 1 }),
+    createRecommendationBatch: async () => ({ batchId: 2 }),
+    recommendationItems: async (batchId, cursor) => {
+      requests.push([batchId, cursor ?? null]);
+      if (batchId === 1) return feedPage([11]);
+      return cursor
+        ? feedPage([12])
+        : {
+            items: [{ candidate: { userId: 11 } }],
+            pageInfo: { hasNext: true, nextCursor: "next-page" },
+          };
+    },
+  });
+  await harness.render().load();
+
+  assert.equal(await harness.render().prepareNextBatch(), true);
+  harness.render().activatePreparedBatch();
+
+  const feed = harness.render();
+  assert.deepEqual(
+    feed.recommendations.map(({ id }) => id),
+    [12],
+  );
+  assert.deepEqual(requests, [
+    [1, null],
+    [2, null],
+    [2, "next-page"],
+  ]);
+});
+
+test("a failed final pagination page still falls through to a regenerated batch", async () => {
+  const createdBatchIds = [];
+  const harness = feedHarness({
+    activeBatch: async () => ({ batchId: 1 }),
+    createRecommendationBatch: async () => {
+      createdBatchIds.push(2);
+      return { batchId: 2 };
+    },
+    recommendationItems: async (batchId, cursor) => {
+      if (batchId === 2) return feedPage([12]);
+      return cursor ? feedPage([], true) : feedPage([11], true);
+    },
+  });
+  await harness.render().load();
+  assert.equal(await harness.render().loadMore(), false);
+
+  assert.equal(await harness.render().prepareNextBatch(), true);
+  assert.equal(harness.render().activatePreparedBatch(), true);
+  const feed = harness.render();
+
+  assert.deepEqual(createdBatchIds, [2]);
+  assert.deepEqual(
+    feed.recommendations.map(({ id }) => id),
+    [12],
   );
 });
 
