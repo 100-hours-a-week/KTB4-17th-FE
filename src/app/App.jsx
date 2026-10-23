@@ -153,6 +153,9 @@ function AppRouter() {
     reloadAfterPreferences: reloadRecommendationsAfterPreferences,
     loadMore: loadMoreRecommendations,
     refresh: refreshRecommendations,
+    prepareNextBatch: prepareNextRecommendationBatch,
+    activatePreparedBatch: activatePreparedRecommendationBatch,
+    nextBatchReady,
     advance: advanceRecommendation,
     retreat: retreatRecommendation,
     dismiss: dismissRecommendation,
@@ -448,6 +451,9 @@ function AppRouter() {
         recommendationRefreshing={recommendationRefreshing}
         onRetryRecommendations={loadRecommendations}
         onRefreshRecommendations={refreshRecommendations}
+        onPrepareNextBatch={prepareNextRecommendationBatch}
+        onActivatePreparedBatch={activatePreparedRecommendationBatch}
+        nextBatchReady={nextBatchReady}
         onAdvance={advanceRecommendation}
         onRetreat={retreatRecommendation}
         onDismiss={dismissRecommendation}
