@@ -521,6 +521,11 @@ export function ProfilePhotoEditor({
                     </div>
                   </div>
                 )}
+                {trust.cameraOn && trust.progress.restartNotice && (
+                  <p className="trust-restart-notice" role="status">
+                    {trust.progress.restartNotice}
+                  </p>
+                )}
                 {["pose", "head", "recording"].includes(
                   trust.progress.stage,
                 ) && (

@@ -19,6 +19,7 @@ import {
   PHOTO_REASONS,
   reorderPhotos,
   replaceFrontalPhoto,
+  restartNotice,
   savedPhotoItems,
   sessionIssue,
   trustError,
@@ -1362,4 +1363,12 @@ test("an unfinished hold times out without returning a video for submission", as
     ),
     { code: "CAMERA_ALIGNMENT_TIMEOUT" },
   );
+});
+
+test("an automatic restart names the stalled stage and its blocker", () => {
+  assert.equal(
+    restartNotice({ stage: "pose", blocker: "HAND_NOT_DETECTED" }),
+    "'손 포즈' 단계에서 시간이 지나 정면부터 다시 촬영해요. 손이 인식되지 않았어요. 손 전체가 화면에 보이도록 들어 주세요.",
+  );
+  assert.equal(restartNotice({}), "시간이 지나 정면부터 다시 촬영해요.");
 });

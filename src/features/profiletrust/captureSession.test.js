@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { handCoversFace, prepareCaptureSession } from "./captureSession.js";
+import {
+  handCoversFace,
+  prepareCaptureSession,
+  recordWithRestarts,
+} from "./captureSession.js";
 import { holdProgress } from "./hold.js";
 import { poseFixtures } from "./poseHold.fixtures.js";
 
@@ -311,4 +315,86 @@ test("a phone held close gets a distance hint when the hand has no room", async 
   await run.advance(3);
   assert.match(run.states.at(-1).hint, /휴대폰을 조금 더 멀리/);
   run.controller.abort();
+});
+
+test("restart stops the current run without closing models and a new run starts from the frontal stage", async (t) => {
+  const run = await setup(t);
+  await run.advance(36);
+  assert.equal(run.states.at(-1).stage, "pose");
+  run.session.restart();
+  await assert.rejects(run.waiting, { code: "CAMERA_ALIGNMENT_TIMEOUT" });
+  assert.equal(run.closed, 0);
+  let done = false;
+  const second = run.session.wait().then(() => {
+    done = true;
+  });
+  await run.advance(2);
+  assert.equal(run.states.at(-1).stage, "centering");
+  await run.advance(70);
+  await second;
+  assert.equal(done, true);
+  // 모델은 다시 불러오지 않는다.
+  assert.deepEqual(run.loads, [1, 1]);
+});
+
+const timeout = () =>
+  Object.assign(new Error("CAMERA_ALIGNMENT_TIMEOUT"), {
+    code: "CAMERA_ALIGNMENT_TIMEOUT",
+  });
+
+test("a timed-out recording restarts automatically instead of failing", async () => {
+  let calls = 0,
+    restarts = 0;
+  const notices = [];
+  const session = {
+    stuck: () => ({ stage: "pose", blocker: "HAND_NOT_DETECTED" }),
+    restart: () => restarts++,
+  };
+  const file = await recordWithRestarts(
+    async () => {
+      if (++calls < 3) throw timeout();
+      return "clip";
+    },
+    session,
+    { onRestart: (stuck, count) => notices.push([stuck.blocker, count]) },
+  );
+  assert.equal(file, "clip");
+  assert.equal(restarts, 2);
+  assert.deepEqual(notices, [
+    ["HAND_NOT_DETECTED", 1],
+    ["HAND_NOT_DETECTED", 2],
+  ]);
+});
+
+test("auto restarts are capped and other errors are not retried", async () => {
+  const session = {
+    stuck: () => ({ stage: "head", blocker: "HEAD_NOT_MOVED" }),
+    restart() {},
+  };
+  let calls = 0;
+  await assert.rejects(
+    recordWithRestarts(
+      async () => {
+        calls++;
+        throw timeout();
+      },
+      session,
+      { maxRestarts: 2 },
+    ),
+    {
+      code: "CAMERA_ALIGNMENT_TIMEOUT",
+      stage: "head",
+      blocker: "HEAD_NOT_MOVED",
+    },
+  );
+  assert.equal(calls, 3);
+  calls = 0;
+  await assert.rejects(
+    recordWithRestarts(async () => {
+      calls++;
+      throw Object.assign(new Error("x"), { code: "CAMERA_INTERRUPTED" });
+    }, session),
+    { code: "CAMERA_INTERRUPTED" },
+  );
+  assert.equal(calls, 1);
 });
