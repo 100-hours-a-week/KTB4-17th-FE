@@ -231,14 +231,14 @@ const STAGE_NAMES = Object.freeze({
 
 const STUCK_MESSAGES = Object.freeze({
   HAND_COVERS_FACE:
-    "손이 얼굴을 가리고 있었어요. 손을 얼굴 옆으로 조금 떨어뜨려 주세요.",
+    "손이 얼굴을 가리고 있었어요. 손을 얼굴 옆으로 조금 떨어뜨리고, 휴대폰이면 조금 더 멀리 들어 주세요.",
   FACE_NOT_FRONTAL:
     "얼굴이 정면이나 안내 영역을 벗어났어요. 카메라를 정면으로 봐 주세요.",
   FACE_NOT_VISIBLE: "얼굴 전체가 화면에 보이지 않았어요.",
   HAND_NOT_DETECTED:
     "손이 인식되지 않았어요. 손 전체가 화면에 보이도록 들어 주세요.",
   HAND_CROPPED:
-    "손 일부가 화면 밖으로 나갔어요. 손 전체가 화면 안에 들어오게 해 주세요.",
+    "손 일부가 화면 밖으로 나갔어요. 휴대폰을 조금 더 멀리 들어 손 전체가 화면 안에 들어오게 해 주세요.",
   HAND_MISMATCH:
     "손 모양이나 방향이 안내와 달랐어요. 예시와 같은 모양과 방향으로 맞춰 주세요.",
   HEAD_NOT_MOVED:

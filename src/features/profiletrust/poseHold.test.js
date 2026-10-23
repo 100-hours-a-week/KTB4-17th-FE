@@ -30,3 +30,11 @@ test("pose hold requires continuous distinct frames and resets on mismatch or ga
   hold = poseHoldProgress(hold, true, 5);
   assert.equal(hold.progress, 0);
 });
+
+test("a fingertip slightly outside the frame still matches, a cropped hand does not", () => {
+  const target = parseChallenge(["LOOK_STRAIGHT", "HAND_TWO", "HAND_UP"]);
+  const tip = (y) =>
+    fixtures.v.map((point, index) => (index === 8 ? { ...point, y } : point));
+  assert.equal(matchesPose(tip(-0.05), target, 640, 480), true);
+  assert.equal(matchesPose(tip(-0.15), target, 640, 480), false);
+});
