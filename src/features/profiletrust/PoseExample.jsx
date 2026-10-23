@@ -11,7 +11,7 @@ function HandExample({ hand, direction }) {
   const angle = !requiresHandDirection(hand, direction)
     ? 0
     : direction === "SIDEWAYS"
-      ? 90
+      ? -90
       : 0;
   const radians = (angle * Math.PI) / 180;
   const wristX =
@@ -337,11 +337,12 @@ export function PoseExample({ challenge, progress, showHelp = true }) {
               { label: "오른손 · 손바닥", mirror: true, back: false },
               { label: "왼손 · 손등", mirror: false, back: true },
               { label: "오른손 · 손등", mirror: true, back: true },
-            ].map((variation) => (
+            ].map((variation, index) => (
               <div className="trust-hand-variation" key={variation.label}>
                 <HandGlyph
                   hand={challenge.hand}
                   direction={challenge.direction}
+                  screenSide={index < 2 ? "left" : "right"}
                   mirror={variation.mirror}
                   back={variation.back}
                 />
