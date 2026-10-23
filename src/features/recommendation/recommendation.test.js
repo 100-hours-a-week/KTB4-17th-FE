@@ -264,8 +264,7 @@ function feedHarness(api) {
   const slots = [];
   let cursor = 0;
   // This test harness intentionally provides hook implementations outside React.
-  // biome-ignore lint/correctness/noComponentHookFactories: It simulates hook state for the feed hook tests.
-  const useState = (initial) => {
+  const stateSlot = (initial) => {
     const index = cursor++;
     if (!(index in slots))
       slots[index] = typeof initial === "function" ? initial() : initial;
@@ -282,14 +281,14 @@ function feedHarness(api) {
       useCallback: (callback) => callback,
       useEffect: () => {},
       useReducer: (reducer, initial) => {
-        const [state, setState] = useState(initial);
+        const [state, setState] = stateSlot(initial);
         return [
           state,
           (action) => setState((previous) => reducer(previous, action)),
         ];
       },
-      useRef: (initial) => useState(() => ({ current: initial }))[0],
-      useState,
+      useRef: (initial) => stateSlot(() => ({ current: initial }))[0],
+      useState: stateSlot,
     },
     apiErrorMessage,
     api,
