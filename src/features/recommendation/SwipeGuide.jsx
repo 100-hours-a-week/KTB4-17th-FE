@@ -2,23 +2,24 @@ import { useEffect, useState } from "react";
 import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import { watchIdleSwipeGuide } from "./idleSwipeGuide.js";
 
-export function SwipeGuide({ enabled, consumed, canAdvance, canRetreat }) {
+export function useSwipeGuide({ enabled, consumed }) {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     if (!enabled) return;
     return watchIdleSwipeGuide({ consumed, onVisible: setVisible });
   }, [enabled, consumed]);
 
-  if (!enabled || !visible || consumed.current) return null;
+  return enabled && visible && !consumed.current;
+}
+
+export function SwipeGuide({ direction, canRetreat = false }) {
+  const up = direction === "up";
   return (
-    <div className="home-swipe-guide" aria-hidden="true">
-      <span className="home-swipe-guide-caption">SWIPE</span>
+    <div className={`home-swipe-guide is-${direction}`} aria-hidden="true">
       <div className="home-swipe-guide-track">
-        {canAdvance && (
-          <span className="home-swipe-guide-up">
-            <PixelIcon name="arrowDown" scale={2} />
-          </span>
-        )}
+        <span className="home-swipe-guide-arrow">
+          <PixelIcon name="arrowDown" scale={2} />
+        </span>
         <span className="home-swipe-guide-hand">
           <PixelIcon
             name="swipeHand"
@@ -26,13 +27,12 @@ export function SwipeGuide({ enabled, consumed, canAdvance, canRetreat }) {
             colors={{ X: "#f4edff", W: "#b8a4df" }}
           />
         </span>
-        <span className="home-swipe-guide-down">
-          <PixelIcon name="arrowDown" scale={2} />
-        </span>
       </div>
       <span className="home-swipe-guide-label">
-        {canAdvance && <span>위로 다음</span>}
-        <span>{canRetreat ? "아래로 이전" : "아래로 새로고침"}</span>
+        <span>{up ? "위로 스와이프" : "아래로 스와이프"}</span>
+        <span className="home-swipe-guide-detail">
+          {up ? "다음 프로필" : canRetreat ? "이전 프로필" : "새로고침"}
+        </span>
       </span>
     </div>
   );

@@ -330,57 +330,58 @@
 .home-swipe-guide {
   position: absolute;
   z-index: 5;
-  top: clamp(48px, 16%, 90px);
-  right: 16px;
-  display: grid;
-  justify-items: center;
-  gap: 8px;
-  width: 92px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: max-content;
+  max-width: 90%;
+  min-height: 50px;
+  padding: 8px 12px;
+  border: 1px solid rgb(255 255 255 / 50%);
+  border-radius: 2px;
+  background: linear-gradient(
+    135deg,
+    rgb(172 142 218 / 18%),
+    rgb(255 227 246 / 10%)
+  );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 24%),
+    2px 2px 0 rgb(61 37 103 / 12%);
   color: #fbf7ff;
   font-family: var(--font-pixel);
-  text-align: center;
+  translate: -50% 0;
   pointer-events: none;
   animation: home-swipe-guide-reveal 2800ms ease-out both;
 }
 
-.home-swipe-guide-caption {
-  padding: 3px 8px;
-  border: 1px solid rgb(255 255 255 / 60%);
-  background: rgb(92 65 135 / 18%);
-  box-shadow: 2px 2px 0 rgb(61 37 103 / 16%);
-  font-size: 9px;
-  letter-spacing: 2px;
+.home-swipe-guide.is-up {
+  --swipe-hand-offset: -8px;
+
+  top: 36px;
+}
+
+.home-swipe-guide.is-down {
+  --swipe-hand-offset: 8px;
+
+  bottom: calc(100% + 12px);
 }
 
 .home-swipe-guide-track {
-  position: relative;
-  display: grid;
-  align-content: space-between;
-  justify-items: center;
-  width: 44px;
-  height: 104px;
-  padding: 10px 0;
-  border: 1px solid rgb(244 235 255 / 65%);
-  border-radius: 4px;
-  background: rgb(194 174 225 / 12%);
-  box-shadow:
-    inset 2px 0 0 rgb(255 255 255 / 22%),
-    2px 2px 0 rgb(61 37 103 / 12%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  filter: drop-shadow(0 1px 0 rgb(50 27 83 / 65%));
 }
 
-.home-swipe-guide-up {
-  grid-row: 1;
+.home-swipe-guide.is-up .home-swipe-guide-arrow {
   rotate: 180deg;
 }
 
-.home-swipe-guide-down {
-  grid-row: 2;
-}
-
 .home-swipe-guide-hand {
-  position: absolute;
-  top: 36px;
-  left: 23px;
+  display: flex;
   filter: drop-shadow(1px 2px 0 rgb(50 27 83 / 28%));
   animation: home-swipe-hand-nudge 1400ms ease-in-out 1;
 }
@@ -390,10 +391,17 @@
   gap: 3px;
   font-size: 10px;
   line-height: 1.5;
-  text-shadow: 0 1px 3px rgb(41 21 69 / 75%);
+  text-shadow:
+    1px 1px 0 rgb(41 21 69 / 85%),
+    0 0 4px rgb(41 21 69 / 60%);
 }
 
-.recommendation-card-current:has(> .home-swipe-guide) {
+.home-swipe-guide-detail {
+  font-size: 9px;
+  opacity: 0.85;
+}
+
+.recommendation-card-current:has(.home-swipe-guide) {
   animation: home-swipe-card-nudge 1400ms ease-in-out 1;
 }
 
@@ -415,12 +423,8 @@
     translate: 0;
   }
 
-  30% {
-    translate: 0 -14px;
-  }
-
-  70% {
-    translate: 0 14px;
+  45% {
+    translate: 0 var(--swipe-hand-offset);
   }
 }
 
@@ -446,23 +450,25 @@
   }
 
   .home-swipe-guide-hand,
-  .recommendation-card-current:has(> .home-swipe-guide) {
+  .recommendation-card-current:has(.home-swipe-guide) {
     animation: none;
   }
 }
 
 @media (height <= 650px) {
-  .home-swipe-guide-caption,
-  .home-swipe-guide-label {
+  .home-swipe-guide {
+    gap: 8px;
+    min-height: 38px;
+    padding: 5px 10px;
+  }
+
+  .home-swipe-guide-detail {
     display: none;
   }
 
-  .home-swipe-guide-track {
-    height: 88px;
-  }
-
-  .home-swipe-guide-hand {
-    top: 28px;
+  .home-swipe-guide-hand .pixel-icon {
+    width: 20px;
+    height: 24px;
   }
 }
 
