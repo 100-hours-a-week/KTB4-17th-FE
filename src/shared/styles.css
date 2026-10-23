@@ -786,3 +786,47 @@ button:active:not(:disabled) {
   outline: 2px solid var(--purple-deep);
   outline-offset: -2px;
 }
+
+/* 버그 리포트·신고 링크 (마이 페이지, 얼굴 인증 실패 화면) */
+.bug-report-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px;
+  border: 1px solid var(--lavender);
+  color: var(--purple-deep);
+  text-decoration: none;
+  background: var(--paper);
+}
+
+.bug-report-link > svg {
+  flex: none;
+}
+
+.bug-report-link strong {
+  font-size: 14px;
+}
+
+.bug-report-link > span {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 4px;
+}
+
+.bug-report-link small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+.bug-report-link:hover {
+  background: var(--soft-lavender);
+}
+
+.bug-report-link:focus-visible {
+  outline: 2px solid var(--purple-deep);
+  outline-offset: 3px;
+}
