@@ -37,6 +37,9 @@ export function Home({
   recommendationRefreshing,
   onRetryRecommendations,
   onRefreshRecommendations,
+  onPrepareNextBatch,
+  onActivatePreparedBatch,
+  nextBatchReady,
   onAdvance,
   onRetreat,
   onDismiss,
@@ -46,7 +49,9 @@ export function Home({
 }) {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [actionBusy, setActionBusy] = useState("");
+  const [isContinuing, setIsContinuing] = useState(false);
   const actionInFlight = useRef(false);
+  const nextNavigationInFlight = useRef(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [isCardSettling, setIsCardSettling] = useState(false);
   const [previewDirection, setPreviewDirection] = useState("next");
@@ -68,7 +73,6 @@ export function Home({
   const personId = person?.id;
   const previousPerson = recommendations[currentIndex - 1] || null;
   const nextPerson = recommendations[currentIndex + 1] || null;
-  const nextPersonId = nextPerson?.id;
   const previewPerson =
     previewDirection === "previous"
       ? previousPerson
@@ -92,21 +96,25 @@ export function Home({
   }, [personId]);
 
   useEffect(() => {
-    if (personId == null || nextPersonId != null || !hasNext) return;
-    void onLoadMore();
-  }, [hasNext, nextPersonId, onLoadMore, personId]);
-
-  async function advance() {
-    if (currentIndex < recommendations.length - 1) {
-      setPhotoIndex(0);
-      onAdvance();
+    if (recommendationStatus !== "ready" || recommendationRefreshing) return;
+    if (personId == null) {
+      if (recommendations.length === 0 && hasNext) void onLoadMore();
       return;
     }
-    if (hasNext && (await onLoadMore())) {
-      setPhotoIndex(0);
-      onAdvance();
-    }
-  }
+    if (recommendations.length - currentIndex > 2) return;
+
+    if (hasNext) void onLoadMore();
+    else void onPrepareNextBatch();
+  }, [
+    currentIndex,
+    hasNext,
+    onLoadMore,
+    onPrepareNextBatch,
+    personId,
+    recommendationRefreshing,
+    recommendationStatus,
+    recommendations.length,
+  ]);
   async function refreshRecommendations() {
     if (recommendationRefreshing) return;
     toast("새로운 인연을 찾고 있어요.");
@@ -132,7 +140,7 @@ export function Home({
       cardTransitionTimer.current = null;
     }, CARD_TRANSITION_MS);
   }
-  function transitionCard(direction, action) {
+  const transitionCard = useCallback((direction, action) => {
     if (cardTransitionTimer.current) return;
     swipeGuideConsumed.current = true;
     setPreviewDirection(direction);
@@ -147,10 +155,87 @@ export function Home({
       setPreviewDirection("next");
       cardTransitionTimer.current = null;
     }, CARD_TRANSITION_MS);
-  }
+  }, []);
+
+  const advanceToNextRecommendation = useCallback(async () => {
+    if (
+      !person ||
+      nextNavigationInFlight.current ||
+      cardTransitionTimer.current ||
+      actionInFlight.current ||
+      isCardSettling ||
+      actionBusy ||
+      recommendationRefreshing
+    )
+      return;
+
+    nextNavigationInFlight.current = true;
+    setIsContinuing(true);
+    let transitionScheduled = false;
+    const scheduleNextCard = (action) => {
+      transitionCard("next", () => {
+        try {
+          setPhotoIndex(0);
+          action();
+        } finally {
+          nextNavigationInFlight.current = false;
+          setIsContinuing(false);
+        }
+      });
+      transitionScheduled = true;
+    };
+
+    try {
+      if (currentIndex < recommendations.length - 1) {
+        scheduleNextCard(onAdvance);
+        return;
+      }
+      if (nextBatchReady) {
+        scheduleNextCard(onActivatePreparedBatch);
+        return;
+      }
+
+      setIsCardSettling(true);
+      setDragOffset(0);
+      await new Promise((resolve) =>
+        window.requestAnimationFrame(() => resolve()),
+      );
+      setIsCardSettling(false);
+      await new Promise((resolve) =>
+        window.requestAnimationFrame(() => resolve()),
+      );
+
+      if (hasNext && (await onLoadMore())) {
+        scheduleNextCard(onAdvance);
+        return;
+      }
+      if (await onPrepareNextBatch()) scheduleNextCard(onActivatePreparedBatch);
+    } finally {
+      if (!transitionScheduled) {
+        nextNavigationInFlight.current = false;
+        setIsContinuing(false);
+        setIsCardSettling(false);
+        setDragOffset(0);
+      }
+    }
+  }, [
+    actionBusy,
+    currentIndex,
+    hasNext,
+    isCardSettling,
+    nextBatchReady,
+    onActivatePreparedBatch,
+    onAdvance,
+    onLoadMore,
+    onPrepareNextBatch,
+    person,
+    recommendationRefreshing,
+    recommendations.length,
+    transitionCard,
+  ]);
   function handleVerticalGesture(distance) {
     if (distance <= -NEXT_CARD_DISTANCE) {
-      if (nextPerson || hasNext) transitionCard("next", () => void advance());
+      if (person) void advanceToNextRecommendation();
       else resetCardPosition();
       return;
     }
@@ -165,16 +250,21 @@ export function Home({
     const count = Math.max(profilePhotoUrls(person).length, 1);
     setPhotoIndex((current) => (current + direction + count) % count);
   }
-  function selectAdjacentPhoto(direction) {
-    const count = profilePhotoUrls(person).length;
-    if (count <= 1) return;
-    setPhotoIndex((current) =>
-      Math.max(0, Math.min(current + direction, count - 1)),
-    );
-  }
+  const selectAdjacentPhoto = useCallback(
+    (direction) => {
+      const count = profilePhotoUrls(person).length;
+      if (count <= 1) return;
+      setPhotoIndex((current) =>
+        Math.max(0, Math.min(current + direction, count - 1)),
+      );
+    },
+    [person],
+  );
   function handlePointerDown(event) {
     if (
       isCardSettling ||
+      isContinuing ||
+      nextNavigationInFlight.current ||
       actionInFlight.current ||
       recommendationRefreshing ||
       event.isPrimary === false ||
@@ -198,7 +288,7 @@ export function Home({
 
     if (event.currentTarget.hasPointerCapture(event.pointerId))
       event.currentTarget.releasePointerCapture(event.pointerId);
-    if (actionBusy) return;
+    if (actionBusy || isContinuing) return;
 
     const x = event.clientX - start.x;
     const y = event.clientY - start.y;
@@ -244,6 +334,7 @@ export function Home({
     if (
       actionInFlight.current ||
       actionBusy ||
+      isContinuing ||
       recommendationRefreshing ||
       Math.abs(event.deltaY) <= Math.abs(event.deltaX)
     )
@@ -281,7 +372,7 @@ export function Home({
     ) {
       gesture.locked = true;
       gesture.delta = 0;
-      if (nextPerson || hasNext) transitionCard("next", () => void advance());
+      void advanceToNextRecommendation();
       finishWheelGestureAfterIdle();
       return;
     }
@@ -332,6 +423,7 @@ export function Home({
       !person ||
       actionInFlight.current ||
       isCardSettling ||
+      isContinuing ||
       recommendationRefreshing
     )
       return;
@@ -352,7 +444,7 @@ export function Home({
     }
   }
   async function like() {
-    if (!person || actionInFlight.current) return;
+    if (!person || actionInFlight.current || isContinuing) return;
     actionInFlight.current = true;
     setActionBusy("like");
     try {
@@ -367,11 +459,11 @@ export function Home({
     }
   }
   function startPractice() {
-    if (!person || actionBusy) return;
+    if (!person || actionBusy || isContinuing) return;
     navigate(`/ai/practice/${person.id}`);
   }
   async function startSimulation() {
-    if (!person || actionInFlight.current) return;
+    if (!person || actionInFlight.current || isContinuing) return;
     actionInFlight.current = true;
     setActionBusy("simulation");
     try {
@@ -381,6 +473,70 @@ export function Home({
       setActionBusy("");
     }
   }
+  useEffect(() => {
+    function isInteractiveTarget(target) {
+      return (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target.closest(
+            'input, select, textarea, [contenteditable="true"], [role="dialog"], [role="listbox"], [role="menu"], [role="textbox"]',
+          ))
+      );
+    }
+
+    function handleKeyDown(event) {
+      if (
+        event.defaultPrevented ||
+        event.repeat ||
+        event.isComposing ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        isInteractiveTarget(event.target) ||
+        !person ||
+        (event.key !== "ArrowUp" &&
+          event.key !== "ArrowDown" &&
+          event.key !== "ArrowLeft" &&
+          event.key !== "ArrowRight")
+      )
+        return;
+
+      event.preventDefault();
+      if (
+        actionBusy ||
+        actionInFlight.current ||
+        isCardSettling ||
+        isContinuing ||
+        recommendationRefreshing
+      )
+        return;
+
+      if (event.key === "ArrowUp") {
+        void advanceToNextRecommendation();
+      } else if (event.key === "ArrowDown") {
+        if (previousPerson) transitionCard("previous", onRetreat);
+      } else {
+        const photos = profilePhotoUrls(person);
+        if (photos.length > 1)
+          selectAdjacentPhoto(event.key === "ArrowLeft" ? -1 : 1);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    actionBusy,
+    advanceToNextRecommendation,
+    isCardSettling,
+    isContinuing,
+    onRetreat,
+    person,
+    previousPerson,
+    recommendationRefreshing,
+    selectAdjacentPhoto,
+    transitionCard,
+  ]);
+
   return (
     <>
       <BrandHeader navigate={navigate} className="home-header">
@@ -456,6 +612,36 @@ export function Home({
                   : "새로운 추천을 준비하고 있어요"
               }
               description={"새로운 인연이 준비되면 이곳에서 만날 수 있어요."}
+              action={
+                recommendationExhausted || recommendations.length > 0 ? (
+                  <button
+                    type="button"
+                    className="recommendation-empty-refresh-button"
+                    aria-label="새 추천 목록 생성"
+                    aria-busy={recommendationRefreshing}
+                    disabled={recommendationRefreshing}
+                    onClick={() => void refreshRecommendations()}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="24"
+                      height="24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path d="M20 7v5h-5" />
+                      <path d="M4 17v-5h5" />
+                      <path d="M5.64 5.64a9 9 0 0 1 12.72 0L20 7" />
+                      <path d="M18.36 18.36a9 9 0 0 1-12.72 0L4 17" />
+                    </svg>
+                  </button>
+                ) : null
+              }
             />
           </div>
         ) : (
@@ -537,7 +723,9 @@ export function Home({
                   type="button"
                   className="recommendation-profile-link"
                   aria-label={`${person.nickname} 프로필 상세 보기`}
-                  disabled={Boolean(actionBusy) || isCardSettling}
+                  disabled={
+                    Boolean(actionBusy) || isCardSettling || isContinuing
+                  }
                   onClick={() =>
                     navigate(`/profiles/${person.id}?returnTo=/home`)
                   }
@@ -559,6 +747,7 @@ export function Home({
                       disabled={
                         Boolean(actionBusy) ||
                         isCardSettling ||
+                        isContinuing ||
                         recommendationRefreshing
                       }
                       aria-busy={actionBusy === busyKey}

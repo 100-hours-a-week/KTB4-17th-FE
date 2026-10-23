@@ -46,6 +46,48 @@
   user-select: none;
 }
 
+.recommendation-empty-refresh-button {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  margin-top: 2px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: var(--soft-lavender);
+  color: var(--purple-deep);
+  clip-path: var(--pixel-step-shape);
+  transition:
+    background-color 140ms ease,
+    transform 140ms var(--motion-press-ease);
+}
+
+.recommendation-empty-refresh-button:hover:not(:disabled) {
+  background: #e9e1ff;
+}
+
+.recommendation-empty-refresh-button:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.recommendation-empty-refresh-button[aria-busy="true"] svg {
+  animation: recommendation-refresh-spin 900ms linear infinite;
+}
+
+@keyframes recommendation-refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recommendation-empty-refresh-button,
+  .recommendation-empty-refresh-button[aria-busy="true"] svg {
+    animation: none;
+    transition: none;
+  }
+}
+
 .recommendation-card {
   width: 100%;
   height: min(600px, calc(100dvh - 160px));

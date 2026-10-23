@@ -10,7 +10,7 @@ export function recommendationFeedReducer(state, action) {
       return {
         recommendations: action.items,
         currentIndex: 0,
-        exhausted: false,
+        exhausted: Boolean(action.exhausted),
       };
     case "append":
       if (action.items.length === 0) return state;
