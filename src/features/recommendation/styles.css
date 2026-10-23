@@ -328,44 +328,79 @@
 }
 
 .home-swipe-guide {
+  --swipe-guide-delay: 0ms;
+
   position: absolute;
   z-index: 5;
   left: 50%;
+  isolation: isolate;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  width: max-content;
-  max-width: 90%;
-  min-height: 50px;
+  width: 100%;
+  min-height: 56px;
   padding: 8px 12px;
-  border: 1px solid rgb(255 255 255 / 50%);
-  border-radius: 2px;
+  border: 0;
   background: linear-gradient(
-    135deg,
-    rgb(172 142 218 / 18%),
-    rgb(255 227 246 / 10%)
+    90deg,
+    transparent,
+    rgb(172 142 218 / 14%) 20%,
+    rgb(245 231 255 / 18%) 50%,
+    rgb(255 194 233 / 14%) 80%,
+    transparent
   );
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 24%),
-    2px 2px 0 rgb(61 37 103 / 12%);
   color: #fbf7ff;
   font-family: var(--font-pixel);
   translate: -50% 0;
   pointer-events: none;
-  animation: home-swipe-guide-reveal 2800ms ease-out both;
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 12%,
+    #000 88%,
+    transparent
+  );
+  animation: home-swipe-guide-reveal 1200ms ease-out var(--swipe-guide-delay) 1
+    both;
+}
+
+.home-swipe-guide::before {
+  position: absolute;
+  z-index: -1;
+  inset: -70% 0;
+  background: linear-gradient(
+    0deg,
+    transparent 12%,
+    rgb(206 180 255 / 10%) 34%,
+    rgb(255 248 255 / 50%) 50%,
+    rgb(255 193 231 / 16%) 66%,
+    transparent 88%
+  );
+  content: "";
+  animation: home-swipe-guide-sheen 1200ms ease-out var(--swipe-guide-delay) 1
+    both;
 }
 
 .home-swipe-guide.is-up {
   --swipe-arrow-offset: -8px;
+  --swipe-guide-offset: -10px;
+  --swipe-sheen-from: 32%;
+  --swipe-sheen-to: -32%;
 
-  top: 36px;
+  top: 28px;
 }
 
 .home-swipe-guide.is-down {
   --swipe-arrow-offset: 8px;
+  --swipe-guide-delay: 1300ms;
+  --swipe-guide-offset: 10px;
+  --swipe-sheen-from: -32%;
+  --swipe-sheen-to: 32%;
 
-  bottom: calc(100% + 12px);
+  bottom: calc(100% + 18px);
+  width: calc(100% + 30px);
 }
 
 .home-swipe-guide-track {
@@ -380,7 +415,8 @@
 .home-swipe-guide-arrows {
   display: flex;
   gap: 2px;
-  animation: home-swipe-arrow-nudge 1400ms ease-in-out 1;
+  animation: home-swipe-arrow-nudge 1200ms ease-out var(--swipe-guide-delay) 1
+    both;
 }
 
 .home-swipe-guide.is-up .home-swipe-guide-arrows {
@@ -407,18 +443,39 @@
 }
 
 .recommendation-card-current:has(.home-swipe-guide) {
-  animation: home-swipe-card-nudge 1400ms ease-in-out 1;
+  animation: home-swipe-card-nudge 2500ms ease-in-out 1;
 }
 
 @keyframes home-swipe-guide-reveal {
-  0%,
-  100% {
+  0% {
     opacity: 0;
+    transform: translateY(0);
   }
 
-  14%,
-  82% {
+  24%,
+  50% {
     opacity: 0.56;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(var(--swipe-guide-offset));
+  }
+}
+
+@keyframes home-swipe-guide-sheen {
+  0% {
+    opacity: 0;
+    transform: translateY(var(--swipe-sheen-from));
+  }
+
+  35% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(var(--swipe-sheen-to));
   }
 }
 
@@ -435,15 +492,17 @@
 
 @keyframes home-swipe-card-nudge {
   0%,
+  45%,
+  50%,
   100% {
     translate: 0;
   }
 
-  30% {
+  20% {
     translate: 0 -6px;
   }
 
-  70% {
+  75% {
     translate: 0 6px;
   }
 }
@@ -455,8 +514,13 @@
   }
 
   .home-swipe-guide-arrows,
+  .home-swipe-guide::before,
   .recommendation-card-current:has(.home-swipe-guide) {
     animation: none;
+  }
+
+  .home-swipe-guide::before {
+    opacity: 0;
   }
 }
 
