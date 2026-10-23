@@ -12,7 +12,7 @@ export function trustError(code, extra = {}) {
 export const PHOTO_REASONS = Object.freeze({
   NO_FACE: "사진에서 얼굴을 찾지 못했어요.",
   MULTIPLE_FACES: "혼자 나온 사진을 선택해 주세요.",
-  NON_FRONTAL_FACE: "얼굴이 정면을 향한 사진을 선택해 주세요.",
+  NON_FRONTAL_FACE: "눈을 뜨고 카메라를 정면으로 본 사진을 선택해 주세요.",
   IMAGE_TOO_SMALL: "얼굴이 더 크고 선명하게 나온 사진을 선택해 주세요.",
   IMAGE_TOO_BLURRY: "흔들리거나 흐리지 않은 사진을 선택해 주세요.",
   IMAGE_TOO_DARK: "얼굴이 밝게 보이는 사진을 선택해 주세요.",
@@ -313,7 +313,7 @@ export function verificationIssue(error) {
       : reasons.includes("SYNTHETIC_RISK")
         ? "직접 촬영한 원본 사진을 선택해 주세요"
         : reasons.includes("NON_FRONTAL_FACE")
-          ? "얼굴이 정면인 사진을 선택해 주세요"
+          ? "눈을 뜨고 정면을 본 사진을 선택해 주세요"
           : "정면 사진을 다시 선택해 주세요";
     return issueWithAction({
       kind: "photo",
