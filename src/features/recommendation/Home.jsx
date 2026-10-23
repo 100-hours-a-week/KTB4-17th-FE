@@ -13,6 +13,7 @@ import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import { profilePhotoUrls } from "../../shared/utils.js";
 import * as matchingApi from "../matching/api.js";
 import { jobCategoryLabel } from "../profile/jobCategories.js";
+import { SwipeGuide } from "./SwipeGuide.jsx";
 import { wheelNavigationIntent } from "./wheelNavigation.js";
 
 const NEXT_CARD_DISTANCE = 64;
@@ -56,6 +57,7 @@ export function Home({
   const [previewDirection, setPreviewDirection] = useState("next");
   const gestureStart = useRef(null);
   const cardRef = useRef(null);
+  const swipeGuideConsumed = useRef(false);
   const cardTransitionTimer = useRef(null);
   const wheelHandlerRef = useRef(null);
   const nativeWheelListener = useRef((event) =>
@@ -140,6 +142,7 @@ export function Home({
   }
   const transitionCard = useCallback((direction, action) => {
     if (cardTransitionTimer.current) return;
+    swipeGuideConsumed.current = true;
     setPreviewDirection(direction);
     setIsCardSettling(true);
     setDragOffset(
@@ -673,6 +676,17 @@ export function Home({
                 person={person}
                 index={photoIndex}
                 onSelect={setPhotoIndex}
+              />
+              <SwipeGuide
+                enabled={
+                  !actionBusy &&
+                  !isCardSettling &&
+                  !isContinuing &&
+                  !recommendationRefreshing
+                }
+                consumed={swipeGuideConsumed}
+                canAdvance={Boolean(nextPerson || hasNext || nextBatchReady)}
+                canRetreat={Boolean(previousPerson)}
               />
               <div className="recommendation-gradient" />
               <div className="recommendation-info">

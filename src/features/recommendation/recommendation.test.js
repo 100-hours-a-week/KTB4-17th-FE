@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
+import { watchIdleSwipeGuide } from "./idleSwipeGuide.js";
 import { mapRecommendationItem } from "./mapRecommendationItem.js";
 import {
   initialRecommendationFeedState,
@@ -15,6 +16,91 @@ import {
 import { wheelNavigationIntent } from "./wheelNavigation.js";
 
 const recommendation = (id) => ({ id });
+
+function swipeGuideHarness(t, visibilityState = "visible") {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const page = new EventTarget();
+  page.visibilityState = visibilityState;
+  const consumed = { current: false };
+  const updates = [];
+  const stop = watchIdleSwipeGuide({
+    page,
+    consumed,
+    onVisible: (visible) => updates.push(visible),
+  });
+  t.after(stop);
+  return {
+    page,
+    consumed,
+    updates,
+    stop,
+    tick: (ms) => t.mock.timers.tick(ms),
+    event: (name) => page.dispatchEvent(new Event(name)),
+  };
+}
+
+test("swipe guide waits for 1.6 seconds of inactivity and disappears after 2.8 seconds without repeating", (t) => {
+  const guide = swipeGuideHarness(t);
+  guide.tick(1599);
+  assert.deepEqual(guide.updates, [false]);
+  guide.event("pointermove");
+  guide.tick(1599);
+  assert.equal(guide.updates.at(-1), false);
+  guide.tick(1);
+  assert.equal(guide.updates.at(-1), true);
+  guide.tick(2799);
+  assert.equal(guide.updates.at(-1), true);
+  guide.tick(1);
+  assert.equal(guide.updates.at(-1), false);
+  assert.equal(guide.consumed.current, true);
+  guide.event("pointermove");
+  guide.tick(10000);
+  assert.equal(guide.updates.filter(Boolean).length, 1);
+});
+
+test("a held touch prevents the guide, and touching the visible guide dismisses it immediately", (t) => {
+  const guide = swipeGuideHarness(t);
+  guide.event("pointerdown");
+  guide.tick(5000);
+  assert.equal(guide.updates.includes(true), false);
+  guide.event("pointerup");
+  guide.tick(1600);
+  assert.equal(guide.updates.at(-1), true);
+  guide.event("pointerdown");
+  assert.equal(guide.updates.at(-1), false);
+  guide.event("pointerup");
+  guide.tick(5000);
+  assert.equal(guide.updates.filter(Boolean).length, 1);
+});
+
+test("the guide remains hidden in background tabs and starts a fresh idle interval when returning", (t) => {
+  const guide = swipeGuideHarness(t, "hidden");
+  guide.tick(5000);
+  assert.equal(guide.updates.includes(true), false);
+  guide.page.visibilityState = "visible";
+  guide.event("visibilitychange");
+  guide.tick(1599);
+  assert.equal(guide.updates.at(-1), false);
+  guide.tick(1);
+  assert.equal(guide.updates.at(-1), true);
+  guide.page.visibilityState = "hidden";
+  guide.event("visibilitychange");
+  assert.equal(guide.updates.at(-1), false);
+});
+
+test("navigating before the hint appears suppresses it, and cleanup removes pending timers and listeners", (t) => {
+  const guide = swipeGuideHarness(t);
+  guide.consumed.current = true;
+  guide.tick(1600);
+  assert.equal(guide.updates.includes(true), false);
+  guide.consumed.current = false;
+  guide.event("wheel");
+  guide.stop();
+  const count = guide.updates.length;
+  guide.event("pointerup");
+  guide.tick(10000);
+  assert.equal(guide.updates.length, count);
+});
 
 test("dismissing a requested user keeps another current card in place", () => {
   const result = recommendationFeedReducer(
