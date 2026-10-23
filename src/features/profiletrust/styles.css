@@ -837,6 +837,18 @@
   word-break: keep-all;
 }
 
+/* 시간이 끝나 자동으로 다시 촬영할 때, 멈췄던 단계와 원인을 정면 단계 동안 보여 준다. */
+.trust-restart-notice {
+  padding: 8px 10px;
+  border: 2px solid var(--lavender);
+  background: var(--soft-lavender);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
 .trust-face-visibility-icon {
   margin-top: 2px;
 }

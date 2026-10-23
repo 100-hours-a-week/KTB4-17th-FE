@@ -82,7 +82,15 @@ export function openCamera(signal, { recordVideo = true } = {}) {
   });
 }
 
-export function capturePhoto(video) {
+const newCanvas = () => document.createElement("canvas");
+
+// 미리보기처럼 거울 방향(좌우 반전)으로 그린다. 아이폰 셀카도 거울 방향으로 저장되므로 사진·녹화 영상의 방향을 맞춘다.
+function drawMirrored(context, video, width, height) {
+  context.setTransform(-1, 0, 0, 1, width, 0);
+  context.drawImage(video, 0, 0, width, height);
+}
+
+export function capturePhoto(video, { createCanvas = newCanvas } = {}) {
   return new Promise((resolve, reject) => {
     if (
       !video ||
@@ -94,12 +102,12 @@ export function capturePhoto(video) {
       return;
     }
     try {
-      const canvas = document.createElement("canvas");
+      const canvas = createCanvas();
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       const context = canvas.getContext("2d");
       if (!context) throw trustError("CAMERA_CAPTURE_FAILED");
-      context.drawImage(video, 0, 0);
+      drawMirrored(context, video, canvas.width, canvas.height);
       canvas.toBlob(
         (blob) => {
           if (!blob?.size) reject(trustError("CAMERA_CAPTURE_FAILED"));
@@ -157,6 +165,33 @@ export function previewCamera(video, stream, signal) {
   });
 }
 
+// 미리보기 <video>를 거울 방향으로 캔버스에 옮겨 그 캔버스를 녹화한다. <video>에서 그리면 휴대폰 회전 정보도
+// 반영된 바로 선 화면이 된다. 캔버스 녹화를 지원하지 않으면 null을 돌려주고 호출부는 원본 스트림을 녹화한다.
+export function mirrorVideoStream(
+  video,
+  { createCanvas = newCanvas, frameRate = RECORDING_FRAME_RATE } = {},
+) {
+  if (!video?.videoWidth || !video?.videoHeight) return null;
+  const canvas = createCanvas();
+  const context = canvas.getContext?.("2d");
+  if (!context || typeof canvas.captureStream !== "function") return null;
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  // requestVideoFrameCallback은 미리보기가 화면에 그려질 때만 불려(Chromium 측정: 원본 43장 동안 2번)
+  // 빈 영상이 될 수 있다. 화면 표시와 무관하게 녹화 프레임 수만큼 타이머로 그린다.
+  const draw = () => drawMirrored(context, video, canvas.width, canvas.height);
+  draw();
+  const timer = setInterval(draw, 1000 / frameRate);
+  const stream = canvas.captureStream(frameRate);
+  return {
+    stream,
+    stop() {
+      clearInterval(timer);
+      for (const track of stream.getTracks()) track.stop();
+    },
+  };
+}
+
 // Recreate the recorder for each attempt. Individual timeslice chunks from a
 // single long recording are not necessarily standalone video files.
 export function recordClip(
@@ -167,6 +202,8 @@ export function recordClip(
     Recorder = globalThis.MediaRecorder,
     onProgress = () => {},
     until,
+    mirrorFrom,
+    createCanvas = newCanvas,
   } = {},
 ) {
   return new Promise((resolve, reject) => {
@@ -174,10 +211,17 @@ export function recordClip(
       reject(signal.reason);
       return;
     }
+    const mirrored = mirrorFrom
+      ? mirrorVideoStream(mirrorFrom, { createCanvas })
+      : null;
     let recorder;
     try {
-      recorder = new Recorder(stream, recorderOptions(Recorder));
+      recorder = new Recorder(
+        mirrored?.stream ?? stream,
+        recorderOptions(Recorder),
+      );
     } catch {
+      mirrored?.stop();
       reject(trustError("VIDEO_TYPE_NOT_ALLOWED"));
       return;
     }
@@ -204,6 +248,7 @@ export function recordClip(
           /* Already stopped by the device. */
         }
       }
+      mirrored?.stop();
       chunks.length = 0;
       if (error) reject(error);
       else resolve(file);

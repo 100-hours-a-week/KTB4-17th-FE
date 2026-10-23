@@ -2,11 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { preparePrimaryPhoto } from "../profile/photoUpload.js";
 import * as api from "./api.js";
 import { openCamera, previewCamera, recordClip, stopCamera } from "./camera.js";
-import { prepareCaptureSession } from "./captureSession.js";
+import { prepareCaptureSession, recordWithRestarts } from "./captureSession.js";
 import { parseChallenge } from "./challenge.js";
 import {
   latestAttempt,
   MAX_ATTEMPTS,
+  restartNotice,
   sessionIssue,
   trustError,
   verificationIssue,
@@ -342,6 +343,8 @@ export function useFaceVerification() {
             capture.signal,
           ]);
           let session;
+          // 자동으로 다시 촬영할 때 보여 줄 안내. 정면 단계를 마치면 지운다.
+          let notice = null;
           try {
             session = await prepareCaptureSession(videoRef.current, target, {
               signal: captureSignal,
@@ -360,24 +363,34 @@ export function useFaceVerification() {
                   matching: state.matching,
                   paused: state.paused,
                   remainingSeconds: state.remainingSeconds,
+                  restartNotice: state.stageIndex > 0 ? null : notice,
                 });
                 setCenterReady(state.stage === "centering" && state.matching);
                 setCenterHold(state.stage === "centering" ? state.progress : 0);
-                setHint(state.hint);
+                if (state.stageIndex > 0) notice = null;
+                setHint(notice ? `${notice} ${state.hint}` : state.hint);
               },
             });
             captureSignal.throwIfAborted();
-            try {
-              return await recordClip(run.stream, {
-                signal: captureSignal,
-                duration: 17_500,
-                until: session.wait,
-              });
-            } catch (error) {
-              if (error?.code === "CAMERA_ALIGNMENT_TIMEOUT")
-                Object.assign(error, session.stuck());
-              throw error;
-            }
+            return await recordWithRestarts(
+              () =>
+                recordClip(run.stream, {
+                  signal: captureSignal,
+                  duration: 17_500,
+                  until: session.wait,
+                  mirrorFrom: videoRef.current,
+                }),
+              session,
+              {
+                onRestart: (stuck) => {
+                  notice = restartNotice(stuck);
+                  if (current()) {
+                    setHint(notice);
+                    updateStage({ restartNotice: notice });
+                  }
+                },
+              },
+            );
           } finally {
             capture.abort();
             session?.close();

@@ -5,6 +5,8 @@ import {
   onboardingStepFromStatus,
 } from "../../shared/utils.js";
 import {
+  capturePhoto,
+  mirrorVideoStream,
   openCamera,
   previewCamera,
   RECORDING_BITS_PER_SECOND,
@@ -17,6 +19,7 @@ import {
   PHOTO_REASONS,
   reorderPhotos,
   replaceFrontalPhoto,
+  restartNotice,
   savedPhotoItems,
   sessionIssue,
   trustError,
@@ -631,7 +634,8 @@ class Recorder {
   static isTypeSupported(type) {
     return type === "video/mp4";
   }
-  constructor(_, options) {
+  constructor(stream, options) {
+    this.stream = stream;
     this.mimeType = options.mimeType;
     this.state = "inactive";
     Recorder.instances.push(this);
@@ -674,6 +678,97 @@ test("continuous hold completion stops the recorder and failure discards the cli
     ),
     { code: "CAMERA_INTERRUPTED" },
   );
+});
+
+// 캔버스에 그린 순서를 기록하는 가짜 캔버스. 좌우 반전(setTransform(-1, 0, 0, 1, width, 0)) 여부를 확인한다.
+function fakeCanvas() {
+  const calls = [];
+  const track = {
+    stopped: false,
+    stop() {
+      this.stopped = true;
+    },
+  };
+  const canvas = {
+    width: 0,
+    height: 0,
+    calls,
+    track,
+    getContext: () => ({
+      setTransform: (...args) => calls.push(["setTransform", ...args]),
+      drawImage: (_source, ...args) => calls.push(["drawImage", ...args]),
+    }),
+    captureStream: (frameRate) => {
+      canvas.stream = { frameRate, getTracks: () => [track] };
+      return canvas.stream;
+    },
+    toBlob: (callback, type) => callback(new Blob(["jpeg"], { type })),
+  };
+  return canvas;
+}
+
+function fakeVideo() {
+  return { readyState: 2, videoWidth: 480, videoHeight: 640 };
+}
+
+test("in-app frontal photo is saved mirrored like the preview", async () => {
+  const canvas = fakeCanvas();
+  const file = await capturePhoto(fakeVideo(), { createCanvas: () => canvas });
+  assert.equal(file.type, "image/jpeg");
+  assert.deepEqual(canvas.calls[0], ["setTransform", -1, 0, 0, 1, 480, 0]);
+  assert.deepEqual(canvas.calls[1], ["drawImage", 0, 0, 480, 640]);
+});
+
+test("recording is mirrored from the preview video and the canvas stream is stopped", async (t) => {
+  t.mock.timers.enable({ apis: ["setInterval"] });
+  const canvas = fakeCanvas();
+  const mirrored = mirrorVideoStream(fakeVideo(), {
+    createCanvas: () => canvas,
+  });
+  assert.deepEqual(canvas.calls.slice(0, 2), [
+    ["setTransform", -1, 0, 0, 1, 480, 0],
+    ["drawImage", 0, 0, 480, 640],
+  ]);
+  assert.equal(mirrored.stream, canvas.stream);
+  // 미리보기가 화면에 그려지는지와 무관하게 초당 15장씩 그린다.
+  t.mock.timers.tick(1000);
+  assert.equal(
+    canvas.calls.filter(([name]) => name === "drawImage").length,
+    16,
+  );
+  mirrored.stop();
+  t.mock.timers.tick(1000);
+  assert.equal(
+    canvas.calls.filter(([name]) => name === "drawImage").length,
+    16,
+  );
+  assert.equal(canvas.track.stopped, true);
+  t.mock.timers.reset();
+  Recorder.instances.length = 0;
+  const recordingCanvas = fakeCanvas();
+  await recordClip(
+    { raw: true },
+    {
+      duration: 1,
+      Recorder,
+      mirrorFrom: fakeVideo(),
+      createCanvas: () => recordingCanvas,
+    },
+  );
+  assert.equal(Recorder.instances.at(-1).stream, recordingCanvas.stream);
+  assert.equal(recordingCanvas.track.stopped, true);
+});
+
+test("recording falls back to the camera stream when mirroring is unavailable", async () => {
+  Recorder.instances.length = 0;
+  const raw = { raw: true };
+  await recordClip(raw, {
+    duration: 1,
+    Recorder,
+    mirrorFrom: fakeVideo(),
+    createCanvas: () => ({ getContext: () => null }),
+  });
+  assert.equal(Recorder.instances.at(-1).stream, raw);
 });
 
 test("each clip has a new recorder and retains its actual MP4 MIME and extension", async () => {
@@ -1268,4 +1363,12 @@ test("an unfinished hold times out without returning a video for submission", as
     ),
     { code: "CAMERA_ALIGNMENT_TIMEOUT" },
   );
+});
+
+test("an automatic restart names the stalled stage and its blocker", () => {
+  assert.equal(
+    restartNotice({ stage: "pose", blocker: "HAND_NOT_DETECTED" }),
+    "'손 포즈' 단계에서 시간이 지나 정면부터 다시 촬영해요. 손이 인식되지 않았어요. 손 전체가 화면에 보이도록 들어 주세요.",
+  );
+  assert.equal(restartNotice({}), "시간이 지나 정면부터 다시 촬영해요.");
 });
