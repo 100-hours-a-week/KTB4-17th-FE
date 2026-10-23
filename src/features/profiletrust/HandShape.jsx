@@ -100,16 +100,19 @@ export function HandShape({ hand, back = false, outline = false }) {
 export function HandGlyph({
   hand,
   direction,
+  screenSide = null,
   mirror = false,
   back = false,
   outline = false,
   className = "trust-hand-glyph",
 }) {
   // 좌우 손을 뒤집어도 같은 챌린지이며, 가로 방향의 반대쪽도 허용된다.
+  // 화면에서의 위치는 손의 좌우와 별개로, 손끝이 중앙을 향하게 한다.
+  const pointLeft = screenSide ? screenSide === "right" : mirror;
   const angle = !requiresHandDirection(hand, direction)
     ? 0
     : direction === "SIDEWAYS"
-      ? mirror
+      ? pointLeft
         ? -90
         : 90
       : 0;

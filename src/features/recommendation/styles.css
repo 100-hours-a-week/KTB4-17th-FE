@@ -46,6 +46,48 @@
   user-select: none;
 }
 
+.recommendation-empty-refresh-button {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  margin-top: 2px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: var(--soft-lavender);
+  color: var(--purple-deep);
+  clip-path: var(--pixel-step-shape);
+  transition:
+    background-color 140ms ease,
+    transform 140ms var(--motion-press-ease);
+}
+
+.recommendation-empty-refresh-button:hover:not(:disabled) {
+  background: #e9e1ff;
+}
+
+.recommendation-empty-refresh-button:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.recommendation-empty-refresh-button[aria-busy="true"] svg {
+  animation: recommendation-refresh-spin 900ms linear infinite;
+}
+
+@keyframes recommendation-refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recommendation-empty-refresh-button,
+  .recommendation-empty-refresh-button[aria-busy="true"] svg {
+    animation: none;
+    transition: none;
+  }
+}
+
 .recommendation-card {
   width: 100%;
   height: min(600px, calc(100dvh - 160px));
@@ -283,6 +325,145 @@
   text-align: center;
   font-size: 11px;
   margin: 10px 0;
+}
+
+.home-swipe-guide {
+  position: absolute;
+  z-index: 5;
+  top: clamp(48px, 16%, 90px);
+  right: 16px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  width: 92px;
+  color: #fbf7ff;
+  font-family: var(--font-pixel);
+  text-align: center;
+  pointer-events: none;
+  animation: home-swipe-guide-reveal 2800ms ease-out both;
+}
+
+.home-swipe-guide-caption {
+  padding: 3px 8px;
+  border: 1px solid rgb(255 255 255 / 60%);
+  background: rgb(92 65 135 / 18%);
+  box-shadow: 2px 2px 0 rgb(61 37 103 / 16%);
+  font-size: 9px;
+  letter-spacing: 2px;
+}
+
+.home-swipe-guide-track {
+  position: relative;
+  display: grid;
+  align-content: space-between;
+  justify-items: center;
+  width: 44px;
+  height: 104px;
+  padding: 10px 0;
+  border: 1px solid rgb(244 235 255 / 65%);
+  border-radius: 4px;
+  background: rgb(194 174 225 / 12%);
+  box-shadow:
+    inset 2px 0 0 rgb(255 255 255 / 22%),
+    2px 2px 0 rgb(61 37 103 / 12%);
+}
+
+.home-swipe-guide-up {
+  grid-row: 1;
+  rotate: 180deg;
+}
+
+.home-swipe-guide-down {
+  grid-row: 2;
+}
+
+.home-swipe-guide-hand {
+  position: absolute;
+  top: 36px;
+  left: 23px;
+  filter: drop-shadow(1px 2px 0 rgb(50 27 83 / 28%));
+  animation: home-swipe-hand-nudge 1400ms ease-in-out 1;
+}
+
+.home-swipe-guide-label {
+  display: grid;
+  gap: 3px;
+  font-size: 10px;
+  line-height: 1.5;
+  text-shadow: 0 1px 3px rgb(41 21 69 / 75%);
+}
+
+.recommendation-card-current:has(> .home-swipe-guide) {
+  animation: home-swipe-card-nudge 1400ms ease-in-out 1;
+}
+
+@keyframes home-swipe-guide-reveal {
+  0%,
+  100% {
+    opacity: 0;
+  }
+
+  14%,
+  82% {
+    opacity: 0.56;
+  }
+}
+
+@keyframes home-swipe-hand-nudge {
+  0%,
+  100% {
+    translate: 0;
+  }
+
+  30% {
+    translate: 0 -14px;
+  }
+
+  70% {
+    translate: 0 14px;
+  }
+}
+
+@keyframes home-swipe-card-nudge {
+  0%,
+  100% {
+    translate: 0;
+  }
+
+  30% {
+    translate: 0 -6px;
+  }
+
+  70% {
+    translate: 0 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-swipe-guide {
+    opacity: 0.56;
+    animation: none;
+  }
+
+  .home-swipe-guide-hand,
+  .recommendation-card-current:has(> .home-swipe-guide) {
+    animation: none;
+  }
+}
+
+@media (height <= 650px) {
+  .home-swipe-guide-caption,
+  .home-swipe-guide-label {
+    display: none;
+  }
+
+  .home-swipe-guide-track {
+    height: 88px;
+  }
+
+  .home-swipe-guide-hand {
+    top: 28px;
+  }
 }
 
 .detail-main {

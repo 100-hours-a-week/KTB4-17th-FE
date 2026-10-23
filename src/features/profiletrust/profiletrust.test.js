@@ -1372,3 +1372,12 @@ test("an automatic restart names the stalled stage and its blocker", () => {
   );
   assert.equal(restartNotice({}), "시간이 지나 정면부터 다시 촬영해요.");
 });
+
+test("a non-frontal photo rejection also asks for open eyes", () => {
+  // AI는 눈 감은 사진도 NON_FRONTAL_FACE로 돌려준다.
+  const issue = verificationIssue(
+    trustError("PRIMARY_PHOTO_REJECTED", { reasonCodes: ["NON_FRONTAL_FACE"] }),
+  );
+  assert.match(issue.title, /눈을 뜨고/);
+  assert.match(issue.message, /눈을 뜨고/);
+});

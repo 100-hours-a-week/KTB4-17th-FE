@@ -92,8 +92,8 @@ function CaptureGuide() {
         </figure>
       </div>
       <p>
-        혼자 화면에 들어와 주세요. 모자·마스크·선글라스와 강한 필터는 피해
-        주세요.
+        혼자 화면에 들어와 주세요. 눈을 감은 사진, 모자·마스크·선글라스와 강한
+        필터는 피해 주세요.
       </p>
     </details>
   );
@@ -245,6 +245,7 @@ export function ProfilePhotoEditor({
   const removed = useRef(new Set());
   const mounted = useRef(false);
   const dragged = useRef(null);
+  const section = useRef(null);
   const heading = useRef(null);
   const trust = useFaceVerification();
   const showHelp = !compactPose || !verifying || trust.phase === "photo";
@@ -275,6 +276,12 @@ export function ProfilePhotoEditor({
     if (verifying && trust.phase)
       heading.current?.focus({ preventScroll: true });
   }, [trust.phase, verifying]);
+
+  useEffect(() => {
+    if (verifying && !requireVerification) {
+      section.current?.scrollIntoView({ block: "start", behavior: "instant" });
+    }
+  }, [verifying, requireVerification]);
 
   function updateItems(update) {
     const next =
@@ -391,6 +398,7 @@ export function ProfilePhotoEditor({
     : "사진을 저장하려면 정면 사진을 등록해야 해요. 선택한 정면 사진은 얼굴 인증을 마친 뒤 갤러리에 추가돼요.";
   return (
     <section
+      ref={section}
       className="profile-trust"
       data-trust-phase={verifying ? trust.phase : "photos"}
       aria-label="프로필 사진과 본인 인증"

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
+import { watchIdleSwipeGuide } from "./idleSwipeGuide.js";
 import { mapRecommendationItem } from "./mapRecommendationItem.js";
 import {
   initialRecommendationFeedState,
@@ -15,6 +16,91 @@ import {
 import { wheelNavigationIntent } from "./wheelNavigation.js";
 
 const recommendation = (id) => ({ id });
+
+function swipeGuideHarness(t, visibilityState = "visible") {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const page = new EventTarget();
+  page.visibilityState = visibilityState;
+  const consumed = { current: false };
+  const updates = [];
+  const stop = watchIdleSwipeGuide({
+    page,
+    consumed,
+    onVisible: (visible) => updates.push(visible),
+  });
+  t.after(stop);
+  return {
+    page,
+    consumed,
+    updates,
+    stop,
+    tick: (ms) => t.mock.timers.tick(ms),
+    event: (name) => page.dispatchEvent(new Event(name)),
+  };
+}
+
+test("swipe guide waits for 1.6 seconds of inactivity and disappears after 2.8 seconds without repeating", (t) => {
+  const guide = swipeGuideHarness(t);
+  guide.tick(1599);
+  assert.deepEqual(guide.updates, [false]);
+  guide.event("pointermove");
+  guide.tick(1599);
+  assert.equal(guide.updates.at(-1), false);
+  guide.tick(1);
+  assert.equal(guide.updates.at(-1), true);
+  guide.tick(2799);
+  assert.equal(guide.updates.at(-1), true);
+  guide.tick(1);
+  assert.equal(guide.updates.at(-1), false);
+  assert.equal(guide.consumed.current, true);
+  guide.event("pointermove");
+  guide.tick(10000);
+  assert.equal(guide.updates.filter(Boolean).length, 1);
+});
+
+test("a held touch prevents the guide, and touching the visible guide dismisses it immediately", (t) => {
+  const guide = swipeGuideHarness(t);
+  guide.event("pointerdown");
+  guide.tick(5000);
+  assert.equal(guide.updates.includes(true), false);
+  guide.event("pointerup");
+  guide.tick(1600);
+  assert.equal(guide.updates.at(-1), true);
+  guide.event("pointerdown");
+  assert.equal(guide.updates.at(-1), false);
+  guide.event("pointerup");
+  guide.tick(5000);
+  assert.equal(guide.updates.filter(Boolean).length, 1);
+});
+
+test("the guide remains hidden in background tabs and starts a fresh idle interval when returning", (t) => {
+  const guide = swipeGuideHarness(t, "hidden");
+  guide.tick(5000);
+  assert.equal(guide.updates.includes(true), false);
+  guide.page.visibilityState = "visible";
+  guide.event("visibilitychange");
+  guide.tick(1599);
+  assert.equal(guide.updates.at(-1), false);
+  guide.tick(1);
+  assert.equal(guide.updates.at(-1), true);
+  guide.page.visibilityState = "hidden";
+  guide.event("visibilitychange");
+  assert.equal(guide.updates.at(-1), false);
+});
+
+test("navigating before the hint appears suppresses it, and cleanup removes pending timers and listeners", (t) => {
+  const guide = swipeGuideHarness(t);
+  guide.consumed.current = true;
+  guide.tick(1600);
+  assert.equal(guide.updates.includes(true), false);
+  guide.consumed.current = false;
+  guide.event("wheel");
+  guide.stop();
+  const count = guide.updates.length;
+  guide.event("pointerup");
+  guide.tick(10000);
+  assert.equal(guide.updates.length, count);
+});
 
 test("dismissing a requested user keeps another current card in place", () => {
   const result = recommendationFeedReducer(
@@ -263,7 +349,8 @@ const createFeedHook = new Function(
 function feedHarness(api) {
   const slots = [];
   let cursor = 0;
-  const useState = (initial) => {
+  // This test harness intentionally provides hook implementations outside React.
+  const stateSlot = (initial) => {
     const index = cursor++;
     if (!(index in slots))
       slots[index] = typeof initial === "function" ? initial() : initial;
@@ -280,14 +367,14 @@ function feedHarness(api) {
       useCallback: (callback) => callback,
       useEffect: () => {},
       useReducer: (reducer, initial) => {
-        const [state, setState] = useState(initial);
+        const [state, setState] = stateSlot(initial);
         return [
           state,
           (action) => setState((previous) => reducer(previous, action)),
         ];
       },
-      useRef: (initial) => useState(() => ({ current: initial }))[0],
-      useState,
+      useRef: (initial) => stateSlot(() => ({ current: initial }))[0],
+      useState: stateSlot,
     },
     apiErrorMessage,
     api,
@@ -586,10 +673,12 @@ test("an old pagination response neither appends old users nor unlocks new pagin
   const newLoading = harness.render().loadMore();
   oldPage.resolve(feedPage([12]));
   assert.equal(await oldLoading, false);
-  assert.equal(await harness.render().loadMore(), false);
+  const duplicateNewLoading = harness.render().loadMore();
+  assert.equal(duplicateNewLoading, newLoading);
   assert.equal(newPageRequests, 1);
   newPage.resolve(feedPage([22]));
   assert.equal(await newLoading, true);
+  assert.equal(await duplicateNewLoading, true);
   assert.deepEqual(
     harness.render().recommendations.map(({ id }) => id),
     [21, 22],
@@ -623,6 +712,128 @@ test("initial loading still creates a batch when one does not exist", async () =
   assert.deepEqual(
     harness.render().recommendations.map(({ id }) => id),
     [31],
+  );
+});
+
+test("a regenerated batch reuses another eligible user when every candidate was already shown", async () => {
+  const harness = feedHarness({
+    activeBatch: async () => ({ batchId: 1 }),
+    createRecommendationBatch: async () => ({ batchId: 2 }),
+    recommendationItems: async () => feedPage([11, 12]),
+  });
+  await harness.render().load();
+  harness.render().advance();
+
+  assert.equal(await harness.render().prepareNextBatch(), true);
+  assert.equal(harness.render().nextBatchReady, true);
+  assert.equal(harness.render().activatePreparedBatch(), true);
+
+  const feed = harness.render();
+  assert.deepEqual(
+    feed.recommendations.map(({ id }) => id),
+    [11],
+  );
+  assert.equal(feed.recommendations[feed.currentIndex].id, 11);
+  assert.equal(feed.exhausted, false);
+});
+
+test("an empty regenerated batch cycles through previously loaded eligible users", async () => {
+  const harness = feedHarness({
+    activeBatch: async () => ({ batchId: 1 }),
+    createRecommendationBatch: async () => null,
+    recommendationItems: async () => feedPage([11, 12]),
+  });
+  await harness.render().load();
+  harness.render().advance();
+
+  assert.equal(await harness.render().prepareNextBatch(), true);
+  assert.equal(harness.render().activatePreparedBatch(), true);
+  assert.deepEqual(
+    harness.render().recommendations.map(({ id }) => id),
+    [11],
+  );
+
+  assert.equal(await harness.render().prepareNextBatch(), true);
+  assert.equal(harness.render().activatePreparedBatch(), true);
+  assert.deepEqual(
+    harness.render().recommendations.map(({ id }) => id),
+    [12],
+  );
+});
+
+test("an empty regenerated batch remains exhausted when no alternate eligible user exists", async () => {
+  const harness = feedHarness({
+    activeBatch: async () => ({ batchId: 1 }),
+    createRecommendationBatch: async () => null,
+    recommendationItems: async () => feedPage([11]),
+  });
+  await harness.render().load();
+
+  assert.equal(await harness.render().prepareNextBatch(), true);
+  assert.equal(harness.render().activatePreparedBatch(), true);
+
+  const feed = harness.render();
+  assert.deepEqual(feed.recommendations, []);
+  assert.equal(feed.exhausted, true);
+});
+
+test("a regenerated batch searches later pages for unseen candidates before cycling", async () => {
+  const requests = [];
+  const harness = feedHarness({
+    activeBatch: async () => ({ batchId: 1 }),
+    createRecommendationBatch: async () => ({ batchId: 2 }),
+    recommendationItems: async (batchId, cursor) => {
+      requests.push([batchId, cursor ?? null]);
+      if (batchId === 1) return feedPage([11]);
+      return cursor
+        ? feedPage([12])
+        : {
+            items: [{ candidate: { userId: 11 } }],
+            pageInfo: { hasNext: true, nextCursor: "next-page" },
+          };
+    },
+  });
+  await harness.render().load();
+
+  assert.equal(await harness.render().prepareNextBatch(), true);
+  harness.render().activatePreparedBatch();
+
+  const feed = harness.render();
+  assert.deepEqual(
+    feed.recommendations.map(({ id }) => id),
+    [12],
+  );
+  assert.deepEqual(requests, [
+    [1, null],
+    [2, null],
+    [2, "next-page"],
+  ]);
+});
+
+test("a failed final pagination page still falls through to a regenerated batch", async () => {
+  const createdBatchIds = [];
+  const harness = feedHarness({
+    activeBatch: async () => ({ batchId: 1 }),
+    createRecommendationBatch: async () => {
+      createdBatchIds.push(2);
+      return { batchId: 2 };
+    },
+    recommendationItems: async (batchId, cursor) => {
+      if (batchId === 2) return feedPage([12]);
+      return cursor ? feedPage([], true) : feedPage([11], true);
+    },
+  });
+  await harness.render().load();
+  assert.equal(await harness.render().loadMore(), false);
+
+  assert.equal(await harness.render().prepareNextBatch(), true);
+  assert.equal(harness.render().activatePreparedBatch(), true);
+  const feed = harness.render();
+
+  assert.deepEqual(createdBatchIds, [2]);
+  assert.deepEqual(
+    feed.recommendations.map(({ id }) => id),
+    [12],
   );
 });
 
