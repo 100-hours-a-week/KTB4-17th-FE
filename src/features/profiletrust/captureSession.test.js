@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { prepareCaptureSession } from "./captureSession.js";
+import { handCoversFace, prepareCaptureSession } from "./captureSession.js";
 import { holdProgress } from "./hold.js";
 import { poseFixtures } from "./poseHold.fixtures.js";
 
@@ -223,7 +223,7 @@ test("model preparation has a deadline before recording starts", async (t) => {
 
 test("a stalled pose stage reports the most frequent blocker", async (t) => {
   const cropped = hand.map((point, index) =>
-    index === 8 ? { ...point, y: -0.05 } : point,
+    index === 8 ? { ...point, y: -0.15 } : point,
   );
   let stalled = false;
   const run = await setup(t, { hands: () => (stalled ? [cropped] : [hand]) });
@@ -235,5 +235,80 @@ test("a stalled pose stage reports the most frequent blocker", async (t) => {
     stage: "pose",
     blocker: "HAND_CROPPED",
   });
+  run.controller.abort();
+});
+
+// 정면 얼굴 박스 x 0.35~0.65, y 0.23~0.73. 휴대폰처럼 얼굴이 크면 손을 얼굴 옆에 둘 때 뺨 쪽과 겹친다.
+const cheekHand = poseFixtures.v.map((point) => ({
+  ...point,
+  x: point.x + 0.094,
+}));
+const faceBox = { x: 0.5, y: 0.48, width: 0.3, height: 0.5 };
+
+test("only the face center counts as covered in pose and head stages", () => {
+  assert.equal(handCoversFace(faceBox, [cheekHand]), true);
+  assert.equal(
+    handCoversFace(faceBox, [cheekHand], { centerOnly: true }),
+    false,
+  );
+  const overCenter = poseFixtures.v.map((point) => ({
+    ...point,
+    y: point.y - 0.1,
+  }));
+  assert.equal(
+    handCoversFace(faceBox, [overCenter], { centerOnly: true }),
+    true,
+  );
+});
+
+test("pose stage accepts a hand beside the face that overlaps only the cheek", async (t) => {
+  let raised = false;
+  const run = await setup(t, { hands: () => (raised ? [cheekHand] : [hand]) });
+  await run.advance(36);
+  assert.equal(run.states.at(-1).stage, "pose");
+  raised = true;
+  await run.advance(36);
+  assert.equal(run.completed, true);
+});
+
+test("pose stage still blocks a hand over the face center", async (t) => {
+  const overCenter = poseFixtures.v.map((point) => ({
+    ...point,
+    y: point.y - 0.1,
+  }));
+  let raised = false;
+  const run = await setup(t, { hands: () => (raised ? [overCenter] : [hand]) });
+  await run.advance(36);
+  raised = true;
+  await run.advance(10);
+  assert.deepEqual(run.session.stuck(), {
+    stage: "pose",
+    blocker: "HAND_COVERS_FACE",
+  });
+  run.controller.abort();
+});
+
+test("a phone held close gets a distance hint when the hand has no room", async (t) => {
+  const close = () => ({
+    ...neutral(),
+    faceLandmarks: [
+      [
+        { x: 0.25, y: 0.15 },
+        { x: 0.75, y: 0.8 },
+      ],
+    ],
+  });
+  const cropped = hand.map((point, index) =>
+    index === 8 ? { ...point, y: -0.15 } : point,
+  );
+  let raised = false;
+  const run = await setup(t, {
+    face: close,
+    hands: () => (raised ? [cropped] : [hand]),
+  });
+  await run.advance(36);
+  raised = true;
+  await run.advance(3);
+  assert.match(run.states.at(-1).hint, /휴대폰을 조금 더 멀리/);
   run.controller.abort();
 });
