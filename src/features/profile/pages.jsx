@@ -632,6 +632,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
               ) : (
                 <ProfilePhotoEditor
                   initialPhotos={initialPhotos}
+                  compactPose
                   disabled={isSaving}
                   onChange={setPhotoState}
                 />
