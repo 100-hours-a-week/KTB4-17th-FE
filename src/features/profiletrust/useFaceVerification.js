@@ -372,6 +372,7 @@ export function useFaceVerification() {
                 signal: captureSignal,
                 duration: 17_500,
                 until: session.wait,
+                mirrorFrom: videoRef.current,
               });
             } catch (error) {
               if (error?.code === "CAMERA_ALIGNMENT_TIMEOUT")
