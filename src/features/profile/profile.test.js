@@ -15,6 +15,20 @@ import {
   prepareProfilePhoto,
 } from "./photoUpload.js";
 import { profilePayload, withoutRegistrationName } from "./serialize.js";
+import { profileHeightValidationError } from "./validation.js";
+
+test("profile height validation accepts integer values from 130 through 220", () => {
+  assert.equal(profileHeightValidationError("130"), "");
+  assert.equal(profileHeightValidationError("170"), "");
+  assert.equal(profileHeightValidationError("220"), "");
+});
+
+test("profile height validation rejects missing, fractional, and out-of-range values", () => {
+  const message = "키는 130~220cm의 정수로 입력해 주세요.";
+  for (const value of ["", "abc", "100", "220.5", "221"]) {
+    assert.equal(profileHeightValidationError(value), message, value);
+  }
+});
 
 test("single-digit month and day are accepted and sent in ISO format", () => {
   assert.equal(normalizeBirthDate("1998-1-1"), "1998-01-01");
