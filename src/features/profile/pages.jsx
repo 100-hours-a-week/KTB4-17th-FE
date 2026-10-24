@@ -36,16 +36,16 @@ import {
   religions,
   smokings,
 } from "./data.js";
+import { profileSecurityFilterErrorMessage } from "./errors.js";
 import { JobCategorySelect } from "./JobCategorySelect.jsx";
 import { isJobCategory, normalizeJobCategory } from "./jobCategories.js";
 import { profilePayload } from "./serialize.js";
 import {
   PROFILE_HEIGHT_VALIDATION_ERROR,
   profileHeightValidationError,
+  profileNicknameValidationError,
 } from "./validation.js";
 
-const NICKNAME_PATTERN = /^[가-힣A-Za-z0-9]{2,10}$/;
-const NICKNAME_FORMAT_ERROR = "닉네임은 한글·영문·숫자 2~10자로 입력해 주세요.";
 const PROFILE_SAVE_ERROR =
   "프로필을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.";
 const PROFILE_AI_ERROR_CODES = new Set([
@@ -82,6 +82,8 @@ function profileSaveErrorMessage(error) {
   if (PROFILE_AI_ERROR_CODES.has(error?.code)) return PROFILE_SAVE_ERROR;
   if (error?.code === "INVALID_REQUEST")
     return "입력한 프로필 정보를 다시 확인해 주세요.";
+  const securityFilterMessage = profileSecurityFilterErrorMessage(error);
+  if (securityFilterMessage) return securityFilterMessage;
   return apiErrorMessage(error, PROFILE_SAVE_ERROR);
 }
 
@@ -508,8 +510,9 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
     }
     setJobError("");
     const nickname = String(profile.nickname ?? "");
-    if (!NICKNAME_PATTERN.test(nickname)) {
-      setNicknameError(NICKNAME_FORMAT_ERROR);
+    const nicknameError = profileNicknameValidationError(nickname);
+    if (nicknameError) {
+      setNicknameError(nicknameError);
       return;
     }
     const invalidHeight = profileHeightValidationError(profile.height);

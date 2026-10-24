@@ -28,7 +28,10 @@ import {
 import { JobCategorySelect } from "../profile/JobCategorySelect.jsx";
 import { isJobCategory } from "../profile/jobCategories.js";
 import { profilePayload } from "../profile/serialize.js";
-import { profileHeightValidationError } from "../profile/validation.js";
+import {
+  profileHeightValidationError,
+  profileNicknameValidationError,
+} from "../profile/validation.js";
 import { savedPhotoItems } from "../profiletrust/model.js";
 import { ProfilePhotoEditor } from "../profiletrust/ProfilePhotoEditor.jsx";
 import * as userApi from "../user/api.js";
@@ -399,10 +402,11 @@ export function profileValidation(profile, includeLifestyle = false) {
       step: "region",
       message: "활동 지역을 다시 선택해 주세요.",
     };
-  if (!profile.nickname || !/^[가-힣A-Za-z0-9]{2,10}$/.test(profile.nickname))
+  const nicknameError = profileNicknameValidationError(profile.nickname);
+  if (nicknameError)
     return {
       step: "profile",
-      message: "닉네임은 한글·영문·숫자 2~10자로 입력해 주세요.",
+      message: nicknameError,
     };
 
   const heightError = profileHeightValidationError(profile.height);
