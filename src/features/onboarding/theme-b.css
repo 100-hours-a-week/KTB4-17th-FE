@@ -99,12 +99,44 @@
   transform: translate(-50%, -50%);
 }
 
+.onboarding-header-actions {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.onboarding-logout-action {
+  min-height: 36px;
+  margin-right: 10px;
+  padding: 5px 8px;
+  border: 2px solid #9e315f;
+  background: #fff7fb;
+  color: #8d2b56;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.onboarding-logout-action:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.onboarding-logout-action:focus-visible {
+  outline: 3px solid #7c5cfa;
+  outline-offset: 2px;
+}
+
+.onboarding-logout-confirm {
+  flex: none;
+  margin: 8px 16px 0;
+}
+
 .brand-signal {
   display: flex;
   align-items: flex-end;
   gap: 2px;
   height: 10px;
-  margin-left: auto;
 }
 
 .brand-signal i {
