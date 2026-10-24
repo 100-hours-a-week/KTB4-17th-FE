@@ -28,6 +28,7 @@ import {
 import { JobCategorySelect } from "../profile/JobCategorySelect.jsx";
 import { isJobCategory } from "../profile/jobCategories.js";
 import { profilePayload } from "../profile/serialize.js";
+import { profileHeightValidationError } from "../profile/validation.js";
 import { savedPhotoItems } from "../profiletrust/model.js";
 import { ProfilePhotoEditor } from "../profiletrust/ProfilePhotoEditor.jsx";
 import * as userApi from "../user/api.js";
@@ -404,11 +405,11 @@ export function profileValidation(profile, includeLifestyle = false) {
       message: "닉네임은 한글·영문·숫자 2~10자로 입력해 주세요.",
     };
 
-  const height = Number(profile.height);
-  if (!Number.isInteger(height) || height < 130 || height > 220)
+  const heightError = profileHeightValidationError(profile.height);
+  if (heightError)
     return {
       step: "profile",
-      message: "키는 130~220cm의 정수로 입력해 주세요.",
+      message: heightError,
     };
   if (!profile.bodyType || !profile.educationLevel)
     return {

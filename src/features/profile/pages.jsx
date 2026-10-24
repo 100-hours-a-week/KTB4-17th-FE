@@ -39,6 +39,10 @@ import {
 import { JobCategorySelect } from "./JobCategorySelect.jsx";
 import { isJobCategory, normalizeJobCategory } from "./jobCategories.js";
 import { profilePayload } from "./serialize.js";
+import {
+  PROFILE_HEIGHT_VALIDATION_ERROR,
+  profileHeightValidationError,
+} from "./validation.js";
 
 const NICKNAME_PATTERN = /^[가-힣A-Za-z0-9]{2,10}$/;
 const NICKNAME_FORMAT_ERROR = "닉네임은 한글·영문·숫자 2~10자로 입력해 주세요.";
@@ -76,6 +80,8 @@ function samePhotoItems(left = [], right = []) {
 
 function profileSaveErrorMessage(error) {
   if (PROFILE_AI_ERROR_CODES.has(error?.code)) return PROFILE_SAVE_ERROR;
+  if (error?.code === "INVALID_REQUEST")
+    return "입력한 프로필 정보를 다시 확인해 주세요.";
   return apiErrorMessage(error, PROFILE_SAVE_ERROR);
 }
 
@@ -420,6 +426,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
   });
   const [jobError, setJobError] = useState("");
   const [nicknameError, setNicknameError] = useState("");
+  const [heightError, setHeightError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const initialNickname = useRef("");
   const saveInFlight = useRef(false);
@@ -474,6 +481,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
 
   const set = (key, value) => {
     if (key === "nickname") setNicknameError("");
+    if (key === "height") setHeightError("");
     setData((old) => ({ ...old, profile: { ...old.profile, [key]: value } }));
   };
 
@@ -504,6 +512,12 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
       setNicknameError(NICKNAME_FORMAT_ERROR);
       return;
     }
+    const invalidHeight = profileHeightValidationError(profile.height);
+    if (invalidHeight) {
+      setHeightError(invalidHeight);
+      return;
+    }
+    setHeightError("");
     if (!profile.activityRegionId) {
       toast("검색 결과에서 활동 지역을 선택해 주세요.");
       return;
@@ -561,6 +575,12 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
         setNicknameError(
           "이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해 주세요.",
         );
+      } else if (
+        e?.code === "INVALID_REQUEST" &&
+        Array.isArray(e.fields) &&
+        e.fields.some((fieldError) => fieldError?.field === "height")
+      ) {
+        setHeightError(PROFILE_HEIGHT_VALIDATION_ERROR);
       } else {
         toast(profileSaveErrorMessage(e));
       }
@@ -676,7 +696,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                 }))
               }
             />
-            <Field label="키 (cm)">
+            <Field label="키 (cm)" error={heightError}>
               <input
                 type="number"
                 name="height"
