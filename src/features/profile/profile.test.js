@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { createApiError } from "../../shared/api/errorMessages.js";
 import { dateAge } from "../../shared/utils.js";
 import { mapRecommendationItem } from "../recommendation/mapRecommendationItem.js";
 import { isValidBirthDate, normalizeBirthDate } from "../user/birthDate.js";
+import { profileSecurityFilterErrorMessage } from "./errors.js";
 import {
   isJobCategory,
   jobCategories,
@@ -15,7 +17,49 @@ import {
   prepareProfilePhoto,
 } from "./photoUpload.js";
 import { profilePayload, withoutRegistrationName } from "./serialize.js";
-import { profileHeightValidationError } from "./validation.js";
+import {
+  PROFILE_UNSAFE_INPUT_ERROR,
+  profileHeightValidationError,
+  profileNicknameValidationError,
+} from "./validation.js";
+
+test("nickname validation rejects markup and special characters before saving", () => {
+  assert.equal(profileNicknameValidationError("홍길동"), "");
+  assert.equal(profileNicknameValidationError("woo123"), "");
+  assert.equal(
+    profileNicknameValidationError("<script>alert(1)</script>"),
+    PROFILE_UNSAFE_INPUT_ERROR,
+  );
+  assert.equal(
+    profileNicknameValidationError("홍길동!"),
+    PROFILE_UNSAFE_INPUT_ERROR,
+  );
+  assert.equal(
+    profileNicknameValidationError("A"),
+    "닉네임은 한글·영문·숫자 2~10자로 입력해 주세요.",
+  );
+});
+
+test("profile security filter errors show a safe message for raw HTTP 403", () => {
+  const error = createApiError({ status: 403 }, null);
+  assert.equal(error.code, "HTTP_403");
+  assert.equal(
+    profileSecurityFilterErrorMessage(error),
+    PROFILE_UNSAFE_INPUT_ERROR,
+  );
+  assert.equal(
+    profileSecurityFilterErrorMessage({ status: 403 }),
+    PROFILE_UNSAFE_INPUT_ERROR,
+  );
+  assert.equal(
+    profileSecurityFilterErrorMessage("HTTP_403"),
+    PROFILE_UNSAFE_INPUT_ERROR,
+  );
+  assert.equal(
+    profileSecurityFilterErrorMessage({ code: "INVALID_REQUEST", status: 403 }),
+    "",
+  );
+});
 
 test("profile height validation accepts integer values from 130 through 220", () => {
   assert.equal(profileHeightValidationError("130"), "");
@@ -158,6 +202,7 @@ test("missing and legacy job values cannot be silently serialized as OTHER or nu
     "UNDISCLOSED",
     "it_data",
     " IT_DATA ",
+    "<script>alert(1)</script>",
     0,
     "0",
     true,
