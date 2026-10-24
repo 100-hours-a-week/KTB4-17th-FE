@@ -343,7 +343,7 @@ function AppRouter() {
       await logoutAuth();
       clearAccessToken();
       setData(makeInitialState());
-      navigate("/login");
+      navigate("/login", { replace: true });
     } catch {
       toast("로그아웃을 완료하지 못했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
@@ -427,7 +427,14 @@ function AppRouter() {
       <RegistrationRestricted onConfirm={() => navigate("/registration")} />
     );
   else if (path === "/registration")
-    page = <Onboarding navigate={navigate} toast={toast} />;
+    page = (
+      <Onboarding
+        navigate={navigate}
+        toast={toast}
+        onLogout={handleLogout}
+        isLoggingOut={logoutPending}
+      />
+    );
   else if (!data.session || path === "/login")
     page = (
       <Login
@@ -436,7 +443,14 @@ function AppRouter() {
       />
     );
   else if (!data.onboarded)
-    page = <Onboarding navigate={navigate} toast={toast} />;
+    page = (
+      <Onboarding
+        navigate={navigate}
+        toast={toast}
+        onLogout={handleLogout}
+        isLoggingOut={logoutPending}
+      />
+    );
   else if (path === "/home" || path === "/")
     page = (
       <Home
