@@ -116,6 +116,13 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
             소식을 확인하지 못했어요. 잠시 후 다시 확인할게요.
           </p>
         )}
+        {notifications.connection !== "reconnecting" &&
+          notifications.streamStatus === "reconnecting" && (
+            <p className="notification-connection" role="status">
+              실시간 연결을 복구하고 있어요. 새 소식이 잠시 늦게 도착할 수
+              있어요.
+            </p>
+          )}
         {page.error && (
           <div className="notification-error" role="alert">
             <p>{page.error}</p>

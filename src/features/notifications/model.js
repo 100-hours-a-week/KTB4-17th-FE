@@ -118,6 +118,17 @@ export function mergeNotifications(current, incoming) {
       byId.set(String(item.notificationId), item);
   }
   return [...byId.values()].sort((a, b) => {
+    const leftCreatedAt = notificationDate(a.createdAt).getTime();
+    const rightCreatedAt = notificationDate(b.createdAt).getTime();
+    if (Number.isFinite(leftCreatedAt) && Number.isFinite(rightCreatedAt)) {
+      if (leftCreatedAt !== rightCreatedAt)
+        return rightCreatedAt - leftCreatedAt;
+    } else if (Number.isFinite(leftCreatedAt)) {
+      return -1;
+    } else if (Number.isFinite(rightCreatedAt)) {
+      return 1;
+    }
+
     const left = BigInt(a.notificationId);
     const right = BigInt(b.notificationId);
     return left > right ? -1 : left < right ? 1 : 0;

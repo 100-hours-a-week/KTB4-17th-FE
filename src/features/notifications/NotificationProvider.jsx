@@ -11,6 +11,10 @@ import { isCurrentChatNotification, notificationDestination } from "./model.js";
 import { NotificationToast } from "./NotificationToast.jsx";
 import { createNotificationPoller } from "./polling.js";
 import { createNotificationSound } from "./sound.js";
+import { connectNotificationStream } from "./stream.js";
+
+const LIVE_POLL_INTERVAL = 30000;
+const FALLBACK_POLL_INTERVAL = 5000;
 
 export function NotificationProvider({
   enabled,
@@ -27,6 +31,7 @@ export function NotificationProvider({
   const [matchRevision, setMatchRevision] = useState(0);
   const [recent, setRecent] = useState(null);
   const [connection, setConnection] = useState("connecting");
+  const [streamStatus, setStreamStatus] = useState("connecting");
   const tracker = useRef(null);
   const location = useRef({ path, search });
   location.current = { path, search };
@@ -42,9 +47,36 @@ export function NotificationProvider({
     returnPath.current = "/home";
     let active = true;
     const isCurrent = () => active && getAuthSessionSubject() === subject;
+    const seen = new Set();
     const sound = createNotificationSound();
     setConnection("connecting");
+    setStreamStatus("connecting");
+    const handleNotification = (item, fromStream = false) => {
+      if (!isCurrent()) return;
+      const id = String(item.notificationId);
+      if (!id || seen.has(id)) return;
+      seen.add(id);
+      while (seen.size > 1000) seen.delete(seen.values().next().value);
+
+      if (fromStream) refresh();
+      if (item.type === "MATCH") setMatchRevision((value) => value + 1);
+      const inCurrentRoom =
+        document.visibilityState !== "hidden" &&
+        (isCurrentChatNotification(item, location.current.path) ||
+          (item.type === "MATCH" &&
+            item.targetType === "CHAT_ROOM" &&
+            location.current.path === `/chats/${item.targetId}`));
+      if (!item.readAt && !inCurrentRoom) sound.play();
+      if (
+        !item.readAt &&
+        document.visibilityState !== "hidden" &&
+        location.current.path !== "/notifications" &&
+        !inCurrentRoom
+      )
+        setRecent({ subject, item });
+    };
     const current = createNotificationPoller({
+      interval: FALLBACK_POLL_INTERVAL,
       isCurrent,
       onSnapshot: ({ count, initial, changed }) => {
         if (!isCurrent()) return;
@@ -55,33 +87,35 @@ export function NotificationProvider({
       onStatus: (status) => {
         if (isCurrent()) setConnection(status);
       },
-      onNotification: (item) => {
-        if (!isCurrent()) return;
-        if (item.type === "MATCH") setMatchRevision((value) => value + 1);
-        const inCurrentRoom =
-          document.visibilityState !== "hidden" &&
-          (isCurrentChatNotification(item, location.current.path) ||
-            (item.type === "MATCH" &&
-              item.targetType === "CHAT_ROOM" &&
-              location.current.path === `/chats/${item.targetId}`));
-        if (!item.readAt && !inCurrentRoom) sound.play();
-        if (
-          !item.readAt &&
-          document.visibilityState !== "hidden" &&
-          location.current.path !== "/notifications" &&
-          !inCurrentRoom
-        )
-          setRecent({ subject, item });
-      },
+      onNotification: (item) => handleNotification(item),
     });
     tracker.current = current;
+    const disconnect = connectNotificationStream({
+      onConnected: () => {
+        if (!isCurrent()) return;
+        current.refresh();
+        setMatchRevision((value) => value + 1);
+      },
+      onStatus: (status) => {
+        if (!isCurrent()) return;
+        setStreamStatus(status);
+        current.setInterval(
+          status === "connected" ? LIVE_POLL_INTERVAL : FALLBACK_POLL_INTERVAL,
+        );
+        if (status === "reconnecting") current.refresh();
+      },
+      onNotification: (item) => handleNotification(item, true),
+    });
     const synchronize = () => {
       if (isCurrent()) current.refresh();
     };
     const clear = () => {
       active = false;
       current.stop();
+      disconnect();
       sound.stop();
+      setConnection("unauthenticated");
+      setStreamStatus("unauthenticated");
       setSnapshot(null);
       setRecent(null);
     };
@@ -96,6 +130,7 @@ export function NotificationProvider({
     return () => {
       active = false;
       current.stop();
+      disconnect();
       sound.stop();
       if (tracker.current === current) tracker.current = null;
       window.removeEventListener(AUTH_SESSION_CLEARED_EVENT, clear);
@@ -106,7 +141,7 @@ export function NotificationProvider({
       window.removeEventListener("pageshow", synchronize);
       document.removeEventListener("visibilitychange", synchronize);
     };
-  }, [enabled, subject]);
+  }, [enabled, subject, refresh]);
 
   useEffect(() => {
     if (enabled) refresh();
@@ -160,6 +195,7 @@ export function NotificationProvider({
     revision,
     matchRevision,
     connection,
+    streamStatus,
     refresh,
     markRead,
     remove,
