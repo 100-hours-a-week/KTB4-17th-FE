@@ -104,6 +104,25 @@ test("new polling arrivals are delivered oldest first so the newest banner wins"
   assert.deepEqual(state.arrivals, [11, 12]);
 });
 
+test("polling cadence follows the live and fallback stream intervals", async (t) => {
+  const state = pollingFixture(t);
+  state.poller.refresh();
+  await state.tick();
+  assert.equal(state.snapshots.length, 1);
+
+  state.poller.setInterval(30000);
+  await state.tick(5000);
+  assert.equal(state.snapshots.length, 1);
+  await state.tick(25000);
+  assert.equal(state.snapshots.length, 2);
+
+  state.poller.setInterval(5000);
+  await state.tick(4999);
+  assert.equal(state.snapshots.length, 2);
+  await state.tick(1);
+  assert.equal(state.snapshots.length, 3);
+});
+
 test("refreshes coalesce behind a request and discard its outdated snapshot", async (t) => {
   let resolveCount;
   let calls = 0;
@@ -566,6 +585,22 @@ test("paging and repeated events merge by server id with fresh read state", () =
     [4, 3, 2],
   );
   assert.equal(result[1].readAt, "now");
+});
+
+test("merged pages follow backend createdAt order with notification ID as a tie-breaker", () => {
+  const result = mergeNotifications(
+    [],
+    [
+      { notificationId: 22, createdAt: "2026-10-20T10:00:00" },
+      { notificationId: 18, createdAt: "2026-10-20T11:00:00" },
+      { notificationId: 17, createdAt: "2026-10-20T11:00:00" },
+    ],
+  );
+
+  assert.deepEqual(
+    result.map((item) => item.notificationId),
+    [18, 17, 22],
+  );
 });
 
 test("SSE handles split CRLF, comments, multiple data lines and consecutive events", () => {
