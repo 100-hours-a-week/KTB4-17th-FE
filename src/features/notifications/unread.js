@@ -37,6 +37,37 @@ async function visitPages(category, { signal, fetchPage, isCurrent }, visit) {
   }
 }
 
+export async function loadUnreadNotifications(
+  expectedCount,
+  { signal, fetchPage = notifications, isCurrent } = {},
+) {
+  const expected = Number.isSafeInteger(expectedCount)
+    ? Math.max(0, expectedCount)
+    : 0;
+  const byId = new Map();
+  if (expected === 0) return { items: [], complete: true };
+
+  let cursor;
+  const seen = new Set();
+  while (true) {
+    assertActive(signal, isCurrent);
+    const page = await fetchPage("ALL", { cursor, signal });
+    assertActive(signal, isCurrent);
+    for (const item of page.items || []) {
+      if (item?.notificationId != null && !item.readAt)
+        byId.set(String(item.notificationId), item);
+    }
+    if (byId.size >= expected || !page.pageInfo?.hasNext)
+      return { items: [...byId.values()], complete: true };
+
+    const next = page.pageInfo.nextCursor;
+    if (!next || seen.has(String(next)))
+      throw new Error("Repeated notification cursor");
+    seen.add(String(next));
+    cursor = next;
+  }
+}
+
 export async function loadUnreadCategories({
   signal,
   fetchPage = notifications,

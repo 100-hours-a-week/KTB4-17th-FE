@@ -33,6 +33,7 @@ export function NotificationProvider({
   const [connection, setConnection] = useState("connecting");
   const [streamStatus, setStreamStatus] = useState("connecting");
   const tracker = useRef(null);
+  const readRequests = useRef(new Map());
   const location = useRef({ path, search });
   location.current = { path, search };
   const returnPath = useRef("/home");
@@ -154,10 +155,23 @@ export function NotificationProvider({
   }, [enabled, path, refresh]);
 
   const markRead = useCallback(
-    async (item) => {
-      if (!subject || getAuthSessionSubject() !== subject) return;
-      if (!item.readAt) await api.markAsRead(item.notificationId);
-      if (getAuthSessionSubject() === subject) refresh();
+    async (item, { refreshAfter = true } = {}) => {
+      if (!subject || getAuthSessionSubject() !== subject) return false;
+      if (!item.readAt) {
+        const key = `${subject}:${item.notificationId}`;
+        let request = readRequests.current.get(key);
+        if (!request) {
+          request = api.markAsRead(item.notificationId).finally(() => {
+            if (readRequests.current.get(key) === request)
+              readRequests.current.delete(key);
+          });
+          readRequests.current.set(key, request);
+        }
+        await request;
+      }
+      if (getAuthSessionSubject() !== subject) return false;
+      if (refreshAfter) refresh();
+      return true;
     },
     [subject, refresh],
   );
