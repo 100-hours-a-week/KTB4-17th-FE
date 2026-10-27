@@ -13,7 +13,7 @@ import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import { profilePhotoUrls } from "../../shared/utils.js";
 import * as matchingApi from "../matching/api.js";
 import { jobCategoryLabel } from "../profile/jobCategories.js";
-import { SwipeGuide } from "./SwipeGuide.jsx";
+import { SwipeGuide, useSwipeGuide } from "./SwipeGuide.jsx";
 import { wheelNavigationIntent } from "./wheelNavigation.js";
 
 const NEXT_CARD_DISTANCE = 64;
@@ -79,6 +79,17 @@ export function Home({
       : previewDirection === "next"
         ? nextPerson
         : null;
+  const showSwipeGuide = useSwipeGuide({
+    enabled:
+      Boolean(person) &&
+      recommendationStatus === "ready" &&
+      !recommendationError &&
+      !actionBusy &&
+      !isCardSettling &&
+      !isContinuing &&
+      !recommendationRefreshing,
+    consumed: swipeGuideConsumed,
+  });
 
   useEffect(
     () => () => {
@@ -677,19 +688,18 @@ export function Home({
                 index={photoIndex}
                 onSelect={setPhotoIndex}
               />
-              <SwipeGuide
-                enabled={
-                  !actionBusy &&
-                  !isCardSettling &&
-                  !isContinuing &&
-                  !recommendationRefreshing
-                }
-                consumed={swipeGuideConsumed}
-                canAdvance={Boolean(nextPerson || hasNext || nextBatchReady)}
-                canRetreat={Boolean(previousPerson)}
-              />
+              {showSwipeGuide &&
+                Boolean(nextPerson || hasNext || nextBatchReady) && (
+                  <SwipeGuide direction="up" />
+                )}
               <div className="recommendation-gradient" />
               <div className="recommendation-info">
+                {showSwipeGuide && (
+                  <SwipeGuide
+                    direction="down"
+                    canRetreat={Boolean(previousPerson)}
+                  />
+                )}
                 {person.activity && (
                   <span className="recommendation-keyword recommendation-status">
                     <i aria-hidden="true" />
