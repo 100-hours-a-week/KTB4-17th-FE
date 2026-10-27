@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import {
   BrandHeader,
@@ -8,17 +8,23 @@ import {
 import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import { useNotifications } from "./context.jsx";
 import {
+  mergeNotifications,
   NOTIFICATION_CATEGORIES,
   notificationCopy,
   notificationDay,
   notificationTime,
+  sortNotificationsUnreadFirst,
 } from "./model.js";
 import {
   NotificationIllustration,
   PagerIcon,
 } from "./NotificationControls.jsx";
+import {
+  notificationCategory as categoryForType,
+  emptyUnreadCategories,
+} from "./unread.js";
 import { useNotificationInbox } from "./useNotificationInbox.js";
-import { useUnreadCategories } from "./useUnreadCategories.js";
+import { useUnreadNotificationCatalog } from "./useUnreadNotificationCatalog.js";
 
 const notificationCategory = (value) =>
   NOTIFICATION_CATEGORIES.some(([key]) => key === value) ? value : "ALL";
@@ -31,14 +37,232 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
   useEffect(() => {
     setCategory(notificationCategory(initialCategory));
   }, [initialCategory]);
-  const unreadCategories = useUnreadCategories(notifications);
+  const unreadCatalog = useUnreadNotificationCatalog(
+    notifications.subject,
+    notifications.count,
+  );
+  const unreadCategories = useMemo(() => {
+    const flags = emptyUnreadCategories();
+    for (const item of unreadCatalog.items) {
+      if (!item.readAt) {
+        flags.ALL = true;
+        flags[categoryForType(item.type)] = true;
+      }
+    }
+    flags.ALL = notifications.count > 0 || flags.ALL;
+    return flags;
+  }, [notifications.count, unreadCatalog.items]);
   const page = useNotificationInbox(
     category,
     notifications.revision,
     notifications.subject,
   );
   const [pending, setPending] = useState(new Set());
+  const [locallyRead, setLocallyRead] = useState(new Map());
+  const [deletedIds, setDeletedIds] = useState(new Set());
   const inFlight = useRef(new Set());
+
+  const readInFlight = useRef(new Set());
+  const visibilityTimers = useRef(new Map());
+  const readRefreshTimer = useRef(null);
+  const readRefreshPending = useRef(false);
+  const mainRef = useRef(null);
+  const subjectRef = useRef(notifications.subject);
+
+  const displayItems = useMemo(() => {
+    const catalogItems = unreadCatalog.items.filter(
+      (item) => category === "ALL" || categoryForType(item.type) === category,
+    );
+    const merged = mergeNotifications(
+      mergeNotifications(catalogItems, page.items),
+      [...locallyRead.values()],
+    )
+      .filter((item) => !deletedIds.has(String(item.notificationId)))
+      .map((item) => {
+        const local = locallyRead.get(String(item.notificationId));
+        return local ? { ...item, readAt: local.readAt } : item;
+      });
+    return sortNotificationsUnreadFirst(merged);
+  }, [category, deletedIds, locallyRead, page.items, unreadCatalog.items]);
+
+  useEffect(() => {
+    if (subjectRef.current === notifications.subject) return;
+    subjectRef.current = notifications.subject;
+    if (readRefreshTimer.current) {
+      window.clearTimeout(readRefreshTimer.current);
+      readRefreshTimer.current = null;
+    }
+    readRefreshPending.current = false;
+    setLocallyRead(new Map());
+    setDeletedIds(new Set());
+    readInFlight.current.clear();
+    for (const entry of visibilityTimers.current.values())
+      window.clearTimeout(entry.timer);
+    visibilityTimers.current.clear();
+  }, [notifications.subject]);
+
+  const scheduleReadRefresh = useCallback(() => {
+    readRefreshPending.current = true;
+    if (unreadCatalog.loading) return;
+    if (readRefreshTimer.current) window.clearTimeout(readRefreshTimer.current);
+    readRefreshTimer.current = window.setTimeout(() => {
+      readRefreshTimer.current = null;
+      readRefreshPending.current = false;
+      notifications.refresh();
+    }, 300);
+  }, [notifications.refresh, unreadCatalog.loading]);
+
+  useEffect(() => {
+    if (unreadCatalog.loading && readRefreshTimer.current) {
+      window.clearTimeout(readRefreshTimer.current);
+      readRefreshTimer.current = null;
+    }
+    if (!unreadCatalog.loading && readRefreshPending.current)
+      scheduleReadRefresh();
+  }, [scheduleReadRefresh, unreadCatalog.loading]);
+
+  useEffect(
+    () => () => {
+      if (readRefreshTimer.current)
+        window.clearTimeout(readRefreshTimer.current);
+      readRefreshPending.current = false;
+      for (const entry of visibilityTimers.current.values())
+        window.clearTimeout(entry.timer);
+      visibilityTimers.current.clear();
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const root = mainRef.current;
+    if (
+      !root ||
+      !notifications.enabled ||
+      !displayItems.length ||
+      typeof IntersectionObserver === "undefined"
+    )
+      return undefined;
+
+    const itemsById = new Map(
+      displayItems.map((item) => [String(item.notificationId), item]),
+    );
+    const visibleEnough = (element) => {
+      if (document.visibilityState === "hidden") return false;
+      const rootBounds = root.getBoundingClientRect();
+      const cardBounds = element.getBoundingClientRect();
+      const toolbarBounds = root
+        .querySelector(".notification-toolbar")
+        ?.getBoundingClientRect();
+      const top = Math.max(
+        rootBounds.top,
+        toolbarBounds?.bottom ?? rootBounds.top,
+      );
+      const bottom = Math.min(rootBounds.bottom, window.innerHeight);
+      const left = Math.max(rootBounds.left, 0);
+      const right = Math.min(rootBounds.right, window.innerWidth);
+      const height = Math.max(
+        0,
+        Math.min(cardBounds.bottom, bottom) - Math.max(cardBounds.top, top),
+      );
+      const width = Math.max(
+        0,
+        Math.min(cardBounds.right, right) - Math.max(cardBounds.left, left),
+      );
+      const area = cardBounds.width * cardBounds.height;
+      return area > 0 && (height * width) / area >= 0.5;
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const id = String(entry.target.dataset.notificationId || "");
+          const requestKey = `${notifications.subject}:${id}`;
+          const item = itemsById.get(id);
+          const visible =
+            entry.isIntersecting && entry.intersectionRatio >= 0.5;
+          const existing = visibilityTimers.current.get(id);
+          if (
+            !visible ||
+            !item ||
+            item.readAt ||
+            readInFlight.current.has(requestKey)
+          ) {
+            if (existing) {
+              window.clearTimeout(existing.timer);
+              visibilityTimers.current.delete(id);
+            }
+            continue;
+          }
+          if (existing) continue;
+
+          const timer = window.setTimeout(() => {
+            visibilityTimers.current.delete(id);
+            if (!visibleEnough(entry.target)) return;
+            readInFlight.current.add(requestKey);
+            void notifications
+              .markRead(item, { refreshAfter: false })
+              .then((marked) => {
+                if (!marked) return;
+                const locallyReadItem = {
+                  ...item,
+                  readAt: new Date().toISOString(),
+                };
+                setLocallyRead((previous) => {
+                  const next = new Map(previous);
+                  next.set(id, locallyReadItem);
+                  return next;
+                });
+                unreadCatalog.markRead(locallyReadItem);
+                scheduleReadRefresh();
+              })
+              .catch((error) => {
+                toast(
+                  apiErrorMessage(
+                    error,
+                    "알림 읽음 상태를 갱신하지 못했어요. 다시 시도해 주세요.",
+                  ),
+                );
+              })
+              .finally(() => readInFlight.current.delete(requestKey));
+          }, 700);
+          visibilityTimers.current.set(id, { timer, element: entry.target });
+        }
+      },
+      { root, threshold: [0, 0.5] },
+    );
+
+    const observeCards = () =>
+      root
+        .querySelectorAll(".notification-card[data-notification-id]")
+        .forEach((element) => {
+          observer.observe(element);
+        });
+    observeCards();
+    const resume = () => {
+      if (document.visibilityState === "hidden") return;
+      observer.disconnect();
+      observeCards();
+    };
+    document.addEventListener("visibilitychange", resume);
+
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", resume);
+      for (const [id, entry] of visibilityTimers.current) {
+        window.clearTimeout(entry.timer);
+        visibilityTimers.current.delete(id);
+      }
+    };
+  }, [
+    displayItems,
+    notifications.enabled,
+    notifications.markRead,
+    notifications.subject,
+    unreadCatalog.markRead,
+    scheduleReadRefresh,
+    toast,
+  ]);
+
   function selectCategory(nextCategory) {
     if (nextCategory === category) return;
     setCategory(nextCategory);
@@ -56,6 +280,9 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
       if (action === "delete") {
         await notifications.remove(item);
         page.removeLocal(item.notificationId);
+        setDeletedIds((previous) =>
+          new Set(previous).add(String(item.notificationId)),
+        );
         toast("알림을 삭제했어요.");
       } else await notifications.open(item);
     } catch (error) {
@@ -68,6 +295,7 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
     }
   }
   let previousDay;
+  let previousReadState;
   return (
     <>
       <BrandHeader navigate={navigate} notificationAction={false}>
@@ -79,10 +307,13 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
         </span>
       </BrandHeader>
       <main
+        ref={mainRef}
         id="main-content"
         tabIndex={-1}
         className="main-scroll notifications-main"
-        aria-busy={page.loading}
+        aria-busy={
+          page.loading || (!displayItems.length && unreadCatalog.loading)
+        }
       >
         <div className="notification-toolbar">
           <div className="notification-heading">
@@ -131,9 +362,9 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
             </PixelButton>
           </div>
         )}
-        {!page.items.length &&
+        {!displayItems.length &&
           !page.error &&
-          (page.loading ? (
+          (page.loading || unreadCatalog.loading ? (
             <div className="notification-loading" role="status">
               <PagerIcon />
               <p>도착한 소식을 확인하고 있어요…</p>
@@ -146,17 +377,26 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
             />
           ))}
         <div className="notification-list">
-          {page.items.map((item) => {
+          {displayItems.map((item) => {
             const day = notificationDay(item.createdAt);
             const showDay = day !== previousDay;
+            const isUnread = !item.readAt;
+            const showGroup = previousReadState !== isUnread;
             previousDay = day;
+            previousReadState = isUnread;
             const copy = notificationCopy(item);
             const busy = pending.has(item.notificationId);
             return (
               <div key={item.notificationId}>
+                {showGroup && (
+                  <h2 className="notification-day">
+                    {isUnread ? "읽지 않은 알림" : "읽은 알림"}
+                  </h2>
+                )}
                 {showDay && <h2 className="notification-day">{day}</h2>}
                 <article
                   className={`notification-card ${item.readAt ? "read" : "unread"}`}
+                  data-notification-id={item.notificationId}
                 >
                   <button
                     type="button"
@@ -204,7 +444,7 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
             {page.loading ? "소식을 불러오고 있어요…" : "이전 소식 더 보기"}
           </button>
         )}
-        {page.items.length > 0 && !page.pageInfo.hasNext && (
+        {displayItems.length > 0 && !page.pageInfo.hasNext && (
           <p className="notification-end">
             소중한 신호를 모두 확인했어요 · *23#
           </p>

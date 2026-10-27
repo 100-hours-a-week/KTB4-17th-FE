@@ -134,3 +134,25 @@ export function mergeNotifications(current, incoming) {
     return left > right ? -1 : left < right ? 1 : 0;
   });
 }
+
+export function sortNotificationsUnreadFirst(items) {
+  return [...items].sort((a, b) => {
+    const unreadOrder = Number(!b.readAt) - Number(!a.readAt);
+    if (unreadOrder !== 0) return unreadOrder;
+
+    const leftCreatedAt = notificationDate(a.createdAt).getTime();
+    const rightCreatedAt = notificationDate(b.createdAt).getTime();
+    if (Number.isFinite(leftCreatedAt) && Number.isFinite(rightCreatedAt)) {
+      if (leftCreatedAt !== rightCreatedAt)
+        return rightCreatedAt - leftCreatedAt;
+    } else if (Number.isFinite(leftCreatedAt)) {
+      return -1;
+    } else if (Number.isFinite(rightCreatedAt)) {
+      return 1;
+    }
+
+    const left = BigInt(a.notificationId);
+    const right = BigInt(b.notificationId);
+    return left > right ? -1 : left < right ? 1 : 0;
+  });
+}
