@@ -14,7 +14,9 @@ export function useUnreadNotificationCatalog(subject, count) {
   useEffect(() => {
     if (!subject || count == null) return undefined;
     const current = snapshotRef.current;
-    const knownUnreadCount = current.items.filter((item) => !item.readAt).length;
+    const knownUnreadCount = current.items.filter(
+      (item) => !item.readAt,
+    ).length;
     if (
       current.subject === subject &&
       current.complete &&
@@ -40,7 +42,9 @@ export function useUnreadNotificationCatalog(subject, count) {
     })
       .then(({ items, complete }) => {
         if (!complete || !isCurrent()) return;
-        const unreadIds = new Set(items.map((item) => String(item.notificationId)));
+        const unreadIds = new Set(
+          items.map((item) => String(item.notificationId)),
+        );
         const readAt = new Date().toISOString();
         const previous = snapshotRef.current;
         const byId = new Map();
@@ -49,9 +53,7 @@ export function useUnreadNotificationCatalog(subject, count) {
             const id = String(item.notificationId);
             byId.set(
               id,
-              unreadIds.has(id) || item.readAt
-                ? item
-                : { ...item, readAt },
+              unreadIds.has(id) || item.readAt ? item : { ...item, readAt },
             );
           }
         }

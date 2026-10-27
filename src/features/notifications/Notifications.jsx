@@ -19,12 +19,12 @@ import {
   NotificationIllustration,
   PagerIcon,
 } from "./NotificationControls.jsx";
+import {
+  notificationCategory as categoryForType,
+  emptyUnreadCategories,
+} from "./unread.js";
 import { useNotificationInbox } from "./useNotificationInbox.js";
 import { useUnreadNotificationCatalog } from "./useUnreadNotificationCatalog.js";
-import {
-  emptyUnreadCategories,
-  notificationCategory as categoryForType,
-} from "./unread.js";
 
 const notificationCategory = (value) =>
   NOTIFICATION_CATEGORIES.some(([key]) => key === value) ? value : "ALL";
@@ -67,11 +67,11 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
   const readRefreshTimer = useRef(null);
   const readRefreshPending = useRef(false);
   const mainRef = useRef(null);
+  const subjectRef = useRef(notifications.subject);
 
   const displayItems = useMemo(() => {
     const catalogItems = unreadCatalog.items.filter(
-      (item) =>
-        category === "ALL" || categoryForType(item.type) === category,
+      (item) => category === "ALL" || categoryForType(item.type) === category,
     );
     const merged = mergeNotifications(
       mergeNotifications(catalogItems, page.items),
@@ -86,6 +86,8 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
   }, [category, deletedIds, locallyRead, page.items, unreadCatalog.items]);
 
   useEffect(() => {
+    if (subjectRef.current === notifications.subject) return;
+    subjectRef.current = notifications.subject;
     if (readRefreshTimer.current) {
       window.clearTimeout(readRefreshTimer.current);
       readRefreshTimer.current = null;
@@ -121,7 +123,8 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
 
   useEffect(
     () => () => {
-      if (readRefreshTimer.current) window.clearTimeout(readRefreshTimer.current);
+      if (readRefreshTimer.current)
+        window.clearTimeout(readRefreshTimer.current);
       readRefreshPending.current = false;
       for (const entry of visibilityTimers.current.values())
         window.clearTimeout(entry.timer);
@@ -150,7 +153,10 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
       const toolbarBounds = root
         .querySelector(".notification-toolbar")
         ?.getBoundingClientRect();
-      const top = Math.max(rootBounds.top, toolbarBounds?.bottom ?? rootBounds.top);
+      const top = Math.max(
+        rootBounds.top,
+        toolbarBounds?.bottom ?? rootBounds.top,
+      );
       const bottom = Math.min(rootBounds.bottom, window.innerHeight);
       const left = Math.max(rootBounds.left, 0);
       const right = Math.min(rootBounds.right, window.innerWidth);
@@ -172,7 +178,8 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
           const id = String(entry.target.dataset.notificationId || "");
           const requestKey = `${notifications.subject}:${id}`;
           const item = itemsById.get(id);
-          const visible = entry.isIntersecting && entry.intersectionRatio >= 0.5;
+          const visible =
+            entry.isIntersecting && entry.intersectionRatio >= 0.5;
           const existing = visibilityTimers.current.get(id);
           if (
             !visible ||
@@ -227,7 +234,9 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
     const observeCards = () =>
       root
         .querySelectorAll(".notification-card[data-notification-id]")
-        .forEach((element) => observer.observe(element));
+        .forEach((element) => {
+          observer.observe(element);
+        });
     observeCards();
     const resume = () => {
       if (document.visibilityState === "hidden") return;
@@ -302,7 +311,9 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
         id="main-content"
         tabIndex={-1}
         className="main-scroll notifications-main"
-        aria-busy={page.loading || (!displayItems.length && unreadCatalog.loading)}
+        aria-busy={
+          page.loading || (!displayItems.length && unreadCatalog.loading)
+        }
       >
         <div className="notification-toolbar">
           <div className="notification-heading">
