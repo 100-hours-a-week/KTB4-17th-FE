@@ -5,6 +5,7 @@ import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import {
   defaultPreferences,
   PREFERENCE_CHOICES,
+  PREFERENCE_SINGLE_CHOICES,
   preferenceSummary,
   preferencesFromResponse,
   preferencesPayload,
@@ -20,21 +21,27 @@ const saved = {
   religion: ["NONE", "CATHOLIC"],
   drinking: ["NEVER", "SOCIAL"],
   smoking: ["NON_SMOKER"],
+  preferredGenders: ["FEMALE"],
 };
 
-test("unconfigured server values retain unrestricted nulls and empty lists", () => {
+test("unconfigured preferences keep open ranges and use the service gender default", () => {
+  const unconfigured = {
+    ...defaultPreferences(),
+    preferredGenders: ["MALE"],
+  };
   assert.deepEqual(
-    preferencesFromResponse({ preference: defaultPreferences() }),
-    defaultPreferences(),
+    preferencesFromResponse({ preference: unconfigured }),
+    unconfigured,
   );
+  assert.equal(validatePreferences(unconfigured), "");
   assert.deepEqual(
     preferencesFromResponse({ preference: null }),
     defaultPreferences(),
   );
-  assert.equal(validatePreferences(defaultPreferences()), "");
+  assert.match(validatePreferences(defaultPreferences()), /성별/);
 });
 
-test("saved preferences load all seven fields and do not mutate the API response", () => {
+test("saved preferences load all fields and do not mutate the API response", () => {
   const result = preferencesFromResponse({ preference: saved });
   assert.deepEqual(result, saved);
   result.religion.push("OTHER");
@@ -95,6 +102,27 @@ test("multiple choices toggle independently; any clears all constraints", () => 
   );
 });
 
+test("gender preferences require one supported value and normalize old dual selections", () => {
+  for (const selected of [[], ["MALE", "FEMALE"], ["UNKNOWN"], "MALE", null]) {
+    assert.notEqual(
+      validatePreferences({ ...saved, preferredGenders: selected }),
+      "",
+      JSON.stringify(selected),
+    );
+  }
+
+  assert.equal(
+    validatePreferences({ ...saved, preferredGenders: ["MALE"] }),
+    "",
+  );
+  assert.deepEqual(
+    preferencesFromResponse({
+      preference: { ...saved, preferredGenders: ["FEMALE", "MALE"] },
+    }).preferredGenders,
+    ["FEMALE"],
+  );
+});
+
 test("invalid bounds cannot be submitted, including fractions and reversed ranges", () => {
   for (const [key, value] of [
     ["minAge", 18],
@@ -133,6 +161,22 @@ test("choice payloads reject unsupported enums, duplicates, null elements and sc
       ["UNKNOWN"],
       [field.options[0][0], field.options[0][0]],
       "NONE",
+      null,
+    ]) {
+      assert.notEqual(
+        validatePreferences({ ...saved, [field.key]: selected }),
+        "",
+      );
+    }
+  }
+  for (const field of PREFERENCE_SINGLE_CHOICES) {
+    for (const selected of [
+      [],
+      ["ANY"],
+      [null],
+      ["UNKNOWN"],
+      ["MALE", "FEMALE"],
+      "MALE",
       null,
     ]) {
       assert.notEqual(
