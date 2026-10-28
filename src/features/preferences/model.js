@@ -10,12 +10,12 @@ export const GENDER_CHOICES = [
   ["FEMALE", "여성"],
 ];
 
-export const PREFERENCE_SINGLE_CHOICES = [
+export const PREFERENCE_REQUIRED_CHOICES = [
   {
     key: "preferredGenders",
     label: "성별",
     options: GENDER_CHOICES,
-    selectionMode: "single",
+    selectionMode: "required-multiple",
   },
 ];
 
@@ -43,9 +43,13 @@ export function defaultPreferences() {
 export function preferencesFromResponse(response) {
   const preference = response?.preference || defaultPreferences();
   const preferredGenders = Array.isArray(preference.preferredGenders)
-    ? preference.preferredGenders.filter((value) =>
-        GENDER_CHOICES.some(([key]) => key === value),
-      )
+    ? [
+        ...new Set(
+          preference.preferredGenders.filter((value) =>
+            GENDER_CHOICES.some(([key]) => key === value),
+          ),
+        ),
+      ]
     : [];
   const ageBound = (value) =>
     value == null
@@ -62,9 +66,7 @@ export function preferencesFromResponse(response) {
     ...Object.fromEntries(
       PREFERENCE_CHOICES.map(({ key }) => [key, [...(preference[key] || [])]]),
     ),
-    // Older saved records may contain both values. Keep one deterministically
-    // so the single-select UI and the next save always use one target gender.
-    preferredGenders: preferredGenders.slice(0, 1),
+    preferredGenders,
   };
 }
 
@@ -82,6 +84,13 @@ export function togglePreference(selected, value) {
   return selected.includes(value)
     ? selected.filter((item) => item !== value)
     : [...selected, value];
+}
+
+export function toggleRequiredPreference(selected, value) {
+  if (!selected.includes(value)) return [...selected, value];
+  return selected.length > 1
+    ? selected.filter((item) => item !== value)
+    : selected;
 }
 
 export function preferenceSummary(selected, options) {
@@ -118,14 +127,15 @@ export function validatePreferences(preference) {
     )
       return `${label} 선택을 다시 확인해 주세요.`;
   }
-  for (const { key, options } of PREFERENCE_SINGLE_CHOICES) {
+  for (const { key, options } of PREFERENCE_REQUIRED_CHOICES) {
     const selected = preference[key];
     if (
       !Array.isArray(selected) ||
-      selected.length !== 1 ||
-      !options.some(([value]) => value === selected[0])
+      selected.length === 0 ||
+      selected.some((value) => !options.some(([key]) => key === value)) ||
+      new Set(selected).size !== selected.length
     )
-      return "성별은 남성 또는 여성 중 하나를 선택해 주세요.";
+      return "성별은 남성 또는 여성 중 하나 이상 선택해 주세요.";
   }
   return "";
 }
