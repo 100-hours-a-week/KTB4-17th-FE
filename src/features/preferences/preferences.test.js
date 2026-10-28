@@ -5,11 +5,12 @@ import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import {
   defaultPreferences,
   PREFERENCE_CHOICES,
-  PREFERENCE_SINGLE_CHOICES,
+  PREFERENCE_REQUIRED_CHOICES,
   preferenceSummary,
   preferencesFromResponse,
   preferencesPayload,
   togglePreference,
+  toggleRequiredPreference,
   validatePreferences,
 } from "./model.js";
 
@@ -102,8 +103,8 @@ test("multiple choices toggle independently; any clears all constraints", () => 
   );
 });
 
-test("gender preferences require one supported value and normalize old dual selections", () => {
-  for (const selected of [[], ["MALE", "FEMALE"], ["UNKNOWN"], "MALE", null]) {
+test("gender preferences require at least one supported value and allow both genders", () => {
+  for (const selected of [[], ["UNKNOWN"], ["MALE", "MALE"], "MALE", null]) {
     assert.notEqual(
       validatePreferences({ ...saved, preferredGenders: selected }),
       "",
@@ -112,15 +113,29 @@ test("gender preferences require one supported value and normalize old dual sele
   }
 
   assert.equal(
-    validatePreferences({ ...saved, preferredGenders: ["MALE"] }),
+    validatePreferences({
+      ...saved,
+      preferredGenders: ["MALE", "FEMALE"],
+    }),
     "",
   );
   assert.deepEqual(
     preferencesFromResponse({
-      preference: { ...saved, preferredGenders: ["FEMALE", "MALE"] },
+      preference: {
+        ...saved,
+        preferredGenders: ["FEMALE", "MALE", "FEMALE"],
+      },
     }).preferredGenders,
-    ["FEMALE"],
+    ["FEMALE", "MALE"],
   );
+  assert.deepEqual(toggleRequiredPreference(["MALE"], "FEMALE"), [
+    "MALE",
+    "FEMALE",
+  ]);
+  assert.deepEqual(toggleRequiredPreference(["MALE", "FEMALE"], "MALE"), [
+    "FEMALE",
+  ]);
+  assert.deepEqual(toggleRequiredPreference(["FEMALE"], "FEMALE"), ["FEMALE"]);
 });
 
 test("invalid bounds cannot be submitted, including fractions and reversed ranges", () => {
@@ -169,13 +184,13 @@ test("choice payloads reject unsupported enums, duplicates, null elements and sc
       );
     }
   }
-  for (const field of PREFERENCE_SINGLE_CHOICES) {
+  for (const field of PREFERENCE_REQUIRED_CHOICES) {
     for (const selected of [
       [],
       ["ANY"],
       [null],
       ["UNKNOWN"],
-      ["MALE", "FEMALE"],
+      ["MALE", "MALE"],
       "MALE",
       null,
     ]) {

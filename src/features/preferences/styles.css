@@ -243,11 +243,6 @@
   cursor: pointer;
 }
 
-.preference-sheet-option input[type="radio"] {
-  height: 24px;
-  border-radius: 50%;
-}
-
 .preference-sheet-option input:checked {
   border-color: var(--purple);
   background: var(--purple);
@@ -260,15 +255,6 @@
   border-bottom: 2px solid var(--paper);
   content: "";
   transform: translateY(-2px) rotate(45deg);
-}
-
-.preference-sheet-option input[type="radio"]:checked::before {
-  width: 10px;
-  height: 10px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--paper);
-  transform: none;
 }
 
 @media (width >= 600px) {

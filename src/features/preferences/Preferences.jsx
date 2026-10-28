@@ -11,11 +11,12 @@ import {
   defaultPreferences,
   PREFERENCE_CHOICES,
   PREFERENCE_RANGES,
-  PREFERENCE_SINGLE_CHOICES,
+  PREFERENCE_REQUIRED_CHOICES,
   preferenceSummary,
   preferencesFromResponse,
   preferencesPayload,
   togglePreference,
+  toggleRequiredPreference,
   validatePreferences,
 } from "./model.js";
 
@@ -78,11 +79,9 @@ function RangeField({ name, preference, onChange }) {
 
 function PreferenceSheet({ field, selected, onDone, onClose }) {
   const dialogRef = useRef(null);
-  const isSingle = field.selectionMode === "single";
-  const [draft, setDraft] = useState(() =>
-    isSingle ? selected[0] : [...selected],
-  );
-  const options = isSingle
+  const requiresSelection = field.selectionMode === "required-multiple";
+  const [draft, setDraft] = useState(() => [...selected]);
+  const options = requiresSelection
     ? field.options
     : [["ANY", "상관없음"], ...field.options];
   useEffect(() => {
@@ -127,7 +126,7 @@ function PreferenceSheet({ field, selected, onDone, onClose }) {
         <PixelIcon name="x" scale={3} />
       </button>
       <h1 id="preference-sheet-title">
-        {isSingle
+        {field.key === "preferredGenders"
           ? "성별을 선택해 주세요"
           : `${field.label}${field.key === "religion" ? "를 선택해 주세요" : ""}`}
       </h1>
@@ -137,19 +136,17 @@ function PreferenceSheet({ field, selected, onDone, onClose }) {
           <label className="preference-sheet-option" key={value}>
             <span>{label}</span>
             <input
-              type={isSingle ? "radio" : "checkbox"}
+              type="checkbox"
               name={`preference-${field.key}`}
               value={value}
               checked={
-                isSingle
-                  ? draft === value
-                  : value === "ANY"
-                    ? draft.length === 0
-                    : draft.includes(value)
+                value === "ANY" ? draft.length === 0 : draft.includes(value)
               }
               onChange={() =>
                 setDraft((old) =>
-                  isSingle ? value : togglePreference(old, value),
+                  requiresSelection
+                    ? toggleRequiredPreference(old, value)
+                    : togglePreference(old, value),
                 )
               }
             />
@@ -158,7 +155,7 @@ function PreferenceSheet({ field, selected, onDone, onClose }) {
       </fieldset>
       <PixelButton
         className="preferences-primary"
-        onClick={() => onDone(isSingle ? [draft] : draft)}
+        onClick={() => onDone(draft)}
       >
         완료
       </PixelButton>
@@ -303,7 +300,7 @@ export function Preferences({ navigate, toast, onSaved }) {
                 onChange={set}
               />
               <div className="preference-choice-rows">
-                {[...PREFERENCE_SINGLE_CHOICES, ...PREFERENCE_CHOICES].map(
+                {[...PREFERENCE_REQUIRED_CHOICES, ...PREFERENCE_CHOICES].map(
                   (field) => (
                     <button
                       type="button"
