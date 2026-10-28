@@ -11,6 +11,7 @@ import {
   defaultPreferences,
   PREFERENCE_CHOICES,
   PREFERENCE_RANGES,
+  PREFERENCE_SINGLE_CHOICES,
   preferenceSummary,
   preferencesFromResponse,
   preferencesPayload,
@@ -77,7 +78,13 @@ function RangeField({ name, preference, onChange }) {
 
 function PreferenceSheet({ field, selected, onDone, onClose }) {
   const dialogRef = useRef(null);
-  const [draft, setDraft] = useState(() => [...selected]);
+  const isSingle = field.selectionMode === "single";
+  const [draft, setDraft] = useState(() =>
+    isSingle ? selected[0] : [...selected],
+  );
+  const options = isSingle
+    ? field.options
+    : [["ANY", "상관없음"], ...field.options];
   useEffect(() => {
     const dialog = dialogRef.current;
     dialog.showModal();
@@ -120,28 +127,38 @@ function PreferenceSheet({ field, selected, onDone, onClose }) {
         <PixelIcon name="x" scale={3} />
       </button>
       <h1 id="preference-sheet-title">
-        {field.label}
-        {field.key === "religion" ? "를 선택해 주세요" : ""}
+        {isSingle
+          ? "성별을 선택해 주세요"
+          : `${field.label}${field.key === "religion" ? "를 선택해 주세요" : ""}`}
       </h1>
-      <div className="preference-sheet-options">
-        {[["ANY", "상관없음"], ...field.options].map(([value, label]) => (
+      <fieldset className="preference-sheet-options">
+        <legend className="sr-only">{field.label}</legend>
+        {options.map(([value, label]) => (
           <label className="preference-sheet-option" key={value}>
             <span>{label}</span>
             <input
-              type="checkbox"
+              type={isSingle ? "radio" : "checkbox"}
               name={`preference-${field.key}`}
               value={value}
               checked={
-                value === "ANY" ? draft.length === 0 : draft.includes(value)
+                isSingle
+                  ? draft === value
+                  : value === "ANY"
+                    ? draft.length === 0
+                    : draft.includes(value)
               }
-              onChange={() => setDraft((old) => togglePreference(old, value))}
+              onChange={() =>
+                setDraft((old) =>
+                  isSingle ? value : togglePreference(old, value),
+                )
+              }
             />
           </label>
         ))}
-      </div>
+      </fieldset>
       <PixelButton
         className="preferences-primary"
-        onClick={() => onDone(draft)}
+        onClick={() => onDone(isSingle ? [draft] : draft)}
       >
         완료
       </PixelButton>
@@ -177,7 +194,10 @@ export function Preferences({ navigate, toast, onSaved }) {
       .getPreferences({ signal: controller.signal })
       .then((response) => {
         if (!active) return;
-        setPreference(preferencesFromResponse(response));
+        const loadedPreference = preferencesFromResponse(response);
+        if (!loadedPreference.preferredGenders.length)
+          throw new Error("선호 성별 정보를 확인할 수 없어요.");
+        setPreference(loadedPreference);
         setStatus("ready");
       })
       .catch((requestError) => {
@@ -283,21 +303,29 @@ export function Preferences({ navigate, toast, onSaved }) {
                 onChange={set}
               />
               <div className="preference-choice-rows">
-                {PREFERENCE_CHOICES.map((field) => (
-                  <button
-                    type="button"
-                    className="preference-choice-row"
-                    key={field.key}
-                    onClick={() => setSheet(field)}
-                    aria-haspopup="dialog"
-                  >
-                    <span>{field.label}</span>
-                    <span className="preference-choice-summary">
-                      {preferenceSummary(preference[field.key], field.options)}
-                    </span>
-                    <PixelIcon name="chev" className="preference-choice-chev" />
-                  </button>
-                ))}
+                {[...PREFERENCE_SINGLE_CHOICES, ...PREFERENCE_CHOICES].map(
+                  (field) => (
+                    <button
+                      type="button"
+                      className="preference-choice-row"
+                      key={field.key}
+                      onClick={() => setSheet(field)}
+                      aria-haspopup="dialog"
+                    >
+                      <span>{field.label}</span>
+                      <span className="preference-choice-summary">
+                        {preferenceSummary(
+                          preference[field.key],
+                          field.options,
+                        )}
+                      </span>
+                      <PixelIcon
+                        name="chev"
+                        className="preference-choice-chev"
+                      />
+                    </button>
+                  ),
+                )}
               </div>
             </fieldset>
             {saveError && (

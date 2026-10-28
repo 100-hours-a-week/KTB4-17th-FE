@@ -5,6 +5,20 @@ export const PREFERENCE_RANGES = {
   height: { min: 130, max: 220, label: "키", unit: "cm" },
 };
 
+export const GENDER_CHOICES = [
+  ["MALE", "남성"],
+  ["FEMALE", "여성"],
+];
+
+export const PREFERENCE_SINGLE_CHOICES = [
+  {
+    key: "preferredGenders",
+    label: "성별",
+    options: GENDER_CHOICES,
+    selectionMode: "single",
+  },
+];
+
 export const PREFERENCE_CHOICES = [
   { key: "religion", label: "종교", options: religions },
   { key: "drinking", label: "음주", options: drinkings },
@@ -20,6 +34,7 @@ export function defaultPreferences() {
     religion: [],
     drinking: [],
     smoking: [],
+    preferredGenders: [],
   };
 }
 
@@ -27,6 +42,11 @@ export function defaultPreferences() {
 // Sliders display the service's full supported range for null bounds.
 export function preferencesFromResponse(response) {
   const preference = response?.preference || defaultPreferences();
+  const preferredGenders = Array.isArray(preference.preferredGenders)
+    ? preference.preferredGenders.filter((value) =>
+        GENDER_CHOICES.some(([key]) => key === value),
+      )
+    : [];
   const ageBound = (value) =>
     value == null
       ? null
@@ -42,6 +62,9 @@ export function preferencesFromResponse(response) {
     ...Object.fromEntries(
       PREFERENCE_CHOICES.map(({ key }) => [key, [...(preference[key] || [])]]),
     ),
+    // Older saved records may contain both values. Keep one deterministically
+    // so the single-select UI and the next save always use one target gender.
+    preferredGenders: preferredGenders.slice(0, 1),
   };
 }
 
@@ -94,6 +117,15 @@ export function validatePreferences(preference) {
       new Set(selected).size !== selected.length
     )
       return `${label} 선택을 다시 확인해 주세요.`;
+  }
+  for (const { key, options } of PREFERENCE_SINGLE_CHOICES) {
+    const selected = preference[key];
+    if (
+      !Array.isArray(selected) ||
+      selected.length !== 1 ||
+      !options.some(([value]) => value === selected[0])
+    )
+      return "성별은 남성 또는 여성 중 하나를 선택해 주세요.";
   }
   return "";
 }
