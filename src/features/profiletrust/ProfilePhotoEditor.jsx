@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { asset } from "../../shared/assets.js";
 import {
   BugReportLink,
@@ -235,10 +236,13 @@ export function ProfilePhotoEditor({
   compactPose = false,
   disabled = false,
   onChange,
+  onVerifiedPhotoSave,
 }) {
   const [items, setItems] = useState(initialPhotos);
   const [verifying, setVerifying] = useState(requireVerification);
   const [error, setError] = useState("");
+  const [photoNotice, setPhotoNotice] = useState("");
+  const [savingVerifiedPhoto, setSavingVerifiedPhoto] = useState(false);
   const [takingPhoto, setTakingPhoto] = useState(false);
   const itemsRef = useRef(items);
   const ownedUrls = useRef(new Set());
@@ -247,6 +251,7 @@ export function ProfilePhotoEditor({
   const dragged = useRef(null);
   const section = useRef(null);
   const heading = useRef(null);
+  const autoSaveAttempted = useRef(false);
   const trust = useFaceVerification();
   const showHelp = !compactPose || !verifying || trust.phase === "photo";
   const handGuideSide = trust.progress.live?.handSide ?? null;
@@ -283,12 +288,12 @@ export function ProfilePhotoEditor({
     }
   }, [verifying, requireVerification]);
 
-  function updateItems(update) {
+  const updateItems = useCallback((update) => {
     const next =
       typeof update === "function" ? update(itemsRef.current) : update;
     itemsRef.current = next;
     setItems(next);
-  }
+  }, []);
 
   async function addPhoto(file) {
     if (disabled || itemsRef.current.length >= 6) return;
@@ -348,31 +353,89 @@ export function ProfilePhotoEditor({
       updateItems((photos) => reorderPhotos(photos, source, target));
   }
 
-  function acceptVerifiedPhoto() {
-    if (!trust.result) return;
-    const previewUrl = URL.createObjectURL(trust.result.file);
-    ownedUrls.current.add(previewUrl);
-    for (const item of itemsRef.current.filter((photo) => photo.isFrontal)) {
-      if (ownedUrls.current.has(item.previewUrl)) {
-        URL.revokeObjectURL(item.previewUrl);
-        ownedUrls.current.delete(item.previewUrl);
-      }
-    }
-    updateItems((photos) =>
-      replaceFrontalPhoto(photos, {
+  const acceptVerifiedPhoto = useCallback(
+    async ({ persist = false } = {}) => {
+      if (!trust.result) return;
+      const previewUrl = URL.createObjectURL(trust.result.file);
+      ownedUrls.current.add(previewUrl);
+      const nextItems = replaceFrontalPhoto(itemsRef.current, {
         localId: createPhotoId(),
         fileId: trust.result.fileId,
         previewUrl,
         isFrontal: true,
         uploading: false,
-      }),
-    );
-    setError("");
-    setVerifying(false);
-  }
+      });
+      const images = nextItems.map(({ fileId, isFrontal }) => ({
+        fileId,
+        isFrontal,
+      }));
+
+      if (persist && onVerifiedPhotoSave) {
+        setSavingVerifiedPhoto(true);
+        setError("");
+        if (nextItems.some((item) => !item.fileId || item.uploading)) {
+          URL.revokeObjectURL(previewUrl);
+          ownedUrls.current.delete(previewUrl);
+          setError("다른 사진 업로드가 끝난 뒤 다시 시도해 주세요.");
+          setSavingVerifiedPhoto(false);
+          return;
+        }
+        try {
+          await onVerifiedPhotoSave(images);
+        } catch (saveError) {
+          URL.revokeObjectURL(previewUrl);
+          ownedUrls.current.delete(previewUrl);
+          setError(
+            apiErrorMessage(
+              saveError,
+              "인증된 정면 사진을 저장하지 못했어요. 다시 시도해 주세요.",
+            ),
+          );
+          setSavingVerifiedPhoto(false);
+          return;
+        }
+      }
+
+      for (const item of itemsRef.current.filter((photo) => photo.isFrontal)) {
+        if (ownedUrls.current.has(item.previewUrl)) {
+          URL.revokeObjectURL(item.previewUrl);
+          ownedUrls.current.delete(item.previewUrl);
+        }
+      }
+      updateItems(nextItems);
+      setError("");
+      setPhotoNotice(
+        persist && onVerifiedPhotoSave ? "정면 사진을 저장했어요." : "",
+      );
+      setSavingVerifiedPhoto(false);
+      setVerifying(false);
+    },
+    [onVerifiedPhotoSave, trust.result, updateItems],
+  );
+
+  useEffect(() => {
+    if (
+      requireVerification ||
+      !onVerifiedPhotoSave ||
+      trust.phase !== "success" ||
+      !trust.result ||
+      autoSaveAttempted.current
+    )
+      return;
+    autoSaveAttempted.current = true;
+    void acceptVerifiedPhoto({ persist: true });
+  }, [
+    acceptVerifiedPhoto,
+    onVerifiedPhotoSave,
+    requireVerification,
+    trust.phase,
+    trust.result,
+  ]);
 
   function beginReplacement() {
     if (disabled) return;
+    autoSaveAttempted.current = false;
+    setPhotoNotice("");
     setTakingPhoto(false);
     trust.reset();
     setVerifying(true);
@@ -394,8 +457,10 @@ export function ProfilePhotoEditor({
     ? "정면 사진 변경 · 본인 인증 다시 하기"
     : "정면 사진 등록 · 본인 인증하기";
   const frontalPhotoHelp = hasFrontalPhoto
-    ? "정면 사진을 교체할 때만 사진 확인과 카메라 인증을 다시 진행해요. 순서만 바꿀 때는 다시 인증하지 않아요."
-    : "사진을 저장하려면 정면 사진을 등록해야 해요. 선택한 정면 사진은 얼굴 인증을 마친 뒤 갤러리에 추가돼요.";
+    ? "정면 사진은 인증을 마치면 바로 저장돼요. 다른 사진 추가나 순서 변경은 아래 저장하기를 눌러 주세요."
+    : onVerifiedPhotoSave
+      ? "정면 사진은 인증을 마치면 바로 저장돼요. 다른 사진은 나중에 추가할 수 있어요."
+      : "사진을 저장하려면 정면 사진을 등록해야 해요. 선택한 정면 사진은 얼굴 인증을 마친 뒤 갤러리에 추가돼요.";
   return (
     <section
       ref={section}
@@ -812,23 +877,55 @@ export function ProfilePhotoEditor({
                   alt="본인 인증 성공"
                 />
               </div>
-              {showHelp && (
+              {onVerifiedPhotoSave ? (
                 <>
-                  <p className="trust-subcopy">
-                    이제 사진으로 나를 소개해볼까요?
+                  <p className="trust-subcopy" role="status">
+                    {savingVerifiedPhoto
+                      ? "인증한 정면 사진을 바로 저장하고 있어요."
+                      : error
+                        ? "인증은 완료됐지만 정면 사진 저장에 실패했어요."
+                        : "인증한 정면 사진을 바로 저장하고 있어요."}
                   </p>
-                  <div className="trust-note">
-                    <strong>나를 보여줄 사진을 더해보세요</strong>
-                    <p>
-                      인증한 사진에는 정면 사진 표시가 붙어요. 사진 순서를 바꿔
-                      추천 피드에 보여줄 대표사진을 정할 수 있어요.
+                  {error && (
+                    <p className="field-error" role="alert">
+                      {error}
                     </p>
-                  </div>
+                  )}
+                  {error && (
+                    <PixelButton
+                      onClick={() =>
+                        void acceptVerifiedPhoto({ persist: true })
+                      }
+                      disabled={disabled || savingVerifiedPhoto}
+                    >
+                      저장 다시 시도
+                    </PixelButton>
+                  )}
+                </>
+              ) : (
+                <>
+                  {showHelp && (
+                    <>
+                      <p className="trust-subcopy">
+                        이제 사진으로 나를 소개해볼까요?
+                      </p>
+                      <div className="trust-note">
+                        <strong>나를 보여줄 사진을 더해보세요</strong>
+                        <p>
+                          인증한 사진에는 정면 사진 표시가 붙어요. 사진 순서를
+                          바꿔 추천 피드에 보여줄 대표사진을 정할 수 있어요.
+                        </p>
+                      </div>
+                    </>
+                  )}
+                  <PixelButton
+                    onClick={() => void acceptVerifiedPhoto()}
+                    disabled={disabled}
+                  >
+                    프로필 사진 설정하기
+                  </PixelButton>
                 </>
               )}
-              <PixelButton onClick={acceptVerifiedPhoto} disabled={disabled}>
-                프로필 사진 설정하기
-              </PixelButton>
             </>
           )}
           {canCancel && (
@@ -972,6 +1069,11 @@ export function ProfilePhotoEditor({
           </button>
           {showHelp && (
             <p className="trust-subcopy trust-small">{frontalPhotoHelp}</p>
+          )}
+          {photoNotice && (
+            <p className="trust-subcopy trust-small" role="status">
+              {photoNotice}
+            </p>
           )}
           {error && (
             <p className="field-error" role="alert">
