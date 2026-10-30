@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { useAppState } from "../../shared/appState.jsx";
 import { asset } from "../../shared/assets.js";
@@ -430,6 +430,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
   const [nicknameError, setNicknameError] = useState("");
   const [heightError, setHeightError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingPhoto, setIsSavingPhoto] = useState(false);
   const initialNickname = useRef("");
   const saveInFlight = useRef(false);
 
@@ -492,6 +493,18 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
     keepLegacyPhoto ||
     photoState.ready ||
     samePhotoItems(initialPhotos, photoState.images);
+  const saveVerifiedPhoto = useCallback(async (images) => {
+    setIsSavingPhoto(true);
+    try {
+      await saveProfileImages(images);
+      setInitialPhotos(images);
+      setPhotoState({ images, ready: true, busy: false });
+      setLegacyPhoto("");
+      setReplacingLegacyPhoto(false);
+    } finally {
+      setIsSavingPhoto(false);
+    }
+  }, []);
   const navigateWhenIdle = (path) => {
     if (!saveInFlight.current) navigate(path);
   };
@@ -500,6 +513,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
     if (
       isLoadingProfile ||
       profileLoadFailed ||
+      isSavingPhoto ||
       saveInFlight.current ||
       !photosReady
     )
@@ -609,7 +623,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
         id="main-content"
         tabIndex={-1}
         className="main-scroll edit-main"
-        aria-busy={isLoadingProfile || isSaving}
+        aria-busy={isLoadingProfile || isSaving || isSavingPhoto}
       >
         {isLoadingProfile ? (
           <p className="profile-load-state" role="status">
@@ -656,8 +670,9 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                 <ProfilePhotoEditor
                   initialPhotos={initialPhotos}
                   compactPose
-                  disabled={isSaving}
+                  disabled={isSaving || isSavingPhoto}
                   onChange={setPhotoState}
+                  onVerifiedPhotoSave={saveVerifiedPhoto}
                 />
               )}
               {legacyPhoto && replacingLegacyPhoto && (
@@ -763,7 +778,10 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
               />
             </Field>
             <div className="edit-actions">
-              <PixelButton onClick={save} disabled={isSaving || !photosReady}>
+              <PixelButton
+                onClick={save}
+                disabled={isSaving || isSavingPhoto || !photosReady}
+              >
                 {isSaving ? "저장 중…" : "저장하기"}
               </PixelButton>
             </div>
