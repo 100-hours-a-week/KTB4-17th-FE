@@ -552,6 +552,15 @@ export function Home({
     <>
       <BrandHeader navigate={navigate} className="home-header">
         <button
+          className="home-popular-profiles-button"
+          type="button"
+          onClick={() => navigate("/popular-profiles")}
+          aria-label="인기 프로필 순위 보기"
+          title="인기 프로필 순위"
+        >
+          <span aria-hidden="true">TOP</span>
+        </button>
+        <button
           className="home-preference-action"
           type="button"
           onClick={() => navigate("/preferences")}
