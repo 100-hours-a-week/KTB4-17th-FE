@@ -132,7 +132,7 @@ export function BottomNav({ path, navigate, unreadMessageCount = null }) {
           href === "/chats" ? formatUnreadCount(unreadMessageCount) : "";
         const active =
           href === "/home"
-            ? path === "/" || path === "/home"
+            ? path === "/" || path === "/home" || path === "/popular-profiles"
             : path === href || path.startsWith(`${href}/`);
         return (
           <a

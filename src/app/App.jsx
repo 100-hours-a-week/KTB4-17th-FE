@@ -27,6 +27,7 @@ import { Likes } from "../features/matching/Likes.jsx";
 import { NotificationProvider } from "../features/notifications/NotificationProvider.jsx";
 import { Notifications } from "../features/notifications/Notifications.jsx";
 import { Onboarding } from "../features/onboarding/Onboarding.jsx";
+import { PopularProfiles } from "../features/popular-profiles/PopularProfiles.jsx";
 import { Preferences } from "../features/preferences/Preferences.jsx";
 import { OtherProfile } from "../features/profile/OtherProfile.jsx";
 import {
@@ -74,6 +75,9 @@ function profileReturnPath(search) {
     const destination = new URL(requested, window.location.origin);
     if (destination.origin !== window.location.origin) return "/home";
     if (destination.pathname === "/notifications") return "/notifications";
+    if (destination.pathname === "/popular-profiles") {
+      return "/popular-profiles";
+    }
     if (destination.pathname === "/likes") {
       const tab = destination.searchParams.get("tab");
       return tab === "sent" || tab === "received"
@@ -397,7 +401,15 @@ function AppRouter() {
   );
   const showNav =
     data.onboarded &&
-    ["/", "/home", "/likes", "/chats", "/my", "/notifications"].includes(path);
+    [
+      "/",
+      "/home",
+      "/popular-profiles",
+      "/likes",
+      "/chats",
+      "/my",
+      "/notifications",
+    ].includes(path);
   const showLanding = path === "/" && !data.session && !handlingOAuthCallback;
   const showPublicLogin = path === "/login" && !handlingOAuthCallback;
 
@@ -476,6 +488,8 @@ function AppRouter() {
         onStartSimulation={startSimulation}
       />
     );
+  else if (path === "/popular-profiles")
+    page = <PopularProfiles navigate={navigate} />;
   else if (/^\/profiles\/\d+$/.test(path))
     page = (
       <OtherProfile
@@ -484,6 +498,7 @@ function AppRouter() {
         navigate={navigate}
         onStartSimulation={startSimulation}
         simulationStartingFor={simulationStartingFor}
+        toast={toast}
       />
     );
   else if (path.startsWith("/profiles/"))
