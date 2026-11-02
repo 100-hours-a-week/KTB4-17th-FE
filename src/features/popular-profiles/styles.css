@@ -44,7 +44,7 @@
 .screen-header.popular-profiles-header {
   height: calc(56px + env(safe-area-inset-top, 0px));
   min-height: calc(56px + env(safe-area-inset-top, 0px));
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-top: env(safe-area-inset-top, 0);
 }
 
 .popular-profiles-sticky-intro {

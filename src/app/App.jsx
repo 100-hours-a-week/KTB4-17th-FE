@@ -27,9 +27,9 @@ import { Likes } from "../features/matching/Likes.jsx";
 import { NotificationProvider } from "../features/notifications/NotificationProvider.jsx";
 import { Notifications } from "../features/notifications/Notifications.jsx";
 import { Onboarding } from "../features/onboarding/Onboarding.jsx";
+import { PopularProfiles } from "../features/popular-profiles/PopularProfiles.jsx";
 import { Preferences } from "../features/preferences/Preferences.jsx";
 import { OtherProfile } from "../features/profile/OtherProfile.jsx";
-import { PopularProfiles } from "../features/popular-profiles/PopularProfiles.jsx";
 import {
   MyPage,
   MyProfile,

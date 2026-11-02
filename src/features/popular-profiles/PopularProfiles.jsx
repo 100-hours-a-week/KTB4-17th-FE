@@ -37,9 +37,7 @@ export function PopularProfiles({ navigate }) {
     try {
       const response = await getPopularProfiles();
       if (version !== requestVersion.current) return;
-      setProfiles(
-        Array.isArray(response?.profiles) ? response.profiles : [],
-      );
+      setProfiles(Array.isArray(response?.profiles) ? response.profiles : []);
     } catch (requestError) {
       if (version !== requestVersion.current) return;
       setProfiles([]);
@@ -172,7 +170,7 @@ export function PopularProfiles({ navigate }) {
           </div>
         )}
       </main>
-      <div className="popular-profiles-sticky-intro" aria-label="인기 프로필 안내">
+      <div className="popular-profiles-sticky-intro">
         <PixelIcon name="heart" scale={1.5} aria-hidden="true" />
         <span>회원들이 많이 좋아한 프로필이에요</span>
         <PixelIcon name="heart" scale={1.5} aria-hidden="true" />

@@ -10,8 +10,8 @@ import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { PhotoSegments, ProfilePhoto } from "../../shared/ui/components.jsx";
 import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import { dateAge } from "../../shared/utils.js";
-import { NotificationButton } from "../notifications/NotificationControls.jsx";
 import * as matchingApi from "../matching/api.js";
+import { NotificationButton } from "../notifications/NotificationControls.jsx";
 import { isProfileAccessUnavailable } from "./access.js";
 import { getMyProfile, getUserProfile } from "./api.js";
 import {
@@ -164,11 +164,7 @@ export function OtherProfile({
       toast?.("본인과 AI 시뮬레이션을 시작할 수 없어요.");
       return;
     }
-    if (
-      actionInFlight.current ||
-      startingSimulation ||
-      !onStartSimulation
-    )
+    if (actionInFlight.current || startingSimulation || !onStartSimulation)
       return;
     actionInFlight.current = true;
     setActionBusy("simulation");
@@ -513,10 +509,7 @@ export function OtherProfile({
             </dl>
           </section>
           {!isOwn && (
-            <section
-              className="other-profile-actions"
-              aria-label="프로필 액션"
-            >
+            <section className="other-profile-actions" aria-label="프로필 액션">
               <button
                 type="button"
                 aria-label="AI 시뮬레이션"
