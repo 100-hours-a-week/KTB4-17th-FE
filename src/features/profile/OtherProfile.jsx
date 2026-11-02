@@ -5,11 +5,13 @@ import {
   useRef,
   useState,
 } from "react";
+import { getAuthSessionSubject } from "../../shared/api/authToken.js";
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { PhotoSegments, ProfilePhoto } from "../../shared/ui/components.jsx";
 import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import { dateAge } from "../../shared/utils.js";
 import { NotificationButton } from "../notifications/NotificationControls.jsx";
+import * as matchingApi from "../matching/api.js";
 import { isProfileAccessUnavailable } from "./access.js";
 import { getMyProfile, getUserProfile } from "./api.js";
 import {
@@ -128,6 +130,7 @@ export function OtherProfile({
   isOwn = false,
   onStartSimulation,
   simulationStartingFor,
+  toast,
 }) {
   const [profile, setProfile] = useState(null);
   const [photoIndex, setPhotoIndex] = useState(0);
@@ -139,17 +142,83 @@ export function OtherProfile({
   const heroRef = useRef(null);
   const [viewerOpen, setViewerOpen] = useState(false);
   const photos = profile?.photos || [];
-  const [simulationBusy, setSimulationBusy] = useState(false);
-  const showAiActions = !isOwn && returnTo?.split("?")[0] === "/likes";
-  const startingSimulation = simulationBusy || simulationStartingFor != null;
+  const [actionBusy, setActionBusy] = useState("");
+  const [likedProfileId, setLikedProfileId] = useState(null);
+  const actionInFlight = useRef(false);
+  const viewerId = Number(getAuthSessionSubject());
+  const viewedProfileId = Number(profile?.userId ?? profile?.id ?? userId);
+  const isSelfProfile =
+    isOwn ||
+    (Number.isSafeInteger(viewerId) &&
+      viewerId > 0 &&
+      Number.isSafeInteger(viewedProfileId) &&
+      viewedProfileId > 0 &&
+      viewerId === viewedProfileId);
+  const likeSent = profile?.id === likedProfileId;
+  const startingSimulation =
+    actionBusy === "simulation" || simulationStartingFor === profile?.id;
 
   async function startSimulation() {
-    if (!profile || startingSimulation || !onStartSimulation) return;
-    setSimulationBusy(true);
+    if (!profile) return;
+    if (isSelfProfile) {
+      toast?.("본인과 AI 시뮬레이션을 시작할 수 없어요.");
+      return;
+    }
+    if (
+      actionInFlight.current ||
+      startingSimulation ||
+      !onStartSimulation
+    )
+      return;
+    actionInFlight.current = true;
+    setActionBusy("simulation");
     try {
       await onStartSimulation(profile.id);
+    } catch (simulationError) {
+      toast?.(
+        apiErrorMessage(
+          simulationError,
+          "시뮬레이션을 시작하지 못했어요. 잠시 후 다시 시도해 주세요.",
+        ),
+      );
     } finally {
-      setSimulationBusy(false);
+      actionInFlight.current = false;
+      setActionBusy("");
+    }
+  }
+
+  function startPractice() {
+    if (!profile) return;
+    if (isSelfProfile) {
+      toast?.("본인 프로필로 AI 연습대화를 시작할 수 없어요.");
+      return;
+    }
+    if (actionInFlight.current) return;
+    navigate(`/ai/practice/${profile.id}`);
+  }
+
+  async function sendLike() {
+    if (!profile) return;
+    if (isSelfProfile) {
+      toast?.("본인 프로필에는 좋아요를 보낼 수 없어요.");
+      return;
+    }
+    if (actionInFlight.current || likeSent) return;
+    actionInFlight.current = true;
+    setActionBusy("like");
+    try {
+      const result = await matchingApi.sendLike(profile.id);
+      setLikedProfileId(profile.id);
+      toast?.(
+        result?.status === "MATCHED"
+          ? `${profile.nickname}님과 매칭됐어요.`
+          : `${profile.nickname}님에게 좋아요를 보냈어요.`,
+      );
+    } catch (requestError) {
+      toast?.(apiErrorMessage(requestError, "좋아요를 보내지 못했어요."));
+    } finally {
+      actionInFlight.current = false;
+      setActionBusy("");
     }
   }
 
@@ -411,43 +480,6 @@ export function OtherProfile({
               </p>
             )}
           </div>
-          {showAiActions && (
-            <section
-              className="other-profile-ai-actions"
-              aria-label="대화 시작 전 알아보기"
-            >
-              <button
-                type="button"
-                disabled={startingSimulation || !onStartSimulation}
-                aria-busy={
-                  simulationBusy || simulationStartingFor === profile.id
-                }
-                onClick={() => void startSimulation()}
-              >
-                <PixelIcon name="sim" scale={3} />
-                <span>
-                  <strong>AI 시뮬레이션</strong>
-                  <small>
-                    {simulationBusy || simulationStartingFor === profile.id
-                      ? "대화를 준비하고 있어요…"
-                      : "두 사람의 대화 호흡 알아보기"}
-                  </small>
-                </span>
-                <PixelIcon name="chev" />
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate(`/ai/practice/${profile.id}`)}
-              >
-                <PixelIcon name="chat" scale={3} />
-                <span>
-                  <strong>AI 연습대화</strong>
-                  <small>첫 메시지를 편하게 연습하기</small>
-                </span>
-                <PixelIcon name="chev" />
-              </button>
-            </section>
-          )}
           <section
             className="other-profile-detail-section"
             aria-label="프로필 상세 정보"
@@ -480,6 +512,48 @@ export function OtherProfile({
               ))}
             </dl>
           </section>
+          {!isOwn && (
+            <section
+              className="other-profile-actions"
+              aria-label="프로필 액션"
+            >
+              <button
+                type="button"
+                aria-label="AI 시뮬레이션"
+                title="AI 시뮬레이션"
+                disabled={
+                  actionBusy !== "" || startingSimulation || !onStartSimulation
+                }
+                aria-busy={startingSimulation}
+                onClick={() => void startSimulation()}
+              >
+                <PixelIcon name="sim" scale={2.5} />
+                <span className="other-profile-action-label">시뮬레이션</span>
+              </button>
+              <button
+                type="button"
+                aria-label="AI 연습대화"
+                title="AI 연습대화"
+                disabled={actionBusy !== ""}
+                onClick={startPractice}
+              >
+                <PixelIcon name="chat" scale={2.5} />
+                <span className="other-profile-action-label">연습 대화</span>
+              </button>
+              <button
+                type="button"
+                aria-label={likeSent ? "좋아요를 보냈어요" : "좋아요 보내기"}
+                title={likeSent ? "좋아요를 보냈어요" : "좋아요 보내기"}
+                disabled={actionBusy !== "" || likeSent}
+                aria-busy={actionBusy === "like"}
+                aria-pressed={likeSent}
+                onClick={() => void sendLike()}
+              >
+                <PixelIcon name="heart" scale={2.5} />
+                <span className="other-profile-action-label">좋아요</span>
+              </button>
+            </section>
+          )}
         </section>
       ) : (
         !loading && (
