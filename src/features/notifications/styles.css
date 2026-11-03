@@ -262,6 +262,104 @@
   --notification-art-size: 36px;
 }
 
+.notification-open-partner {
+  position: relative;
+  min-height: 70px;
+}
+
+.notification-partner-avatar-button,
+.notification-toast-avatar-button {
+  display: grid;
+  flex: 0 0 36px;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.notification-partner-avatar,
+.notification-toast-avatar {
+  display: block;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.notification-copy .notification-inline-result,
+.notification-copy .notification-profile-link,
+.notification-toast-result-body button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  text-align: left;
+}
+
+.notification-copy .notification-partner-message {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.notification-enrichment-status button {
+  padding: 3px 7px;
+  border: 1px solid var(--line-soft);
+  background: var(--paper);
+  color: var(--purple-deep);
+  font-size: inherit;
+}
+
+.notification-copy .notification-inline-result,
+.notification-toast-result-body > button:not(.notification-profile-link) {
+  cursor: pointer;
+}
+
+.notification-copy .notification-profile-link,
+.notification-toast-result-body .notification-profile-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0 1px;
+  color: var(--purple-deep);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.notification-copy .notification-profile-link:hover,
+.notification-toast-result-body .notification-profile-link:hover {
+  color: var(--purple);
+}
+
+.notification-copy .notification-profile-link:focus-visible,
+.notification-copy .notification-inline-result:focus-visible,
+.notification-toast-result-body button:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
+.notification-enrichment-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -4px 44px 8px 62px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 .notification-copy {
   display: flex;
   flex: 1;
@@ -290,6 +388,16 @@
   color: var(--muted);
   font-size: 11px;
   line-height: 1.4;
+}
+
+.notification-copy .notification-time-action {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
 }
 
 .notification-open .notification-unread-dot {
@@ -428,6 +536,26 @@
 }
 
 .notification-toast-open > span > span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.notification-toast-open-partner {
+  align-items: flex-start;
+}
+
+.notification-toast-open-partner > span:last-child {
+  align-items: flex-start;
+}
+
+.notification-toast-open-partner .notification-toast-avatar-button {
+  margin-top: 20px;
+}
+
+.notification-toast-result-body {
+  display: block;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.6;

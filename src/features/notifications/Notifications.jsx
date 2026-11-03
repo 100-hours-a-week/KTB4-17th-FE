@@ -4,15 +4,17 @@ import {
   BrandHeader,
   EmptyState,
   PixelButton,
+  ProfilePhoto,
 } from "../../shared/ui/components.jsx";
 import { PixelIcon } from "../../shared/ui/pixel.jsx";
+import { profileImageUrls } from "../profile/imageUrls.js";
 import { useNotifications } from "./context.jsx";
 import {
   mergeNotifications,
   NOTIFICATION_CATEGORIES,
-  notificationCopy,
   notificationDay,
   notificationTime,
+  simulationCompletionCopy,
   sortNotificationsUnreadFirst,
 } from "./model.js";
 import {
@@ -24,10 +26,173 @@ import {
   emptyUnreadCategories,
 } from "./unread.js";
 import { useNotificationInbox } from "./useNotificationInbox.js";
+import { useSimulationCompletionNotification } from "./useSimulationCompletionNotification.js";
 import { useUnreadNotificationCatalog } from "./useUnreadNotificationCatalog.js";
 
 const notificationCategory = (value) =>
   NOTIFICATION_CATEGORIES.some(([key]) => key === value) ? value : "ALL";
+
+function CompletionLookupStatus({ item, details }) {
+  if (item.type !== "AI_SIMULATION_REPORT_COMPLETED") return null;
+  if (details.status === "loading")
+    return (
+      <p className="notification-enrichment-status" role="status">
+        완료된 대화 정보를 확인하고 있어요…
+      </p>
+    );
+  if (details.status === "pending")
+    return (
+      <div className="notification-enrichment-status" role="status">
+        <span>시뮬레이션 결과가 아직 준비되지 않았어요.</span>
+        <button type="button" onClick={details.retry}>
+          다시 확인
+        </button>
+      </div>
+    );
+  if (details.status === "error")
+    return (
+      <div className="notification-enrichment-status" role="status">
+        <span>
+          {details.error?.notificationStage === "profile" &&
+          (details.error?.status === 403 || details.error?.status === 404)
+            ? "요청자 프로필을 더 이상 확인할 수 없어요."
+            : details.error?.status === 403 || details.error?.status === 404
+              ? "시뮬레이션을 더 이상 확인할 수 없어요."
+              : "요청자 정보를 불러오지 못했어요."}
+        </span>
+        <button type="button" onClick={details.retry}>
+          다시 확인
+        </button>
+      </div>
+    );
+  return null;
+}
+
+function NotificationCard({
+  item,
+  subject,
+  busy,
+  onOpen,
+  onDelete,
+  onOpenProfile,
+}) {
+  const details = useSimulationCompletionNotification(item, subject);
+  const copy = simulationCompletionCopy(item, details);
+  const isPartnerCompletion =
+    item.type === "AI_SIMULATION_REPORT_COMPLETED" &&
+    details.role === "partner" &&
+    Boolean(details.profile?.nickname);
+  const images = isPartnerCompletion ? profileImageUrls(details.profile) : [];
+  const person = isPartnerCompletion
+    ? {
+        id: details.requesterId,
+        userId: details.requesterId,
+        nickname: details.profile.nickname,
+        photos: images,
+      }
+    : null;
+  const openResult = () => onOpen(item);
+  const openRequesterProfile = (event) => {
+    event.stopPropagation();
+    onOpenProfile(item, details.requesterId);
+  };
+
+  return (
+    <article
+      className={`notification-card ${item.readAt ? "read" : "unread"}`}
+      data-notification-id={item.notificationId}
+      aria-busy={details.status === "loading"}
+    >
+      {isPartnerCompletion ? (
+        <div className="notification-open notification-open-partner">
+          <button
+            type="button"
+            className="notification-partner-avatar-button"
+            aria-label="시뮬레이션 결과 열기"
+            disabled={busy}
+            onClick={openResult}
+          >
+            {images.length ? (
+              <ProfilePhoto
+                person={person}
+                className="notification-partner-avatar"
+              />
+            ) : (
+              <NotificationIllustration kind="system" />
+            )}
+          </button>
+          <span className="notification-copy">
+            <span className="notification-partner-message">
+              <button
+                type="button"
+                className="notification-profile-link"
+                title="닉네임을 누르면 상세 프로필로 이동해요"
+                aria-label={`${details.profile.nickname}님 상세 프로필 보기`}
+                disabled={busy}
+                onClick={openRequesterProfile}
+              >
+                {details.profile.nickname}님
+                <PixelIcon name="chev" scale={1} />
+              </button>
+              <button
+                type="button"
+                className="notification-inline-result"
+                disabled={busy}
+                onClick={openResult}
+              >
+                이 그려본 두 사람의 대화, 지금 확인해 보세요.
+              </button>
+            </span>
+            <button
+              type="button"
+              className="notification-time-action"
+              disabled={busy}
+              onClick={openResult}
+              aria-label="시뮬레이션 결과 열기"
+            >
+              <time dateTime={item.createdAt}>
+                {notificationTime(item.createdAt)}
+              </time>
+            </button>
+          </span>
+          {!item.readAt && (
+            <i className="notification-unread-dot" aria-hidden="true" />
+          )}
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="notification-open"
+          disabled={busy}
+          onClick={openResult}
+          aria-label={`${item.readAt ? "" : "읽지 않음. "}${copy.title}. ${copy.body}`}
+        >
+          <NotificationIllustration kind={copy.illustration} />
+          <span className="notification-copy">
+            <strong>{copy.title}</strong>
+            <span>{copy.body}</span>
+            <time dateTime={item.createdAt}>
+              {notificationTime(item.createdAt)}
+            </time>
+          </span>
+          {!item.readAt && (
+            <i className="notification-unread-dot" aria-hidden="true" />
+          )}
+        </button>
+      )}
+      <CompletionLookupStatus item={item} details={details} />
+      <button
+        type="button"
+        className="notification-delete"
+        disabled={busy}
+        onClick={() => onDelete(item)}
+        aria-label={`${copy.title || "AI 시뮬레이션 완료"} 알림 삭제`}
+      >
+        <PixelIcon name="x" scale={2} />
+      </button>
+    </article>
+  );
+}
 
 export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
   const notifications = useNotifications();
@@ -384,7 +549,6 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
             const showGroup = previousReadState !== isUnread;
             previousDay = day;
             previousReadState = isUnread;
-            const copy = notificationCopy(item);
             const busy = pending.has(item.notificationId);
             return (
               <div key={item.notificationId}>
@@ -394,42 +558,16 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
                   </h2>
                 )}
                 {showDay && <h2 className="notification-day">{day}</h2>}
-                <article
-                  className={`notification-card ${item.readAt ? "read" : "unread"}`}
-                  data-notification-id={item.notificationId}
-                >
-                  <button
-                    type="button"
-                    className="notification-open"
-                    disabled={busy}
-                    onClick={() => void act(item, "open")}
-                    aria-label={`${item.readAt ? "" : "읽지 않음. "}${copy.title}. ${copy.body}`}
-                  >
-                    <NotificationIllustration kind={copy.illustration} />
-                    <span className="notification-copy">
-                      <strong>{copy.title}</strong>
-                      <span>{copy.body}</span>
-                      <time dateTime={item.createdAt}>
-                        {notificationTime(item.createdAt)}
-                      </time>
-                    </span>
-                    {!item.readAt && (
-                      <i
-                        className="notification-unread-dot"
-                        aria-hidden="true"
-                      />
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    className="notification-delete"
-                    disabled={busy}
-                    onClick={() => void act(item, "delete")}
-                    aria-label={`${copy.title} 알림 삭제`}
-                  >
-                    <PixelIcon name="x" scale={2} />
-                  </button>
-                </article>
+                <NotificationCard
+                  item={item}
+                  subject={notifications.subject}
+                  busy={busy}
+                  onOpen={(notification) => void act(notification, "open")}
+                  onDelete={(notification) => void act(notification, "delete")}
+                  onOpenProfile={(notification, userId) =>
+                    void notifications.openProfile(notification, userId)
+                  }
+                />
               </div>
             );
           })}
