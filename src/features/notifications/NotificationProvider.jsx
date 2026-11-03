@@ -7,7 +7,11 @@ import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { CHAT_READ_UPDATED_EVENT } from "../chat/unreadCount.js";
 import * as api from "./api.js";
 import { NotificationContext } from "./context.jsx";
-import { isCurrentChatNotification, notificationDestination } from "./model.js";
+import {
+  isCurrentChatNotification,
+  notificationDestination,
+  notificationProfileDestination,
+} from "./model.js";
 import { NotificationToast } from "./NotificationToast.jsx";
 import { createNotificationPoller } from "./polling.js";
 import { createNotificationSound } from "./sound.js";
@@ -191,12 +195,29 @@ export function NotificationProvider({
       if (getAuthSessionSubject() !== subject) return;
       setRecent(null);
       if (path !== "/notifications") returnPath.current = `${path}${search}`;
+      if (item.type === "AI_SIMULATION_REQUESTED") return;
       const destination = notificationDestination(item);
       if (destination) navigate(destination);
       else navigate("/notifications");
     } catch (error) {
       toast(
         apiErrorMessage(error, "알림을 열지 못했어요. 다시 시도해 주세요."),
+      );
+    }
+  }
+
+  async function openProfile(item, userId) {
+    try {
+      const destination = notificationProfileDestination(userId);
+      if (!destination) return;
+      const marked = await markRead(item);
+      if (!marked || getAuthSessionSubject() !== subject) return;
+      setRecent(null);
+      if (path !== "/notifications") returnPath.current = `${path}${search}`;
+      navigate(destination);
+    } catch (error) {
+      toast(
+        apiErrorMessage(error, "프로필을 열지 못했어요. 다시 시도해 주세요."),
       );
     }
   }
@@ -214,6 +235,7 @@ export function NotificationProvider({
     markRead,
     remove,
     open,
+    openProfile,
     openInbox: () => {
       if (path !== "/notifications") returnPath.current = `${path}${search}`;
       setRecent(null);
@@ -229,7 +251,9 @@ export function NotificationProvider({
         <NotificationToast
           key={recent.item.notificationId}
           item={recent.item}
+          subject={subject}
           onOpen={open}
+          onOpenProfile={openProfile}
           onDismiss={() => setRecent(null)}
           blocked={blocked}
         />

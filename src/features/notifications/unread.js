@@ -10,6 +10,11 @@ export const emptyUnreadCategories = () => ({
 export function notificationCategory(type) {
   if (type === "LIKE" || type === "MATCH") return "INTEREST";
   if (type === "CHAT_MESSAGE") return "CHAT";
+  if (
+    type === "AI_SIMULATION_REQUESTED" ||
+    type === "AI_SIMULATION_REPORT_COMPLETED"
+  )
+    return "SYSTEM";
   return "SYSTEM";
 }
 

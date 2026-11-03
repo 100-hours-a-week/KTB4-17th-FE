@@ -1,10 +1,37 @@
 import { useEffect, useRef, useState } from "react";
+import { ProfilePhoto } from "../../shared/ui/components.jsx";
 import { PixelIcon } from "../../shared/ui/pixel.jsx";
-import { notificationCopy } from "./model.js";
+import { profileImageUrls } from "../profile/imageUrls.js";
+import { notificationCopy, simulationCompletionCopy } from "./model.js";
 import { NotificationIllustration } from "./NotificationControls.jsx";
+import { useSimulationCompletionNotification } from "./useSimulationCompletionNotification.js";
 
-export function NotificationToast({ item, onOpen, onDismiss, blocked }) {
-  const copy = notificationCopy(item);
+export function NotificationToast({
+  item,
+  subject,
+  onOpen,
+  onOpenProfile,
+  onDismiss,
+  blocked,
+}) {
+  const details = useSimulationCompletionNotification(item, subject);
+  const copy =
+    item.type === "AI_SIMULATION_REPORT_COMPLETED"
+      ? simulationCompletionCopy(item, details)
+      : notificationCopy(item);
+  const partnerCompletion =
+    item.type === "AI_SIMULATION_REPORT_COMPLETED" &&
+    details.role === "partner" &&
+    Boolean(details.profile?.nickname);
+  const images = partnerCompletion ? profileImageUrls(details.profile) : [];
+  const person = partnerCompletion
+    ? {
+        id: details.requesterId,
+        userId: details.requesterId,
+        nickname: details.profile.nickname,
+        photos: images,
+      }
+    : null;
   const [interacting, setInteracting] = useState(false);
   const [hidden, setHidden] = useState(document.visibilityState === "hidden");
   const root = useRef(null);
@@ -42,20 +69,62 @@ export function NotificationToast({ item, onOpen, onDismiss, blocked }) {
       }}
     >
       <span className="sr-only" role="status">
-        {copy.title}. {copy.body}
+        {copy.title ? `${copy.title}. ` : ""}
+        {copy.body}
       </span>
-      <button
-        type="button"
-        className="notification-toast-open"
-        onClick={() => onOpen(item)}
-      >
-        <NotificationIllustration kind={copy.illustration} />
-        <span>
-          <small>삐삐! 새로운 소식</small>
-          <strong>{copy.title}</strong>
-          <span>{copy.body}</span>
-        </span>
-      </button>
+      {partnerCompletion ? (
+        <div className="notification-toast-open notification-toast-open-partner">
+          <button
+            type="button"
+            className="notification-toast-avatar-button"
+            aria-label="시뮬레이션 결과 열기"
+            onClick={() => onOpen(item)}
+          >
+            {images.length ? (
+              <ProfilePhoto
+                person={person}
+                className="notification-toast-avatar"
+              />
+            ) : (
+              <NotificationIllustration kind="system" />
+            )}
+          </button>
+          <span>
+            <small>삐삐! 새로운 소식</small>
+            <span className="notification-toast-result-body">
+              <button
+                type="button"
+                className="notification-profile-link"
+                title="닉네임을 누르면 상세 프로필로 이동해요"
+                aria-label={`${details.profile.nickname}님 상세 프로필 보기`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onOpenProfile(item, details.requesterId);
+                }}
+              >
+                {details.profile.nickname}님
+                <PixelIcon name="chev" scale={1} />
+              </button>
+              <button type="button" onClick={() => onOpen(item)}>
+                이 그려본 두 사람의 대화, 지금 확인해 보세요.
+              </button>
+            </span>
+          </span>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="notification-toast-open"
+          onClick={() => onOpen(item)}
+        >
+          <NotificationIllustration kind={copy.illustration} />
+          <span>
+            <small>삐삐! 새로운 소식</small>
+            <strong>{copy.title}</strong>
+            <span>{copy.body}</span>
+          </span>
+        </button>
+      )}
       <button
         type="button"
         className="notification-toast-close"

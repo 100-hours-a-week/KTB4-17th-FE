@@ -7,6 +7,12 @@ export const NOTIFICATION_CATEGORIES = [
 
 export function notificationCopy(item) {
   switch (item.type) {
+    case "AI_SIMULATION_REQUESTED":
+      return {
+        title: "AI 시뮬레이션 요청이 도착했어요",
+        body: "누군가 두 사람의 대화를 AI로 그려봤어요.",
+        illustration: "system",
+      };
     case "LIKE":
       return {
         title: "새로운 인연이 도착했어요",
@@ -35,6 +41,32 @@ export function notificationCopy(item) {
   }
 }
 
+export function simulationCompletionCopy(item, details) {
+  if (item.type !== "AI_SIMULATION_REPORT_COMPLETED")
+    return notificationCopy(item);
+  if (details?.role === "requester") return notificationCopy(item);
+  if (details?.role === "partner" && details.profile?.nickname) {
+    return {
+      title: "",
+      body: `${details.profile.nickname}님이 그려본 두 사람의 대화, 지금 확인해 보세요.`,
+      illustration: "system",
+    };
+  }
+  if (["loading", "pending"].includes(details?.status)) {
+    return {
+      ...notificationCopy(item),
+      body: "완료된 대화 정보를 불러오고 있어요…",
+    };
+  }
+  if (details?.status === "error") {
+    return {
+      ...notificationCopy(item),
+      body: "완료된 대화 정보를 확인할 수 없어요. 결과를 열어 확인해 주세요.",
+    };
+  }
+  return notificationCopy(item);
+}
+
 function positiveId(value) {
   return /^\d+$/.test(String(value)) && Number(value) > 0
     ? String(value)
@@ -42,6 +74,7 @@ function positiveId(value) {
 }
 
 export function notificationDestination(item) {
+  if (item.type === "AI_SIMULATION_REQUESTED") return null;
   if (item.type === "LIKE") return "/likes?tab=received";
   const id = positiveId(item.targetId);
   if (id && item.targetType === "PROFILE")
@@ -52,6 +85,11 @@ export function notificationDestination(item) {
   if (item.type === "FACE_ANALYSIS_COMPLETED") return "/my/profile";
   // Notice and future types stay in the inbox until a supported target exists.
   return null;
+}
+
+export function notificationProfileDestination(userId) {
+  const id = positiveId(userId);
+  return id ? `/profiles/${id}?returnTo=%2Fnotifications` : null;
 }
 
 export function isCurrentChatNotification(item, path) {
