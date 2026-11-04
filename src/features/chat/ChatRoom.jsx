@@ -27,6 +27,7 @@ import {
 } from "./delegation.js";
 import { MessageBubble } from "./MessageBubble.jsx";
 import {
+  chatComposerState,
   formatFileSize,
   messagesAreGrouped,
   messageTimesAreGrouped,
@@ -212,8 +213,13 @@ function ChatRoomContent({
   const delegationRestricted = isDelegationActionRestricted(
     state.room?.delegation?.status,
   );
-  const canSend =
-    Boolean(visit) && state.room?.status === "ACTIVE" && !delegationRestricted;
+  const composer = chatComposerState({
+    visit,
+    roomStatus: state.room?.status,
+    delegationRestricted,
+  });
+  const canSend = composer.canSend;
+  const unreadBoundaryId = visit?.unreadBoundaryId;
   useRoomMatchRead(roomId, Boolean(visit && state.room && !error));
   useComposerAutofocus(
     inputRef,
@@ -519,7 +525,7 @@ function ChatRoomContent({
             </button>
           </div>
         )}
-        {error && state.loaded && visit && (
+        {error && state.loaded && (
           <div className="chat-sync-error" role="alert">
             <span>{error.message}</span>
             <button
@@ -539,7 +545,7 @@ function ChatRoomContent({
             aria-busy={!visit && syncing}
             onScroll={scroll.onScroll}
           >
-            {!visit ? (
+            {!state.loaded ? (
               error ? (
                 <div className="chat-room-load-state" role="alert">
                   <p>{error.message}</p>
@@ -592,12 +598,12 @@ function ChatRoomContent({
                     state.messages.map((message, index) => {
                       const previous = state.messages[index - 1];
                       const startsUnread =
-                        Number(message.id) === visit.unreadBoundaryId;
+                        Number(message.id) === unreadBoundaryId;
                       const grouped =
                         !startsUnread && messagesAreGrouped(previous, message);
                       const showTime =
                         Number(state.messages[index + 1]?.id) ===
-                          visit.unreadBoundaryId ||
+                          unreadBoundaryId ||
                         !messageTimesAreGrouped(
                           message,
                           state.messages[index + 1],
@@ -679,11 +685,9 @@ function ChatRoomContent({
             send();
           }}
         >
-          {state.loaded && !canSend && (
+          {state.loaded && composer.notice && (
             <p className="chat-ended-notice" role="status">
-              {delegationRestricted
-                ? "AI가 대화를 마무리하는 동안 직접 메시지를 보낼 수 없어요."
-                : "대화가 종료되어 메시지를 보낼 수 없어요."}
+              {composer.notice}
             </p>
           )}
           {preparingImage && (
@@ -761,11 +765,7 @@ function ChatRoomContent({
                 event.preventDefault();
                 send();
               }}
-              placeholder={
-                state.loaded && !canSend
-                  ? "종료된 대화예요"
-                  : "메시지를 입력해 주세요…"
-              }
+              placeholder={composer.placeholder}
               aria-label="메시지"
               aria-describedby={
                 state.draft.length >= 900 ? "chat-input-count" : undefined
@@ -777,7 +777,7 @@ function ChatRoomContent({
               }
               rows={1}
               maxLength={1000}
-              disabled={state.loaded && !canSend}
+              disabled={!canSend}
             />
             <button
               type="submit"

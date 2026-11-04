@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
 import { createMessageId } from "../../shared/messageId.js";
 import {
+  chatComposerState,
   mapChatMessage,
   mergeChatMessages,
   mergeRefreshedChatRoom,
@@ -84,6 +85,35 @@ function activeEntry() {
   });
   return entry;
 }
+
+test("cached active rooms stay in a loading state instead of appearing ended", () => {
+  assert.deepEqual(
+    chatComposerState({
+      visit: null,
+      roomStatus: "ACTIVE",
+      delegationRestricted: false,
+    }),
+    {
+      canSend: false,
+      ended: false,
+      notice: "",
+      placeholder: "대화를 불러오는 중…",
+    },
+  );
+});
+
+test("only a non-active room shows the ended conversation notice", () => {
+  const state = chatComposerState({
+    visit: { unreadBoundaryId: null, readThroughId: 10 },
+    roomStatus: "ENDED",
+    delegationRestricted: false,
+  });
+
+  assert.equal(state.canSend, false);
+  assert.equal(state.ended, true);
+  assert.equal(state.notice, "대화가 종료되어 메시지를 보낼 수 없어요.");
+  assert.equal(state.placeholder, "종료된 대화예요");
+});
 
 test("user block sends PUT and accepts created or existing responses", async () => {
   const originalFetch = globalThis.fetch;
