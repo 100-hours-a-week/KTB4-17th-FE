@@ -28,6 +28,10 @@ import {
 import { JobCategorySelect } from "../profile/JobCategorySelect.jsx";
 import { isJobCategory } from "../profile/jobCategories.js";
 import { profilePayload } from "../profile/serialize.js";
+import {
+  profileHeightValidationError,
+  profileNicknameValidationError,
+} from "../profile/validation.js";
 import { savedPhotoItems } from "../profiletrust/model.js";
 import { ProfilePhotoEditor } from "../profiletrust/ProfilePhotoEditor.jsx";
 import * as userApi from "../user/api.js";
@@ -398,17 +402,18 @@ export function profileValidation(profile, includeLifestyle = false) {
       step: "region",
       message: "활동 지역을 다시 선택해 주세요.",
     };
-  if (!profile.nickname || !/^[가-힣A-Za-z0-9]{2,10}$/.test(profile.nickname))
+  const nicknameError = profileNicknameValidationError(profile.nickname);
+  if (nicknameError)
     return {
       step: "profile",
-      message: "닉네임은 한글·영문·숫자 2~10자로 입력해 주세요.",
+      message: nicknameError,
     };
 
-  const height = Number(profile.height);
-  if (!Number.isInteger(height) || height < 130 || height > 220)
+  const heightError = profileHeightValidationError(profile.height);
+  if (heightError)
     return {
       step: "profile",
-      message: "키는 130~220cm의 정수로 입력해 주세요.",
+      message: heightError,
     };
   if (!profile.bodyType || !profile.educationLevel)
     return {
@@ -435,9 +440,16 @@ export function profileValidation(profile, includeLifestyle = false) {
   return null;
 }
 
-export function Onboarding({ navigate, toast }) {
+export function Onboarding({
+  navigate,
+  toast,
+  onLogout,
+  isLoggingOut = false,
+}) {
   const { data, setData } = useAppState();
   const [error, setError] = useState("");
+  const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
+  const logoutActionRef = useRef(null);
   const [identitySaving, setIdentitySaving] = useState(false);
   const [identityAuthExpired, setIdentityAuthExpired] = useState(false);
   const [regionQuery, setRegionQuery] = useState("");
@@ -498,6 +510,10 @@ export function Onboarding({ navigate, toast }) {
   const progressIndex = ONBOARDING_PROGRESS_STEPS.indexOf(progressStep);
   const isPersonaFlowStep = PERSONA_FLOW_STEPS.has(step);
   const canGoBack = stepIndex > (hasRegisteredIdentity ? 1 : 0);
+  function cancelLogoutConfirmation() {
+    setLogoutConfirmationOpen(false);
+    window.requestAnimationFrame(() => logoutActionRef.current?.focus());
+  }
   const updateProfile = (key, value) =>
     setData((old) => ({ ...old, profile: { ...old.profile, [key]: value } }));
   const advance = useCallback(
@@ -1029,14 +1045,58 @@ export function Onboarding({ navigate, toast }) {
             height="45"
             alt="*23#"
           />
-          <span className="brand-signal" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-            <i />
-          </span>
-          <span className="brand-battery" aria-hidden="true" />
+          <div className="onboarding-header-actions">
+            {data.session && onLogout && (
+              <button
+                ref={logoutActionRef}
+                type="button"
+                className="onboarding-logout-action"
+                aria-expanded={logoutConfirmationOpen}
+                aria-controls="onboarding-logout-confirm"
+                onClick={() => setLogoutConfirmationOpen((open) => !open)}
+                disabled={isLoggingOut}
+              >
+                로그아웃
+              </button>
+            )}
+            <span className="brand-signal" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+              <i />
+            </span>
+            <span className="brand-battery" aria-hidden="true" />
+          </div>
         </header>
+        {data.session && onLogout && (
+          <fieldset
+            id="onboarding-logout-confirm"
+            className="settings-logout-confirm onboarding-logout-confirm"
+            aria-label="로그아웃 확인"
+            hidden={!logoutConfirmationOpen}
+          >
+            <legend>온보딩을 중단하고 로그아웃할까요?</legend>
+            <p>로그아웃 후 로그인 화면으로 이동해요.</p>
+            <div className="settings-confirm-actions">
+              <button
+                type="button"
+                className="settings-confirm-cancel"
+                onClick={cancelLogoutConfirmation}
+                disabled={isLoggingOut}
+              >
+                계속 진행
+              </button>
+              <button
+                type="button"
+                className="settings-confirm-submit"
+                onClick={onLogout}
+                disabled={isLoggingOut}
+              >
+                {isLoggingOut ? "로그아웃 중…" : "로그아웃"}
+              </button>
+            </div>
+          </fieldset>
+        )}
         <div className="onboarding-top">
           <i className="onboarding-dot left" aria-hidden="true" />
           <div

@@ -9,11 +9,18 @@ import {
   notificationCopy,
   notificationDay,
   notificationDestination,
+  notificationProfileDestination,
   notificationTime,
+  simulationCompletionCopy,
 } from "./model.js";
 import { createNotificationPoller } from "./polling.js";
+import { loadSimulationCompletionNotification } from "./simulationNotification.js";
 import { connectNotificationStream, createSseParser } from "./stream.js";
-import { loadUnreadCategories, readRoomMatchNotifications } from "./unread.js";
+import {
+  loadUnreadCategories,
+  notificationCategory,
+  readRoomMatchNotifications,
+} from "./unread.js";
 
 async function settlePolling() {
   for (let index = 0; index < 20; index += 1) await Promise.resolve();
@@ -102,6 +109,25 @@ test("new polling arrivals are delivered oldest first so the newest banner wins"
   ]);
   await state.tick(5000);
   assert.deepEqual(state.arrivals, [11, 12]);
+});
+
+test("polling cadence follows the live and fallback stream intervals", async (t) => {
+  const state = pollingFixture(t);
+  state.poller.refresh();
+  await state.tick();
+  assert.equal(state.snapshots.length, 1);
+
+  state.poller.setInterval(30000);
+  await state.tick(5000);
+  assert.equal(state.snapshots.length, 1);
+  await state.tick(25000);
+  assert.equal(state.snapshots.length, 2);
+
+  state.poller.setInterval(5000);
+  await state.tick(4999);
+  assert.equal(state.snapshots.length, 2);
+  await state.tick(1);
+  assert.equal(state.snapshots.length, 3);
 });
 
 test("refreshes coalesce behind a request and discard its outdated snapshot", async (t) => {
@@ -528,6 +554,133 @@ test("only supported server targets can navigate, and the profile returns to the
   );
 });
 
+test("AI simulation requests stay anonymous, belong to SYSTEM, and do not navigate", () => {
+  const request = {
+    type: "AI_SIMULATION_REQUESTED",
+    title: "서연님이 요청했어요",
+    body: "서연님의 사진",
+    targetType: null,
+    targetId: null,
+  };
+  assert.deepEqual(notificationCopy(request), {
+    title: "AI 시뮬레이션 요청이 도착했어요",
+    body: "누군가 두 사람의 대화를 AI로 그려봤어요.",
+    illustration: "system",
+  });
+  assert.equal(notificationCategory(request.type), "SYSTEM");
+  assert.equal(
+    notificationCategory("AI_SIMULATION_REPORT_COMPLETED"),
+    "SYSTEM",
+  );
+  assert.equal(notificationDestination(request), null);
+  assert.equal(
+    notificationProfileDestination(11),
+    "/profiles/11?returnTo=%2Fnotifications",
+  );
+});
+
+test("completion notifications use the fixed me participant to identify the requester", async () => {
+  const item = {
+    type: "AI_SIMULATION_REPORT_COMPLETED",
+    targetType: "AI_SIMULATION",
+    targetId: 17,
+    title: "시뮬레이션 결과가 도착했어요",
+    body: "완성된 대화와 리포트를 확인해 보세요.",
+  };
+  const detail = {
+    simulationId: 17,
+    me: { userId: 11, nickname: "오래된 닉네임" },
+    partner: { userId: 23, nickname: "상대" },
+  };
+  let profileCalls = 0;
+  const requesterView = await loadSimulationCompletionNotification(item, "11", {
+    loadSimulation: async () => detail,
+    loadProfile: async () => {
+      profileCalls += 1;
+      return { userId: 11, nickname: "새 닉네임" };
+    },
+  });
+  assert.equal(requesterView.role, "requester");
+  assert.equal(profileCalls, 0);
+  assert.deepEqual(
+    simulationCompletionCopy(item, {
+      role: requesterView.role,
+      status: "ready",
+    }),
+    notificationCopy(item),
+  );
+
+  const partnerView = await loadSimulationCompletionNotification(item, "23", {
+    loadSimulation: async () => detail,
+    loadProfile: async (userId) => {
+      profileCalls += 1;
+      assert.equal(userId, 11);
+      return {
+        userId,
+        nickname: "새 닉네임",
+        images: [{ imageUrl: "https://example.com/profile.png" }],
+      };
+    },
+  });
+  assert.equal(partnerView.role, "partner");
+  assert.equal(profileCalls, 1);
+  assert.equal(partnerView.profile.nickname, "새 닉네임");
+  assert.match(
+    simulationCompletionCopy(item, {
+      role: partnerView.role,
+      profile: partnerView.profile,
+    }).body,
+    /^새 닉네임님이 그려본 두 사람의 대화/,
+  );
+  assert.equal(notificationDestination(item), "/ai/simulations/17");
+});
+
+test("simulation notification lookups surface pending results and unavailable profiles", async () => {
+  const item = { targetId: 17 };
+  const resultNotReady = Object.assign(new Error("pending"), {
+    code: "SIMULATION_RESULT_NOT_READY",
+  });
+  await assert.rejects(
+    loadSimulationCompletionNotification(item, "23", {
+      loadSimulation: async () => {
+        throw resultNotReady;
+      },
+      loadProfile: async () => assert.fail("profile must wait for simulation"),
+    }),
+    (error) => error.code === "SIMULATION_RESULT_NOT_READY",
+  );
+
+  const simulationUnavailable = Object.assign(new Error("not found"), {
+    status: 404,
+  });
+  await assert.rejects(
+    loadSimulationCompletionNotification(item, "23", {
+      loadSimulation: async () => {
+        throw simulationUnavailable;
+      },
+      loadProfile: async () => assert.fail("profile must wait for simulation"),
+    }),
+    (error) => error.status === 404 && error.notificationStage !== "profile",
+  );
+
+  const profileUnavailable = Object.assign(new Error("not found"), {
+    status: 404,
+  });
+  await assert.rejects(
+    loadSimulationCompletionNotification(item, "23", {
+      loadSimulation: async () => ({
+        simulationId: 17,
+        me: { userId: 11 },
+        partner: { userId: 23 },
+      }),
+      loadProfile: async () => {
+        throw profileUnavailable;
+      },
+    }),
+    (error) => error.status === 404 && error.notificationStage === "profile",
+  );
+});
+
 test("chat notifications suppress a banner only in the same real chat room", () => {
   const item = { type: "CHAT_MESSAGE", targetType: "CHAT_ROOM", targetId: 2 };
   assert.equal(isCurrentChatNotification(item, "/chats/2"), true);
@@ -566,6 +719,22 @@ test("paging and repeated events merge by server id with fresh read state", () =
     [4, 3, 2],
   );
   assert.equal(result[1].readAt, "now");
+});
+
+test("merged pages follow backend createdAt order with notification ID as a tie-breaker", () => {
+  const result = mergeNotifications(
+    [],
+    [
+      { notificationId: 22, createdAt: "2026-10-20T10:00:00" },
+      { notificationId: 18, createdAt: "2026-10-20T11:00:00" },
+      { notificationId: 17, createdAt: "2026-10-20T11:00:00" },
+    ],
+  );
+
+  assert.deepEqual(
+    result.map((item) => item.notificationId),
+    [18, 17, 22],
+  );
 });
 
 test("SSE handles split CRLF, comments, multiple data lines and consecutive events", () => {

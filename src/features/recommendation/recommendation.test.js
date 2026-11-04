@@ -282,6 +282,23 @@ test("recommendation images retain their expiry metadata", () => {
   assert.deepEqual(recommendation.photos, ["https://example.com/701"]);
 });
 
+test("recommendation cards use ordinary candidate data without guessing a source", () => {
+  const item = mapRecommendationItem({
+    source: "AI_SIMULATION_REQUEST",
+    requestorUserId: 99,
+    candidate: {
+      userId: 21,
+      nickname: "지수",
+      images: [{ imageUrl: "https://example.com/21.png", displayOrder: 0 }],
+    },
+  });
+
+  assert.equal(item.id, 21);
+  assert.equal(item.nickname, "지수");
+  assert.equal(Object.hasOwn(item, "source"), false);
+  assert.equal(Object.hasOwn(item, "requestorUserId"), false);
+});
+
 test("image refresh is scheduled thirty seconds before expiry", () => {
   const receivedAt = Date.parse("2026-10-05T12:00:00Z");
   const refreshAt = nextRecommendationImageRefreshAt([

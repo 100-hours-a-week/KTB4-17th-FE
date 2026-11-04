@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { useAppState } from "../../shared/appState.jsx";
 import { asset } from "../../shared/assets.js";
@@ -36,12 +36,16 @@ import {
   religions,
   smokings,
 } from "./data.js";
+import { profileSecurityFilterErrorMessage } from "./errors.js";
 import { JobCategorySelect } from "./JobCategorySelect.jsx";
 import { isJobCategory, normalizeJobCategory } from "./jobCategories.js";
 import { profilePayload } from "./serialize.js";
+import {
+  PROFILE_HEIGHT_VALIDATION_ERROR,
+  profileHeightValidationError,
+  profileNicknameValidationError,
+} from "./validation.js";
 
-const NICKNAME_PATTERN = /^[가-힣A-Za-z0-9]{2,10}$/;
-const NICKNAME_FORMAT_ERROR = "닉네임은 한글·영문·숫자 2~10자로 입력해 주세요.";
 const PROFILE_SAVE_ERROR =
   "프로필을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.";
 const PROFILE_AI_ERROR_CODES = new Set([
@@ -76,6 +80,10 @@ function samePhotoItems(left = [], right = []) {
 
 function profileSaveErrorMessage(error) {
   if (PROFILE_AI_ERROR_CODES.has(error?.code)) return PROFILE_SAVE_ERROR;
+  if (error?.code === "INVALID_REQUEST")
+    return "입력한 프로필 정보를 다시 확인해 주세요.";
+  const securityFilterMessage = profileSecurityFilterErrorMessage(error);
+  if (securityFilterMessage) return securityFilterMessage;
   return apiErrorMessage(error, PROFILE_SAVE_ERROR);
 }
 
@@ -420,7 +428,9 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
   });
   const [jobError, setJobError] = useState("");
   const [nicknameError, setNicknameError] = useState("");
+  const [heightError, setHeightError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingPhoto, setIsSavingPhoto] = useState(false);
   const initialNickname = useRef("");
   const saveInFlight = useRef(false);
 
@@ -474,6 +484,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
 
   const set = (key, value) => {
     if (key === "nickname") setNicknameError("");
+    if (key === "height") setHeightError("");
     setData((old) => ({ ...old, profile: { ...old.profile, [key]: value } }));
   };
 
@@ -482,6 +493,18 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
     keepLegacyPhoto ||
     photoState.ready ||
     samePhotoItems(initialPhotos, photoState.images);
+  const saveVerifiedPhoto = useCallback(async (images) => {
+    setIsSavingPhoto(true);
+    try {
+      await saveProfileImages(images);
+      setInitialPhotos(images);
+      setPhotoState({ images, ready: true, busy: false });
+      setLegacyPhoto("");
+      setReplacingLegacyPhoto(false);
+    } finally {
+      setIsSavingPhoto(false);
+    }
+  }, []);
   const navigateWhenIdle = (path) => {
     if (!saveInFlight.current) navigate(path);
   };
@@ -490,6 +513,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
     if (
       isLoadingProfile ||
       profileLoadFailed ||
+      isSavingPhoto ||
       saveInFlight.current ||
       !photosReady
     )
@@ -500,10 +524,17 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
     }
     setJobError("");
     const nickname = String(profile.nickname ?? "");
-    if (!NICKNAME_PATTERN.test(nickname)) {
-      setNicknameError(NICKNAME_FORMAT_ERROR);
+    const nicknameError = profileNicknameValidationError(nickname);
+    if (nicknameError) {
+      setNicknameError(nicknameError);
       return;
     }
+    const invalidHeight = profileHeightValidationError(profile.height);
+    if (invalidHeight) {
+      setHeightError(invalidHeight);
+      return;
+    }
+    setHeightError("");
     if (!profile.activityRegionId) {
       toast("검색 결과에서 활동 지역을 선택해 주세요.");
       return;
@@ -561,6 +592,12 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
         setNicknameError(
           "이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해 주세요.",
         );
+      } else if (
+        e?.code === "INVALID_REQUEST" &&
+        Array.isArray(e.fields) &&
+        e.fields.some((fieldError) => fieldError?.field === "height")
+      ) {
+        setHeightError(PROFILE_HEIGHT_VALIDATION_ERROR);
       } else {
         toast(profileSaveErrorMessage(e));
       }
@@ -586,7 +623,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
         id="main-content"
         tabIndex={-1}
         className="main-scroll edit-main"
-        aria-busy={isLoadingProfile || isSaving}
+        aria-busy={isLoadingProfile || isSaving || isSavingPhoto}
       >
         {isLoadingProfile ? (
           <p className="profile-load-state" role="status">
@@ -633,8 +670,9 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                 <ProfilePhotoEditor
                   initialPhotos={initialPhotos}
                   compactPose
-                  disabled={isSaving}
+                  disabled={isSaving || isSavingPhoto}
                   onChange={setPhotoState}
+                  onVerifiedPhotoSave={saveVerifiedPhoto}
                 />
               )}
               {legacyPhoto && replacingLegacyPhoto && (
@@ -676,7 +714,7 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
                 }))
               }
             />
-            <Field label="키 (cm)">
+            <Field label="키 (cm)" error={heightError}>
               <input
                 type="number"
                 name="height"
@@ -740,7 +778,10 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
               />
             </Field>
             <div className="edit-actions">
-              <PixelButton onClick={save} disabled={isSaving || !photosReady}>
+              <PixelButton
+                onClick={save}
+                disabled={isSaving || isSavingPhoto || !photosReady}
+              >
                 {isSaving ? "저장 중…" : "저장하기"}
               </PixelButton>
             </div>

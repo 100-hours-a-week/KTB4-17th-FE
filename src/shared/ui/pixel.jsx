@@ -229,6 +229,18 @@ const ICONS = {
     ".XXXXX.",
     "...X...",
   ],
+  trophy: [
+    "..XXXXXXX..",
+    ".XX.....XX.",
+    "XX.......XX",
+    "XX.......XX",
+    ".XXXXXXXXX.",
+    "....XXX....",
+    "...XXXXX...",
+    "....XXX....",
+    "..XX...XX..",
+    ".XX.....XX.",
+  ],
   bust: [
     "....XXX....",
     "...XXXXX...",

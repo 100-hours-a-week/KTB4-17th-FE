@@ -24,6 +24,7 @@ export function createNotificationPoller({
   let failures = 0;
   let revision = 0;
   let previous = null;
+  let intervalMs = interval;
   const seen = new Set();
 
   const active = () => !stopped && isCurrent() && canPoll();
@@ -99,14 +100,19 @@ export function createNotificationPoller({
       inFlight = false;
       if (controller === current) controller = undefined;
       const retryDelay = failures
-        ? Math.min(interval * 2 ** Math.min(failures, 3), 30000) *
+        ? Math.min(intervalMs * 2 ** Math.min(failures, 3), 30000) *
           (0.9 + random() * 0.2)
-        : interval;
+        : intervalMs;
       schedule(requested ? 0 : retryDelay);
     }
   }
 
   return {
+    setInterval(nextInterval) {
+      if (stopped || !Number.isFinite(nextInterval) || nextInterval < 0) return;
+      intervalMs = nextInterval;
+      if (timer !== undefined) schedule(intervalMs);
+    },
     refresh() {
       if (stopped || !isCurrent()) return;
       revision += 1;
