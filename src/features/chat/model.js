@@ -163,6 +163,26 @@ export function chatSendErrorMessage(error) {
   );
 }
 
+export function chatComposerState({ visit, roomStatus, delegationRestricted }) {
+  const ended = Boolean(roomStatus && roomStatus !== "ACTIVE");
+  const canSend =
+    Boolean(visit) && roomStatus === "ACTIVE" && !delegationRestricted;
+  const notice = delegationRestricted
+    ? "AI가 대화를 마무리하는 동안 직접 메시지를 보낼 수 없어요."
+    : ended
+      ? "대화가 종료되어 메시지를 보낼 수 없어요."
+      : "";
+  const placeholder = ended
+    ? "종료된 대화예요"
+    : delegationRestricted
+      ? "AI가 대화를 마무리하고 있어요…"
+      : visit
+        ? "메시지를 입력해 주세요…"
+        : "대화를 불러오는 중…";
+
+  return { canSend, ended, notice, placeholder };
+}
+
 export function formatFileSize(bytes) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))}KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
