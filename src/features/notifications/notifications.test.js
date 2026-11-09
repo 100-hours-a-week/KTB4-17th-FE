@@ -563,7 +563,7 @@ test("AI simulation requests stay anonymous, belong to SYSTEM, and do not naviga
     targetId: null,
   };
   assert.deepEqual(notificationCopy(request), {
-    title: "AI 시뮬레이션 요청이 도착했어요",
+    title: "",
     body: "누군가 두 사람의 대화를 AI로 그려봤어요.",
     illustration: "system",
   });
