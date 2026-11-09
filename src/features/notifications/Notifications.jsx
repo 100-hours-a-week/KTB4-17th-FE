@@ -123,24 +123,26 @@ function NotificationCard({
           </button>
           <span className="notification-copy">
             <span className="notification-partner-message">
-              <button
-                type="button"
-                className="notification-profile-link"
-                title="닉네임을 누르면 상세 프로필로 이동해요"
-                aria-label={`${details.profile.nickname}님 상세 프로필 보기`}
-                disabled={busy}
-                onClick={openRequesterProfile}
-              >
-                {details.profile.nickname}님
-                <PixelIcon name="chev" scale={1} />
-              </button>
+              <span className="notification-partner-first-line">
+                <button
+                  type="button"
+                  className="notification-profile-link"
+                  title="닉네임을 누르면 상세 프로필로 이동해요"
+                  aria-label={`${details.profile.nickname}님 상세 프로필 보기`}
+                  disabled={busy}
+                  onClick={openRequesterProfile}
+                >
+                  {details.profile.nickname}님
+                </button>
+                <span>이 그려본 두 사람의 대화,</span>
+              </span>
               <button
                 type="button"
                 className="notification-inline-result"
                 disabled={busy}
                 onClick={openResult}
               >
-                이 그려본 두 사람의 대화, 지금 확인해 보세요.
+                지금 확인해보세요
               </button>
             </span>
             <button
@@ -165,11 +167,13 @@ function NotificationCard({
           className="notification-open"
           disabled={busy}
           onClick={openResult}
-          aria-label={`${item.readAt ? "" : "읽지 않음. "}${copy.title}. ${copy.body}`}
+          aria-label={`${item.readAt ? "" : "읽지 않음. "}${
+            copy.title ? `${copy.title}. ` : ""
+          }${copy.body}`}
         >
           <NotificationIllustration kind={copy.illustration} />
           <span className="notification-copy">
-            <strong>{copy.title}</strong>
+            {copy.title && <strong>{copy.title}</strong>}
             <span>{copy.body}</span>
             <time dateTime={item.createdAt}>
               {notificationTime(item.createdAt)}
@@ -466,9 +470,7 @@ export function Notifications({ navigate, toast, initialCategory = "ALL" }) {
       <BrandHeader navigate={navigate} notificationAction={false}>
         <span className="notification-count" role="status">
           <PagerIcon />
-          {notifications.count == null
-            ? "새 소식"
-            : `새 알림 ${notifications.count}`}
+          {notifications.count ?? 0}
         </span>
       </BrandHeader>
       <main

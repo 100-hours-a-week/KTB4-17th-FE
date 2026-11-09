@@ -301,12 +301,24 @@
 }
 
 .notification-copy .notification-partner-message {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  overflow: hidden;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.55;
   word-break: keep-all;
-  overflow-wrap: anywhere;
+}
+
+.notification-partner-first-line,
+.notification-toast-result-first-line {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .notification-enrichment-status button {
@@ -319,7 +331,12 @@
 
 .notification-copy .notification-inline-result,
 .notification-toast-result-body > button:not(.notification-profile-link) {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
   cursor: pointer;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .notification-copy .notification-profile-link,
@@ -555,11 +572,13 @@
 }
 
 .notification-toast-result-body {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  overflow: hidden;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.6;
-  overflow-wrap: anywhere;
 }
 
 .notification-toast-close {

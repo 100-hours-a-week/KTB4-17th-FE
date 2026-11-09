@@ -129,7 +129,6 @@ export function MyPage({ navigate }) {
       <BrandHeader
         navigate={navigate}
         className="my-topbar"
-        notificationAction={false}
       />
       <main id="main-content" tabIndex={-1} className="main-scroll my-main">
         <div

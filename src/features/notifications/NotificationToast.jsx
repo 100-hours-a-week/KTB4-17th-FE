@@ -92,21 +92,23 @@ export function NotificationToast({
           <span>
             <small>삐삐! 새로운 소식</small>
             <span className="notification-toast-result-body">
-              <button
-                type="button"
-                className="notification-profile-link"
-                title="닉네임을 누르면 상세 프로필로 이동해요"
-                aria-label={`${details.profile.nickname}님 상세 프로필 보기`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onOpenProfile(item, details.requesterId);
-                }}
-              >
-                {details.profile.nickname}님
-                <PixelIcon name="chev" scale={1} />
-              </button>
+              <span className="notification-toast-result-first-line">
+                <button
+                  type="button"
+                  className="notification-profile-link"
+                  title="닉네임을 누르면 상세 프로필로 이동해요"
+                  aria-label={`${details.profile.nickname}님 상세 프로필 보기`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onOpenProfile(item, details.requesterId);
+                  }}
+                >
+                  {details.profile.nickname}님
+                </button>
+                <span>이 그려본 두 사람의 대화,</span>
+              </span>
               <button type="button" onClick={() => onOpen(item)}>
-                이 그려본 두 사람의 대화, 지금 확인해 보세요.
+                지금 확인해보세요
               </button>
             </span>
           </span>
@@ -120,7 +122,7 @@ export function NotificationToast({
           <NotificationIllustration kind={copy.illustration} />
           <span>
             <small>삐삐! 새로운 소식</small>
-            <strong>{copy.title}</strong>
+            {copy.title && <strong>{copy.title}</strong>}
             <span>{copy.body}</span>
           </span>
         </button>

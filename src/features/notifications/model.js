@@ -9,7 +9,7 @@ export function notificationCopy(item) {
   switch (item.type) {
     case "AI_SIMULATION_REQUESTED":
       return {
-        title: "AI 시뮬레이션 요청이 도착했어요",
+        title: "",
         body: "누군가 두 사람의 대화를 AI로 그려봤어요.",
         illustration: "system",
       };
@@ -48,7 +48,7 @@ export function simulationCompletionCopy(item, details) {
   if (details?.role === "partner" && details.profile?.nickname) {
     return {
       title: "",
-      body: `${details.profile.nickname}님이 그려본 두 사람의 대화, 지금 확인해 보세요.`,
+      body: `${details.profile.nickname}님이 그려본 두 사람의 대화, 지금 확인해보세요`,
       illustration: "system",
     };
   }

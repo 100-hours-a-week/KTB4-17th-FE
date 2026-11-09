@@ -555,10 +555,10 @@ export function Home({
           className="home-popular-profiles-button"
           type="button"
           onClick={() => navigate("/popular-profiles")}
-          aria-label="인기 프로필 순위 보기"
-          title="인기 프로필 순위"
+          aria-label="TOP 10 인기 프로필 순위 보기"
+          title="TOP 10 인기 프로필 순위"
         >
-          <span aria-hidden="true">TOP</span>
+          <span aria-hidden="true">TOP10</span>
         </button>
         <button
           className="home-preference-action"
