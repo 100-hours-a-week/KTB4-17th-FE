@@ -126,10 +126,7 @@ export function MyPage({ navigate }) {
   const age = dateAge(profile.birthDate);
   return (
     <>
-      <BrandHeader
-        navigate={navigate}
-        className="my-topbar"
-      />
+      <BrandHeader navigate={navigate} className="my-topbar" />
       <main id="main-content" tabIndex={-1} className="main-scroll my-main">
         <div
           className={`my-identity${isProfileLoading ? " my-identity-loading" : ""}`}
