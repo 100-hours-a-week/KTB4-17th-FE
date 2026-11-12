@@ -1,25 +1,24 @@
 .home-header .home-popular-profiles-button {
   display: inline-grid;
   flex: 0 0 auto;
-  min-width: 42px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   margin-left: auto;
   place-items: center;
-  padding: 0 7px;
-  border: 2px solid #684e7d;
-  border-radius: 6px;
-  background: #eee5f8;
-  box-shadow: 0 2px 0 #c9b7dc;
-  color: #53304c;
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.04em;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--purple);
   cursor: pointer;
 }
 
 .home-header .home-popular-profiles-button:hover {
-  background: #f5effb;
+  color: var(--purple-deep);
+}
+
+.home-popular-profiles-button .pixel-icon {
+  width: 28px;
+  height: 28px;
 }
 
 .home-header .home-popular-profiles-button:active {

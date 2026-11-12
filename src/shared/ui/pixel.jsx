@@ -214,7 +214,7 @@ const ICONS = {
   chat: [
     "XXXXXXXX",
     "X......X",
-    "X.XXXX.X",
+    "X.pppp.X",
     "X......X",
     "XXXXXXXX",
     ".XX.....",
@@ -228,6 +228,18 @@ const ICONS = {
     ".XX.XX.",
     ".XXXXX.",
     "...X...",
+  ],
+  crown: [
+    "X.....X.....X",
+    "XX...XXX...XX",
+    "XXX.XXXXX.XXX",
+    "XXXXXXXXXXXXX",
+    ".XXXXXXXXXXX.",
+    ".XXppXXXppXX.",
+    ".XXXXXXXXXXX.",
+    "..XXXXXXXXX..",
+    ".............",
+    "..ddddddddd..",
   ],
   trophy: [
     "..XXXXXXX..",
