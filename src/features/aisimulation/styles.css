@@ -11,6 +11,247 @@
   max-width: 230px;
 }
 
+.simulation-progress {
+  width: 100%;
+  max-width: 340px;
+  margin: auto;
+  padding-block: 12px;
+}
+
+.simulation-progress-art {
+  position: relative;
+  width: 172px;
+  height: 108px;
+  margin: 0 auto 12px;
+}
+
+.simulation-progress-paper {
+  position: absolute;
+  top: 4px;
+  left: 30px;
+  display: grid;
+  gap: 6px;
+  width: 88px;
+  padding: 10px;
+  border: 2px solid var(--purple-deep);
+  background: var(--paper);
+  box-shadow: 5px 5px 0 var(--soft-lavender);
+  color: var(--purple);
+  transform: rotate(-7deg);
+}
+
+.simulation-progress-paper-line {
+  height: 4px;
+  background: var(--lavender);
+}
+
+.simulation-progress-paper-line:nth-of-type(2) {
+  width: 68%;
+}
+
+.simulation-progress-paper-chart {
+  display: flex;
+  align-items: end;
+  gap: 5px;
+  height: 30px;
+  padding-top: 4px;
+}
+
+.simulation-progress-chart-bar {
+  flex: 1;
+  height: 60%;
+  background: var(--purple);
+}
+
+.simulation-progress-chart-bar:nth-child(even) {
+  height: 100%;
+  background: var(--lavender);
+}
+
+.simulation-progress-chart-bar:last-child {
+  height: 80%;
+}
+
+.simulation-progress .simulation-progress-avatar {
+  position: absolute;
+  right: 12px;
+  bottom: 0;
+}
+
+.simulation-progress-dots {
+  position: absolute;
+  right: 14px;
+  top: 20px;
+  display: flex;
+  gap: 5px;
+}
+
+.simulation-progress-dot {
+  width: 5px;
+  height: 5px;
+  background: var(--purple);
+  animation: simulation-processing-dot 1.5s ease-in-out infinite;
+}
+
+.simulation-progress-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.simulation-progress-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.simulation-progress-heading {
+  text-align: center;
+}
+
+.simulation-progress-heading h2 {
+  margin: 0;
+  color: var(--purple-deep);
+  font-size: 22px;
+  line-height: 1.4;
+  white-space: pre-line;
+  word-break: keep-all;
+}
+
+.simulation-progress-heading p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+  word-break: keep-all;
+}
+
+.simulation-progress-track {
+  height: 6px;
+  margin: 16px 0 8px;
+  overflow: hidden;
+  background: var(--soft-lavender);
+}
+
+.simulation-progress-track > span {
+  display: block;
+  width: 30%;
+  height: 100%;
+  background: var(--purple);
+  animation: simulation-processing-scan 2s ease-in-out infinite;
+}
+
+.simulation-progress-stages {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.simulation-progress-stages li {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.simulation-progress-step-icon {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--lavender);
+}
+
+.simulation-progress-step-dot {
+  width: 5px;
+  height: 5px;
+  background: currentcolor;
+}
+
+.simulation-progress-stages strong {
+  font-size: 13px;
+}
+
+.simulation-progress-stages p {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+.simulation-progress-stages small {
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.simulation-progress-stages li[data-state="done"] {
+  color: #25714e;
+}
+
+.simulation-progress-stages li[data-state="current"] {
+  color: var(--purple-deep);
+}
+
+.simulation-progress-stages
+  li[data-state="current"]
+  .simulation-progress-step-icon {
+  border-color: var(--purple);
+  background: var(--soft-lavender);
+  color: var(--purple);
+}
+
+.simulation-progress-note {
+  margin: 14px 0;
+  color: var(--muted);
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+.simulation-progress-leave {
+  display: grid;
+  gap: 10px;
+  text-align: center;
+}
+
+.simulation-progress-leave small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+@keyframes simulation-processing-scan {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(335%);
+  }
+}
+
+@keyframes simulation-processing-dot {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .simulation-progress-dot,
+  .simulation-progress-track > span {
+    animation: none;
+  }
+
+  .simulation-progress-track > span {
+    width: 100%;
+    opacity: 0.65;
+  }
+}
+
 .simulation-retry .pixel-button {
   min-height: 48px;
 }
@@ -459,6 +700,15 @@
   color: #67428f;
   font-size: 15px;
   font-weight: 700;
+}
+
+.simulation-progress-avatar .simulation-person-avatar {
+  width: 60px;
+  height: 60px;
+  border: 3px solid var(--paper);
+  border-radius: 0;
+  clip-path: var(--pixel-step-shape);
+  font-size: 22px;
 }
 
 .simulation-view .simulation-participants .simulation-person-avatar {

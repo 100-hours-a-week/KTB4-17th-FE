@@ -7,10 +7,12 @@ import {
   ScreenHeader,
 } from "../../shared/ui/components.jsx";
 import { AiAvatar, PixelIcon } from "../../shared/ui/pixel.jsx";
+import { messages as chatMessages } from "../chat/api.js";
 import { MessageBubble } from "../chat/Chat.jsx";
 import { ChatModeMenu } from "../chat/ChatModeMenu.jsx";
 import { getMyProfile, getUserProfile } from "../profile/api.js";
 import { profileImageUrls } from "../profile/imageUrls.js";
+import { positiveId } from "./model.js";
 import { useSimulationAttempt } from "./useSimulationAttempt.js";
 import { useSimulationResult } from "./useSimulationResult.js";
 
@@ -85,10 +87,8 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
   const chatPath =
     Number.isSafeInteger(roomId) && roomId > 0 ? `/chats/${roomId}` : "/chats";
   const backPath = chatPath === "/chats" ? "/home" : chatPath;
-  const { simulation, status, error, refresh } = useSimulationResult(
-    simulationId,
-    chatRoomId,
-  );
+  const { simulation, status, error, refresh, targetUserId } =
+    useSimulationResult(simulationId, chatRoomId);
   const attempt = useSimulationAttempt({ simulationId, chatRoomId, navigate });
 
   const partner = simulation?.partner || {};
@@ -129,6 +129,11 @@ export function Simulation({ simulationId, chatRoomId, navigate }) {
             error={error}
             refresh={refresh}
             attempt={attempt}
+            navigate={navigate}
+            backPath={backPath}
+            partner={partner}
+            targetUserId={targetUserId}
+            chatRoomId={chatRoomId}
           />
         </div>
       </main>
@@ -230,10 +235,24 @@ const splitSentences = (text) =>
     .filter(Boolean);
 
 export function Report({ simulationId, chatRoomId, navigate }) {
-  const { simulation, status, error, refresh } = useSimulationResult(
-    simulationId,
-    chatRoomId,
+  return (
+    <ReportContent
+      key={simulationId}
+      simulationId={simulationId}
+      chatRoomId={chatRoomId}
+      navigate={navigate}
+    />
   );
+}
+
+function ReportContent({ simulationId, chatRoomId, navigate }) {
+  const [showMinimumLoading, setShowMinimumLoading] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setShowMinimumLoading(false), 15_000);
+    return () => clearTimeout(timer);
+  }, []);
+  const { simulation, status, error, refresh, targetUserId } =
+    useSimulationResult(simulationId, chatRoomId);
   const attempt = useSimulationAttempt({ simulationId, chatRoomId, navigate });
   const report = simulation?.report;
   const rawScore = Number(report?.overall?.score);
@@ -246,7 +265,7 @@ export function Report({ simulationId, chatRoomId, navigate }) {
     Number.isSafeInteger(roomId) && roomId > 0
       ? `/ai/simulations/${simulationId}?chatRoomId=${roomId}`
       : `/ai/simulations/${simulationId}`;
-  if (error || !report)
+  if (error || !report || showMinimumLoading)
     return (
       <>
         <ScreenHeader
@@ -264,6 +283,15 @@ export function Report({ simulationId, chatRoomId, navigate }) {
             error={error}
             refresh={refresh}
             attempt={attempt}
+            partner={simulation?.partner}
+            targetUserId={targetUserId}
+            chatRoomId={chatRoomId}
+            navigate={navigate}
+            backPath={
+              Number.isSafeInteger(roomId) && roomId > 0
+                ? `/chats/${roomId}`
+                : "/home"
+            }
           />
         </main>
       </>
@@ -353,7 +381,17 @@ export function Report({ simulationId, chatRoomId, navigate }) {
   );
 }
 
-function SimulationState({ status, error, refresh, attempt }) {
+function SimulationState({
+  status,
+  error,
+  refresh,
+  attempt,
+  navigate,
+  backPath,
+  partner,
+  targetUserId,
+  chatRoomId,
+}) {
   if (error) {
     const unavailable = [401, 403, 404].includes(error.status);
     return (
@@ -418,21 +456,175 @@ function SimulationState({ status, error, refresh, attempt }) {
     );
   }
   return (
-    <EmptyState
-      icon="✦"
-      title={
-        status === "IN_PROGRESS"
-          ? "AI가 두 사람의 궁합을 분석하고 있어요"
-          : status === "COMPLETED"
-            ? "완료된 결과를 불러오고 있어요…"
-            : "시뮬레이션 상태를 확인하고 있어요…"
-      }
-      description={
-        status === "IN_PROGRESS"
-          ? "보통 수십 초가 걸리며 요청이 몰리면 더 오래 걸릴 수 있어요. 다른 화면을 이용한 뒤 다시 확인해도 돼요."
-          : "잠시만 기다려 주세요…"
-      }
-      role="status"
+    <SimulationProgress
+      status={status}
+      navigate={navigate}
+      backPath={backPath}
+      partner={partner}
+      targetUserId={targetUserId}
+      chatRoomId={chatRoomId}
     />
+  );
+}
+
+function SimulationProgress({
+  status,
+  navigate,
+  backPath,
+  partner,
+  targetUserId,
+  chatRoomId,
+}) {
+  const step = status === "COMPLETED" ? 2 : status === "IN_PROGRESS" ? 1 : 0;
+  const stages = [
+    { label: "생성 요청 확인", detail: "요청을 확인하고 있어요" },
+    {
+      label: "AI 대화·궁합 분석",
+      detail: "두 사람의 성향을 반영해 분석하고 있어요",
+    },
+    { label: "리포트 불러오기", detail: "분석 결과를 화면에 담고 있어요" },
+  ];
+  const titles = [
+    "리포트 생성을\n준비하고 있어요",
+    "두 사람의 궁합을\n분석하고 있어요",
+    "분석을 마쳤어요\n리포트를 불러올게요",
+  ];
+  return (
+    <section
+      className="simulation-progress"
+      aria-label="궁합 리포트 생성 진행 상황"
+    >
+      <div className="simulation-progress-art" aria-hidden="true">
+        <div className="simulation-progress-paper">
+          <PixelIcon name="heart" scale={3} />
+          <span className="simulation-progress-paper-line" />
+          <span className="simulation-progress-paper-line" />
+          <div className="simulation-progress-paper-chart">
+            <i className="simulation-progress-chart-bar" />
+            <i className="simulation-progress-chart-bar" />
+            <i className="simulation-progress-chart-bar" />
+            <i className="simulation-progress-chart-bar" />
+            <i className="simulation-progress-chart-bar" />
+          </div>
+        </div>
+        <SimulationProgressAvatar
+          partner={partner}
+          targetUserId={targetUserId}
+          chatRoomId={chatRoomId}
+        />
+        <span className="simulation-progress-dots">
+          <i className="simulation-progress-dot" />
+          <i className="simulation-progress-dot" />
+          <i className="simulation-progress-dot" />
+        </span>
+      </div>
+      <div
+        className="simulation-progress-heading"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        <h2>{titles[step]}</h2>
+        <p>
+          {step === 1
+            ? "대화 속에서 두 사람의 호흡을 살펴보는 중이에요."
+            : stages[step].detail}
+        </p>
+      </div>
+      <div
+        className="simulation-progress-track"
+        role="progressbar"
+        aria-label={stages[step].label}
+        aria-valuetext="처리 중"
+      >
+        <span />
+      </div>
+      <ol className="simulation-progress-stages">
+        {stages.map(({ label, detail }, index) => (
+          <li
+            key={label}
+            data-state={
+              index < step ? "done" : index === step ? "current" : "waiting"
+            }
+            aria-current={index === step ? "step" : undefined}
+          >
+            <span className="simulation-progress-step-icon" aria-hidden="true">
+              {index < step ? (
+                <PixelIcon name="check" scale={1.5} />
+              ) : (
+                <i className="simulation-progress-step-dot" />
+              )}
+            </span>
+            <div>
+              <strong>{label}</strong>
+              {index === step && <p>{detail}</p>}
+            </div>
+            <small>
+              {index < step ? "완료" : index === step ? "진행 중" : "대기"}
+            </small>
+          </li>
+        ))}
+      </ol>
+      <p className="simulation-progress-note">
+        완료되면 결과가 자동으로 열려요.
+      </p>
+      <div className="simulation-progress-leave">
+        <PixelButton secondary onClick={() => navigate(backPath)}>
+          {backPath === "/home" ? "홈으로 돌아가기" : "채팅으로 돌아가기"}
+        </PixelButton>
+        <small>다른 화면을 보고 와도 분석은 계속돼요.</small>
+      </div>
+    </section>
+  );
+}
+
+function SimulationProgressAvatar({ partner, targetUserId, chatRoomId }) {
+  const userId = positiveId(partner?.userId) || positiveId(targetUserId);
+  const roomId = positiveId(chatRoomId);
+  const key = `${userId}:${roomId}`;
+  const [loaded, setLoaded] = useState(null);
+  useEffect(() => {
+    if (!userId && !roomId) return undefined;
+    const controller = new AbortController();
+    async function load() {
+      let participant = { userId };
+      if (!userId) {
+        const page = await chatMessages(roomId, {
+          size: 1,
+          signal: controller.signal,
+        });
+        if (positiveId(page?.chatRoom?.chatRoomId) !== roomId) return;
+        participant = page.chatRoom.otherParticipant;
+      }
+      const participantId = positiveId(participant?.userId);
+      if (!participantId || controller.signal.aborted) return;
+      const profile = await getUserProfile(participantId, {
+        signal: controller.signal,
+      });
+      if (!controller.signal.aborted) {
+        setLoaded({
+          key,
+          participant: {
+            ...participant,
+            userId: participantId,
+            nickname: profile?.nickname || participant.nickname,
+          },
+          profile,
+        });
+      }
+    }
+    void load().catch(() => {
+      // The report remains available when the participant's photo cannot be loaded.
+    });
+    return () => controller.abort();
+  }, [key, userId, roomId]);
+  const current = loaded?.key === key ? loaded : null;
+  return (
+    <span className="simulation-progress-avatar">
+      <ParticipantAvatar
+        participant={current?.participant || partner || { userId }}
+        profile={current?.profile}
+      />
+    </span>
   );
 }

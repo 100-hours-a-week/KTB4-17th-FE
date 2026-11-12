@@ -52,6 +52,7 @@ export function useSimulationResult(simulationId, chatRoomId) {
 
   return {
     status,
+    targetUserId: positiveId(entry?.targetUserId),
     simulation: result?.key === key ? result.simulation : null,
     error: !id
       ? simulationError("SIMULATION_NOT_FOUND", 404)
