@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  captureStages,
   HAND_DIRECTION_NAMES,
   HAND_NAMES,
   HEAD_MOTIONS,
@@ -181,7 +182,7 @@ function RobotHead({ yaw, pitch }) {
   );
 }
 
-function HaruPose({ challenge, moving }) {
+function HaruPose({ challenge, moving, handsLowered }) {
   const [turn, setTurn] = useState(0);
   const currentTurn = useRef(0);
   useEffect(() => {
@@ -241,7 +242,9 @@ function HaruPose({ challenge, moving }) {
           strokeWidth="3"
         />
       )}
-      <HandExample hand={challenge.hand} direction={challenge.direction} />
+      {!handsLowered && (
+        <HandExample hand={challenge.hand} direction={challenge.direction} />
+      )}
     </svg>
   );
 }
@@ -249,7 +252,9 @@ function HaruPose({ challenge, moving }) {
 export function PoseExample({ challenge, progress, showHelp = true }) {
   const [demoStep, setDemoStep] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const recording = ["centering", "pose", "head"].includes(progress.stage);
+  const recording = ["centering", "pose", "lowering", "head"].includes(
+    progress.stage,
+  );
   const key = challenge
     ? `${challenge.hand}-${challenge.direction}-${challenge.head}`
     : "";
@@ -267,19 +272,22 @@ export function PoseExample({ challenge, progress, showHelp = true }) {
   useEffect(() => {
     if (!playing || recording || !challenge?.head) return undefined;
     const timer = window.setInterval(
-      () => setDemoStep((step) => (step + 1) % 3),
+      () => setDemoStep((step) => (step + 1) % 4),
       1800,
     );
     return () => window.clearInterval(timer);
   }, [playing, recording, challenge?.head]);
   if (!challenge || challenge.legacy) return null;
   const motion = HEAD_MOTIONS[challenge.head];
+  const stages = captureStages(challenge);
   const step = recording ? (progress.stageIndex ?? 0) : demoStep;
+  const showingHead =
+    Boolean(motion) && (recording ? progress.stage === "head" : step === 3);
+  const lowering = recording
+    ? progress.stage === "lowering"
+    : Boolean(motion) && step === 2;
   const stepDone = (index) =>
     Boolean(recording && index < (progress.stageIndex ?? 0));
-  const labels = motion
-    ? ["정면 3초", "손 포즈 3초", "고개 3초"]
-    : ["정면 3초", "손 포즈 3초"];
   return (
     <section className="trust-pose-example" aria-label="하루의 포즈 예시">
       <div className="trust-example-heading">
@@ -301,32 +309,44 @@ export function PoseExample({ challenge, progress, showHelp = true }) {
       <div className="trust-example-preview">
         <HaruPose
           challenge={challenge}
-          moving={
-            Boolean(motion) &&
-            (recording ? progress.stage === "head" : step === 1)
-          }
+          moving={showingHead}
+          handsLowered={lowering || showingHead}
         />
         <div className="trust-example-copy">
-          <strong>{HAND_NAMES[challenge.hand]}</strong>
-          {requiresHandDirection(challenge.hand, challenge.direction) ? (
-            <span>
-              손끝:{" "}
-              {challenge.direction === "SIDEWAYS"
-                ? "← 가로 → 어느 쪽이든"
-                : HAND_DIRECTION_NAMES[challenge.direction]}
-            </span>
-          ) : (
-            <span>손끝 방향은 자유예요</span>
-          )}
-          {showHelp && (
+          {lowering ? (
             <>
-              <span>손바닥·손등 어느 쪽도 OK</span>
-              <span>왼손·오른손 모두 가능</span>
+              <strong>손을 내리고 2초 유지</strong>
+              <span>확인 후 고개 동작으로 넘어가요</span>
+            </>
+          ) : showingHead ? (
+            <>
+              <strong>{motion.label} · 3초 유지</strong>
+              <span>손은 내려도 돼요</span>
+            </>
+          ) : (
+            <>
+              <strong>{HAND_NAMES[challenge.hand]}</strong>
+              {requiresHandDirection(challenge.hand, challenge.direction) ? (
+                <span>
+                  손끝:{" "}
+                  {challenge.direction === "SIDEWAYS"
+                    ? "← 가로 → 어느 쪽이든"
+                    : HAND_DIRECTION_NAMES[challenge.direction]}
+                </span>
+              ) : (
+                <span>손끝 방향은 자유예요</span>
+              )}
+              {showHelp && (
+                <>
+                  <span>손바닥·손등 어느 쪽도 OK</span>
+                  <span>왼손·오른손 모두 가능</span>
+                </>
+              )}
             </>
           )}
         </div>
       </div>
-      {showHelp && (
+      {showHelp && !lowering && !showingHead && (
         <>
           <p className="trust-hand-variations-title">
             같은 손 모양, 이렇게 잡아도 돼요
@@ -353,6 +373,8 @@ export function PoseExample({ challenge, progress, showHelp = true }) {
         </>
       )}
       {showHelp &&
+        !showingHead &&
+        !lowering &&
         requiresHandDirection(challenge.hand, challenge.direction) &&
         challenge.direction === "SIDEWAYS" && (
           <p className="trust-hand-direction-note">
@@ -360,50 +382,62 @@ export function PoseExample({ challenge, progress, showHelp = true }) {
           </p>
         )}
       <ol className="trust-head-steps">
-        {labels.map((label, index) => {
-          const done = stepDone(index);
-          return (
-            <li
-              key={label}
-              aria-current={index === step ? "step" : undefined}
-              data-done={done ? "true" : undefined}
-            >
-              {recording || !motion ? (
-                <span>
-                  {done ? "✓ " : `${index + 1}. `}
-                  {label}
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  aria-pressed={index === step}
-                  onClick={() => {
-                    setPlaying(false);
-                    setDemoStep(index);
-                  }}
-                >
-                  {index + 1}. {label}
-                </button>
-              )}
-            </li>
-          );
-        })}
+        {stages
+          .filter(({ id }) => id !== "lowering")
+          .map((item, index) => {
+            const { id, label, seconds } = item;
+            const captureIndex = stages.indexOf(item);
+            const done = stepDone(captureIndex);
+            return (
+              <li
+                key={id}
+                aria-current={captureIndex === step ? "step" : undefined}
+                data-done={done ? "true" : undefined}
+              >
+                {recording || !motion ? (
+                  <span>
+                    {done ? "✓ " : `${index + 1}. `}
+                    {label} {seconds}초
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    aria-pressed={captureIndex === step}
+                    onClick={() => {
+                      setPlaying(false);
+                      setDemoStep(captureIndex);
+                    }}
+                  >
+                    {index + 1}. {label} {seconds}초
+                  </button>
+                )}
+              </li>
+            );
+          })}
       </ol>
       {showHelp && (
         <small>
-          {!motion
-            ? "정면과 손 모양이 확인되면 자동으로 촬영을 마쳐요."
-            : step === 2
-              ? `${motion.detail} 그 자세를 3초 유지해 주세요.`
-              : step === 0
-                ? "먼저 정면을 바라봐 주세요."
-                : "안내된 손 포즈를 3초 유지해 주세요."}{" "}
-          좌우는 내 몸 기준이에요.{" "}
-          {!requiresHandDirection(challenge.hand, challenge.direction)
-            ? "손 모양만 맞추고 방향에 상관없이 편한 위치에 두세요."
-            : "손 모양과 방향만 맞추면, 화면 안에서 편한 위치에 두어도 돼요."}{" "}
-          예시는 참고용이에요. 손바닥·손등 방향이나 팔 각도까지 똑같이 따라 하지
-          않아도 돼요. 얼굴은 가리지 말아 주세요.
+          {lowering ? (
+            <>
+              손을 턱 아래로 내리고 카메라를 정면으로 보며 2초간 유지해 주세요.
+            </>
+          ) : showingHead ? (
+            <>{motion.detail} 그 자세를 3초 유지해 주세요. 손은 내려도 돼요.</>
+          ) : (
+            <>
+              {!motion
+                ? "정면과 손 모양이 확인되면 자동으로 촬영을 마쳐요."
+                : step === 0
+                  ? "먼저 정면을 바라봐 주세요."
+                  : "안내된 손 포즈를 3초 유지해 주세요."}{" "}
+              좌우는 내 몸 기준이에요.{" "}
+              {!requiresHandDirection(challenge.hand, challenge.direction)
+                ? "손 모양만 맞추고 방향에 상관없이 편한 위치에 두세요."
+                : "손 모양과 방향만 맞추면, 화면 안에서 편한 위치에 두어도 돼요."}{" "}
+              예시는 참고용이에요. 손바닥·손등 방향이나 팔 각도까지 똑같이 따라
+              하지 않아도 돼요. 얼굴은 가리지 말아 주세요.
+            </>
+          )}
         </small>
       )}
     </section>

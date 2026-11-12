@@ -42,6 +42,8 @@ import {
 } from "../features/recommendation/Home.jsx";
 import { isHomePath } from "../features/recommendation/recommendationRefresh.js";
 import { useRecommendationFeed } from "../features/recommendation/useRecommendationFeed.js";
+import { Questions } from "../features/sentence-cards/Questions.jsx";
+import { useSentenceCards } from "../features/sentence-cards/useSentenceCards.js";
 import * as userApi from "../features/user/api.js";
 import { executeUserWithdrawal } from "../features/user/withdrawal.js";
 import {
@@ -144,6 +146,9 @@ function AppRouter() {
   const feed = useRecommendationFeed({
     enabled: !loading && data.session && data.onboarded,
     isHome: isHomePath(path),
+  });
+  const sentenceCards = useSentenceCards({
+    enabled: data.session && data.onboarded && !sessionCheckError,
   });
   const {
     recommendations,
@@ -466,6 +471,7 @@ function AppRouter() {
   else if (path === "/home" || path === "/")
     page = (
       <Home
+        sentenceCards={sentenceCards}
         navigate={navigate}
         toast={toast}
         recommendations={recommendations}
@@ -575,6 +581,8 @@ function AppRouter() {
       />
     );
   else if (path === "/my") page = <MyPage navigate={navigate} toast={toast} />;
+  else if (path === "/my/questions")
+    page = <Questions session={sentenceCards} navigate={navigate} />;
   else if (path === "/settings")
     page = (
       <Settings

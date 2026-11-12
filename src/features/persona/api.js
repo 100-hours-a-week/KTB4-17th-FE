@@ -1,4 +1,10 @@
 import { apiRequest } from "../../shared/api/client.js";
+import { readPersona } from "./model.js";
+
+export const getMyPersona = ({ signal } = {}) =>
+  apiRequest("/api/v1/persona/me", { signal, cache: "no-store" }).then(
+    readPersona,
+  );
 
 export const personaStart = () =>
   apiRequest("/api/v1/persona/onboarding/start", { method: "POST" });

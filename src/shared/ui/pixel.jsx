@@ -60,6 +60,15 @@ const ICONS = {
   ],
   plus: ["..X..", "..X..", "XXXXX", "..X..", "..X.."],
   x: ["X...X", ".X.X.", "..X..", ".X.X.", "X...X"],
+  logout: [
+    "XXXX.....",
+    "X....X...",
+    "X.....X..",
+    "X.XXXXXXX",
+    "X.....X..",
+    "X....X...",
+    "XXXX.....",
+  ],
   spark: [
     "...X...",
     "...X...",
@@ -214,7 +223,7 @@ const ICONS = {
   chat: [
     "XXXXXXXX",
     "X......X",
-    "X.XXXX.X",
+    "X.pppp.X",
     "X......X",
     "XXXXXXXX",
     ".XX.....",
@@ -228,6 +237,18 @@ const ICONS = {
     ".XX.XX.",
     ".XXXXX.",
     "...X...",
+  ],
+  crown: [
+    "X.....X.....X",
+    "XX...XXX...XX",
+    "XXX.XXXXX.XXX",
+    "XXXXXXXXXXXXX",
+    ".XXXXXXXXXXX.",
+    ".XXppXXXppXX.",
+    ".XXXXXXXXXXX.",
+    "..XXXXXXXXX..",
+    ".............",
+    "..ddddddddd..",
   ],
   trophy: [
     "..XXXXXXX..",

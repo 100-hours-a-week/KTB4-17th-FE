@@ -21,7 +21,8 @@
 
 .trust-head-steps {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: 4px;
   margin: 0;
   padding: 0;
@@ -554,6 +555,34 @@
   width: 6px;
   height: 6px;
   background: var(--pink);
+}
+
+.trust-head-notice {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  left: 8px;
+  z-index: 4;
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid #c9b6ed;
+  border-radius: 8px;
+  background: rgb(27 20 48 / 92%);
+  color: #fff;
+  text-align: center;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+.trust-head-notice strong {
+  font-size: 15px;
+  word-break: keep-all;
+}
+
+.trust-head-notice span {
+  color: #a4efbb;
+  font-size: 12px;
 }
 
 .trust-reference-photo {

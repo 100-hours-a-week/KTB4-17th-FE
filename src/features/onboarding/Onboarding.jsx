@@ -450,6 +450,13 @@ export function Onboarding({
   const [error, setError] = useState("");
   const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
   const logoutActionRef = useRef(null);
+  const logoutDialogRef = useRef(null);
+  useEffect(() => {
+    const dialog = logoutDialogRef.current;
+    if (!dialog || !logoutConfirmationOpen) return undefined;
+    dialog.showModal();
+    return () => dialog.close();
+  }, [logoutConfirmationOpen]);
   const [identitySaving, setIdentitySaving] = useState(false);
   const [identityAuthExpired, setIdentityAuthExpired] = useState(false);
   const [regionQuery, setRegionQuery] = useState("");
@@ -1025,18 +1032,37 @@ export function Onboarding({
         aria-label="온보딩"
       >
         <header className="brand-header onboarding-brand">
-          {isPersonaFlowStep || !canGoBack ? (
-            <span className="onboarding-back-placeholder" aria-hidden="true" />
-          ) : (
-            <button
-              type="button"
-              className="onboarding-back"
-              onClick={back}
-              aria-label="뒤로가기"
-            >
-              <PixelIcon name="back" />
-            </button>
-          )}
+          <div className="onboarding-header-start">
+            {isPersonaFlowStep || !canGoBack ? (
+              <span
+                className="onboarding-back-placeholder"
+                aria-hidden="true"
+              />
+            ) : (
+              <button
+                type="button"
+                className="onboarding-back"
+                onClick={back}
+                aria-label="뒤로가기"
+              >
+                <PixelIcon name="back" />
+              </button>
+            )}
+            {data.session && onLogout && (
+              <button
+                ref={logoutActionRef}
+                type="button"
+                className="onboarding-logout-action"
+                aria-label="로그아웃"
+                title="로그아웃"
+                aria-haspopup="dialog"
+                onClick={() => setLogoutConfirmationOpen(true)}
+                disabled={isLoggingOut}
+              >
+                <PixelIcon name="logout" />
+              </button>
+            )}
+          </div>
 
           <img
             className="brand-header-logo"
@@ -1046,19 +1072,6 @@ export function Onboarding({
             alt="*23#"
           />
           <div className="onboarding-header-actions">
-            {data.session && onLogout && (
-              <button
-                ref={logoutActionRef}
-                type="button"
-                className="onboarding-logout-action"
-                aria-expanded={logoutConfirmationOpen}
-                aria-controls="onboarding-logout-confirm"
-                onClick={() => setLogoutConfirmationOpen((open) => !open)}
-                disabled={isLoggingOut}
-              >
-                로그아웃
-              </button>
-            )}
             <span className="brand-signal" aria-hidden="true">
               <i />
               <i />
@@ -1068,19 +1081,23 @@ export function Onboarding({
             <span className="brand-battery" aria-hidden="true" />
           </div>
         </header>
-        {data.session && onLogout && (
-          <fieldset
-            id="onboarding-logout-confirm"
-            className="settings-logout-confirm onboarding-logout-confirm"
-            aria-label="로그아웃 확인"
-            hidden={!logoutConfirmationOpen}
+        {data.session && onLogout && logoutConfirmationOpen && (
+          <dialog
+            ref={logoutDialogRef}
+            className="like-confirm-dialog"
+            aria-labelledby="onboarding-logout-title"
+            onCancel={(event) => {
+              event.preventDefault();
+              if (!isLoggingOut) cancelLogoutConfirmation();
+            }}
           >
-            <legend>온보딩을 중단하고 로그아웃할까요?</legend>
+            <h2 id="onboarding-logout-title">
+              온보딩을 중단하고 로그아웃할까요?
+            </h2>
             <p>로그아웃 후 로그인 화면으로 이동해요.</p>
-            <div className="settings-confirm-actions">
+            <div>
               <button
                 type="button"
-                className="settings-confirm-cancel"
                 onClick={cancelLogoutConfirmation}
                 disabled={isLoggingOut}
               >
@@ -1088,14 +1105,14 @@ export function Onboarding({
               </button>
               <button
                 type="button"
-                className="settings-confirm-submit"
+                className="is-primary"
                 onClick={onLogout}
                 disabled={isLoggingOut}
               >
                 {isLoggingOut ? "로그아웃 중…" : "로그아웃"}
               </button>
             </div>
-          </fieldset>
+          </dialog>
         )}
         <div className="onboarding-top">
           <i className="onboarding-dot left" aria-hidden="true" />

@@ -226,6 +226,7 @@ const FACE_REASONS = Object.freeze({
 const STAGE_NAMES = Object.freeze({
   centering: "정면",
   pose: "손 포즈",
+  lowering: "손 내리기",
   head: "고개",
 });
 
@@ -237,6 +238,8 @@ const STUCK_MESSAGES = Object.freeze({
   FACE_NOT_VISIBLE: "얼굴 전체가 화면에 보이지 않았어요.",
   HAND_NOT_DETECTED:
     "손이 인식되지 않았어요. 손 전체가 화면에 보이도록 들어 주세요.",
+  HAND_NOT_LOWERED:
+    "손 내리기를 확인하지 못했어요. 손을 화면 아래로 내리고 정면을 보며 2초간 유지해 주세요.",
   HAND_CROPPED:
     "손 일부가 화면 밖으로 나갔어요. 휴대폰을 조금 더 멀리 들어 손 전체가 화면 안에 들어오게 해 주세요.",
   HAND_MISMATCH:
