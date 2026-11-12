@@ -14,6 +14,8 @@ import {
   profilePhotoErrorMessage,
 } from "../profile/photoUpload.js";
 import { CameraSilhouette } from "./CameraSilhouette.jsx";
+import { captureStages, HEAD_NAMES } from "./challenge.js";
+import { HOLD_SECONDS } from "./hold.js";
 import { reorderPhotos, replaceFrontalPhoto } from "./model.js";
 import { PhotoCapture } from "./PhotoCapture.jsx";
 import { PoseExample } from "./PoseExample.jsx";
@@ -100,40 +102,48 @@ function CaptureGuide() {
   );
 }
 
-function VerificationProgress({ progress }) {
+function VerificationProgress({ progress, challenge }) {
   const {
     stage,
     clipProgress = 0,
     matching,
     paused,
     stageIndex = 0,
-    stageCount = 2,
   } = progress;
-  const labels = ["정면", "손 포즈", "고개 동작"].slice(0, stageCount);
-  const holding = ["centering", "pose", "head"].includes(stage);
+  const stages = captureStages(challenge);
+  const seconds = stages[stageIndex]?.seconds ?? HOLD_SECONDS;
+  const holding = stages.some((item) => item.id === stage);
   const waiting = ["analyzing", "recovering", "finalizing"].includes(stage);
   return (
     <div className="trust-camera-guidance">
       {holding && (
         <>
           <ol className="trust-step-list" aria-label="인증 단계">
-            {labels.map((label, index) => (
-              <li
-                className="trust-step"
-                key={label}
-                data-state={
-                  index < stageIndex
-                    ? "done"
-                    : index === stageIndex
-                      ? "current"
-                      : "waiting"
-                }
-                aria-current={index === stageIndex ? "step" : undefined}
-              >
-                <span>{index < stageIndex ? "✓" : index + 1}</span> {label}{" "}
-                <small>3초</small>
-              </li>
-            ))}
+            {stages
+              .filter(({ id }) => id !== "lowering")
+              .map((item, index) => {
+                const { id, label, seconds: duration } = item;
+                const captureIndex = stages.indexOf(item);
+                return (
+                  <li
+                    className="trust-step"
+                    key={id}
+                    data-state={
+                      captureIndex < stageIndex
+                        ? "done"
+                        : captureIndex === stageIndex
+                          ? "current"
+                          : "waiting"
+                    }
+                    aria-current={
+                      captureIndex === stageIndex ? "step" : undefined
+                    }
+                  >
+                    <span>{captureIndex < stageIndex ? "✓" : index + 1}</span>{" "}
+                    {label} <small>{duration}초</small>
+                  </li>
+                );
+              })}
           </ol>
           <p role="status" aria-live="polite">
             {matching
@@ -145,20 +155,21 @@ function VerificationProgress({ progress }) {
           <div
             className="trust-camera-progress"
             role="progressbar"
-            aria-label={`${labels[stageIndex]} 3초 유지 진행`}
+            aria-label={`${stages[stageIndex]?.label} ${seconds}초 유지 진행`}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={Math.round(clipProgress * 100)}
-            aria-valuetext={`${(clipProgress * 3).toFixed(1)} / 3초${paused ? ", 잠시 멈춤" : ""}`}
+            aria-valuetext={`${(clipProgress * seconds).toFixed(1)} / ${seconds}초${paused ? ", 잠시 멈춤" : ""}`}
           >
             <span style={{ transform: `scaleX(${clipProgress})` }} />
           </div>
           <strong className="trust-hold-time">
-            {(clipProgress * 3).toFixed(1)} / 3초
+            {(clipProgress * seconds).toFixed(1)} / {seconds}초
           </strong>
           <small>
-            잠깐 끊기면 기다려요. 자세가 오래 달라지면 현재 단계만 다시
-            시작해요.
+            {stage === "lowering"
+              ? "손을 내린 상태가 2초간 이어지면 고개 확인으로 넘어가요. 손을 다시 올리면 처음부터 확인해요."
+              : "잠깐 끊기면 기다려요. 자세가 오래 달라지면 현재 단계만 다시 시작해요."}
           </small>
         </>
       )}
@@ -180,7 +191,8 @@ function VerificationProgress({ progress }) {
 
 function LiveRecognitionStatus({ progress }) {
   const { stage, live } = progress;
-  if (!live || !["centering", "pose", "head"].includes(stage)) return null;
+  if (!live || !["centering", "pose", "lowering", "head"].includes(stage))
+    return null;
   return (
     <div
       className="trust-live-recognition"
@@ -223,6 +235,16 @@ function LiveRecognitionStatus({ progress }) {
               : `고개 동작 ${live.headDelta || 0}° / 12°`}
           </span>
         )}
+        {stage === "lowering" && (
+          <span
+            className="trust-live-badge"
+            data-state={progress.matching ? "matched" : "waiting"}
+          >
+            {live.handsLowered
+              ? "✓ 손 내림 확인"
+              : "손을 화면 아래로 내려 주세요"}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -253,6 +275,10 @@ export function ProfilePhotoEditor({
   const heading = useRef(null);
   const autoSaveAttempted = useRef(false);
   const trust = useFaceVerification();
+  const holdSeconds =
+    captureStages(trust.challenge).find(
+      (item) => item.id === trust.progress.stage,
+    )?.seconds ?? HOLD_SECONDS;
   const showHelp = !compactPose || !verifying || trust.phase === "photo";
   const handGuideSide = trust.progress.live?.handSide ?? null;
   const ready =
@@ -579,27 +605,31 @@ export function ProfilePhotoEditor({
                 <PixelIcon name="lock" /> CAMERA CHECK
               </span>
               <div className="trust-capture-workspace">
-                {trust.cameraOn && trust.challenge?.hand && (
-                  <div className="trust-face-visibility-note" role="note">
-                    <PixelIcon
-                      name="alert"
-                      scale={3}
-                      className="trust-face-visibility-icon"
-                    />
-                    <div>
-                      <strong>손으로 얼굴을 가리지 마세요</strong>
-                      {showHelp && (
-                        <p>손은 얼굴 옆에, 눈·코·입은 모두 보이게 해 주세요.</p>
-                      )}
+                {trust.cameraOn &&
+                  trust.challenge?.hand &&
+                  !["lowering", "head"].includes(trust.progress.stage) && (
+                    <div className="trust-face-visibility-note" role="note">
+                      <PixelIcon
+                        name="alert"
+                        scale={3}
+                        className="trust-face-visibility-icon"
+                      />
+                      <div>
+                        <strong>손으로 얼굴을 가리지 마세요</strong>
+                        {showHelp && (
+                          <p>
+                            손은 얼굴 옆에, 눈·코·입은 모두 보이게 해 주세요.
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
                 {trust.cameraOn && trust.progress.restartNotice && (
                   <p className="trust-restart-notice" role="status">
                     {trust.progress.restartNotice}
                   </p>
                 )}
-                {["pose", "head", "recording"].includes(
+                {["pose", "lowering", "head", "recording"].includes(
                   trust.progress.stage,
                 ) && (
                   <PoseExample
@@ -640,14 +670,44 @@ export function ProfilePhotoEditor({
                   {trust.cameraOn && (
                     <CameraSilhouette
                       ready={trust.centerReady}
-                      recording={["centering", "pose", "head"].includes(
-                        trust.progress.stage,
-                      )}
+                      recording={[
+                        "centering",
+                        "pose",
+                        "lowering",
+                        "head",
+                      ].includes(trust.progress.stage)}
                       challenge={trust.challenge}
                       progress={trust.progress}
                       handSide={handGuideSide}
                     />
                   )}
+                  {trust.cameraOn &&
+                    ["lowering", "head"].includes(trust.progress.stage) && (
+                      <div
+                        className="trust-head-notice"
+                        role="status"
+                        aria-live="polite"
+                        aria-atomic="true"
+                      >
+                        {trust.progress.stage === "lowering" ? (
+                          <>
+                            <strong>손을 화면 아래로 내려 주세요</strong>
+                            <span>
+                              정면을 보고 2초간 유지하면 고개 확인을 시작해요
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <strong>
+                              고개를 {HEAD_NAMES[trust.challenge?.head]} 움직여
+                              <br />
+                              3초간 유지해 주세요
+                            </strong>
+                            <span>손은 내린 채로 있어도 돼요</span>
+                          </>
+                        )}
+                      </div>
+                    )}
                   {processingMessage && (
                     <div className="trust-camera-processing" role="status">
                       <span
@@ -661,7 +721,7 @@ export function ProfilePhotoEditor({
                     </div>
                   )}
                   {trust.cameraOn &&
-                    ["centering", "pose", "head"].includes(
+                    ["centering", "pose", "lowering", "head"].includes(
                       trust.progress.stage,
                     ) && (
                       <div
@@ -673,14 +733,20 @@ export function ProfilePhotoEditor({
                           data-matching={trust.progress.matching}
                         >
                           {trust.progress.matching
-                            ? "✓ 인식 중"
+                            ? trust.progress.stage === "lowering"
+                              ? "✓ 손 내림 확인 중"
+                              : "✓ 인식 중"
                             : trust.progress.paused
                               ? "잠시 멈춤"
-                              : "자세를 맞춰 주세요"}
+                              : trust.progress.stage === "lowering"
+                                ? "손을 내려 주세요"
+                                : "자세를 맞춰 주세요"}
                         </strong>
                         <span className="trust-hold-elapsed">
-                          {((trust.progress.clipProgress || 0) * 3).toFixed(1)}{" "}
-                          / 3초
+                          {(
+                            (trust.progress.clipProgress || 0) * holdSeconds
+                          ).toFixed(1)}{" "}
+                          / {holdSeconds}초
                         </span>
                         <div
                           className="trust-camera-progress trust-hold-bar"
@@ -694,18 +760,17 @@ export function ProfilePhotoEditor({
                         </div>
                       </div>
                     )}
-                  {trust.cameraOn && (
-                    <span className="trust-live">
-                      <i />{" "}
-                      {trust.progress.stage === "head"
-                        ? "고개 3초 유지"
-                        : trust.progress.stage === "centering"
+                  {trust.cameraOn &&
+                    !["lowering", "head"].includes(trust.progress.stage) && (
+                      <span className="trust-live">
+                        <i />{" "}
+                        {trust.progress.stage === "centering"
                           ? "정면 3초 유지"
                           : trust.progress.automatic
                             ? "손 포즈 3초 유지"
                             : "포즈 준비"}
-                    </span>
-                  )}
+                      </span>
+                    )}
                   {trust.previewUrl && (
                     <img
                       className="trust-reference-photo"
@@ -724,8 +789,11 @@ export function ProfilePhotoEditor({
                 )}
                 {showHelp && trust.cameraOn && (
                   <p className="trust-capture-tip">
-                    얼굴과 어깨를 실루엣에 맞춰 주세요. 손 가이드는 위치
-                    예시예요. 손은 얼굴 옆으로 올려 주세요.
+                    {trust.progress.stage === "lowering"
+                      ? "카메라를 정면으로 보면서 양손을 턱 아래로 내려 주세요. 손을 내린 상태를 2초간 확인해요."
+                      : trust.progress.stage === "head"
+                        ? "손을 내리고, 얼굴이 보이도록 안내된 고개 자세를 유지해 주세요."
+                        : "얼굴과 어깨를 실루엣에 맞춰 주세요. 손 가이드는 위치 예시예요. 손은 얼굴 옆으로 올려 주세요."}
                   </p>
                 )}
                 <div className="trust-capture-controls">
@@ -743,6 +811,7 @@ export function ProfilePhotoEditor({
               </div>
               <VerificationProgress
                 progress={trust.progress}
+                challenge={trust.challenge}
                 showHelp={showHelp}
               />
               {showHelp && (

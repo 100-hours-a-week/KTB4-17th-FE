@@ -17,6 +17,7 @@
     "test:ai": "node --test src/features/aipractice/aipractice.test.js src/features/aisimulation/aisimulation.test.js",
     "test:chat": "node --test src/features/chat/chat.test.js src/features/chat/delegation.test.js src/features/chat/unreadCount.test.js src/features/chat/presence.test.js",
     "test:profile": "node --test src/features/profile/profile.test.js",
+    "test:persona": "node --test src/features/persona/persona.test.js",
     "test:user": "node --test src/features/user/user.test.js",
     "test:matching": "node --test src/features/matching/matching.test.js",
     "test:recommendation": "node --test src/features/recommendation/recommendation.test.js",

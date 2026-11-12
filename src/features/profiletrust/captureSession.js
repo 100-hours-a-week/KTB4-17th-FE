@@ -1,5 +1,5 @@
 import { createFaceTracker, facePosition } from "./centering.js";
-import { HEAD_NAMES } from "./challenge.js";
+import { captureStages, HEAD_NAMES } from "./challenge.js";
 import { createHandTracker, visibleHandSide } from "./handGuide.js";
 import { holdProgress } from "./hold.js";
 import { trustError } from "./model.js";
@@ -109,9 +109,7 @@ export async function prepareCaptureSession(
     finishWaiting?.(signal.reason || trustError("CAMERA_INTERRUPTED"));
     dispose();
   };
-  const stages = target.legacy
-    ? ["centering"]
-    : ["centering", "pose", ...(target.head ? ["head"] : [])];
+  const stages = captureStages(target);
   return {
     close,
     stuck: () => ({ ...stuck }),
@@ -180,7 +178,7 @@ export async function prepareCaptureSession(
               const landmarks = handResult.landmarks || [];
               // 정면 단계는 동일인 비교 사진을 고르므로 얼굴 박스 전체 기준을 유지한다.
               const covered =
-                stages[stageIndex] === "centering"
+                stages[stageIndex].id === "centering"
                   ? handCoversFace(face, landmarks)
                   : handCoversFace(face, landmarks, { centerOnly: true });
               const frontal = face.issue == null && !covered;
@@ -192,7 +190,17 @@ export async function prepareCaptureSession(
                   video.videoHeight,
                 ),
               );
-              const stage = stages[stageIndex];
+              const { id: stage, label, seconds } = stages[stageIndex];
+              // 손이 검출되지 않거나, 검출된 모든 손이 턱 아래에 있어야 손을 내린 것으로 본다.
+              const handsLowered = landmarks.every(
+                (points) =>
+                  points?.length === 21 &&
+                  points.every(
+                    (point) =>
+                      Number.isFinite(point.y) &&
+                      point.y > face.y + face.height / 2,
+                  ),
+              );
               const baseline = baselineCount
                 ? baselineSum / baselineCount
                 : face.pitch;
@@ -211,8 +219,16 @@ export async function prepareCaptureSession(
                   ? frontal
                   : stage === "pose"
                     ? frontal && handMatched
-                    : faceVisible && delta >= 12;
-              hold = holdProgress(hold, matching, timestamp);
+                    : stage === "lowering"
+                      ? frontal && handsLowered
+                      : faceVisible && delta >= 12;
+              // 손 내리기는 연속 2초가 필요하다. 손을 다시 들거나 얼굴이 사라지면 즉시 처음부터 센다.
+              hold = holdProgress(
+                stage === "lowering" && !matching ? {} : hold,
+                matching,
+                timestamp,
+                seconds,
+              );
               const cropped = landmarks.some((points) =>
                 points?.some((point) => !insideFrame(point)),
               );
@@ -220,17 +236,21 @@ export async function prepareCaptureSession(
                 ? null
                 : covered
                   ? "HAND_COVERS_FACE"
-                  : stage === "head"
-                    ? faceVisible
-                      ? "HEAD_NOT_MOVED"
-                      : "FACE_NOT_VISIBLE"
-                    : !frontal
+                  : stage === "lowering"
+                    ? !frontal
                       ? "FACE_NOT_FRONTAL"
-                      : !landmarks.length
-                        ? "HAND_NOT_DETECTED"
-                        : cropped
-                          ? "HAND_CROPPED"
-                          : "HAND_MISMATCH";
+                      : "HAND_NOT_LOWERED"
+                    : stage === "head"
+                      ? faceVisible
+                        ? "HEAD_NOT_MOVED"
+                        : "FACE_NOT_VISIBLE"
+                      : !frontal
+                        ? "FACE_NOT_FRONTAL"
+                        : !landmarks.length
+                          ? "HAND_NOT_DETECTED"
+                          : cropped
+                            ? "HAND_CROPPED"
+                            : "HAND_MISMATCH";
               if (blocker)
                 blockers.set(blocker, (blockers.get(blocker) || 0) + 1);
               stuck = {
@@ -246,12 +266,6 @@ export async function prepareCaptureSession(
                 baselineSum += face.pitch;
                 baselineCount++;
               }
-              const label =
-                stage === "centering"
-                  ? "정면"
-                  : stage === "pose"
-                    ? "손 포즈"
-                    : `고개 ${HEAD_NAMES[target.head]}`;
               const noRoom =
                 stage === "pose" &&
                 (covered || cropped) &&
@@ -262,13 +276,15 @@ export async function prepareCaptureSession(
                   ? "손을 얼굴 옆으로 옮겨 주세요."
                   : !faceVisible
                     ? "얼굴 전체가 보이도록 카메라를 봐 주세요."
-                    : stage === "pose" && !frontal
-                      ? "손은 그대로 두고 카메라를 정면으로 봐 주세요."
-                      : stage === "pose"
-                        ? "안내된 손 모양과 방향을 맞춰 주세요."
-                        : stage === "head"
-                          ? `고개를 ${HEAD_NAMES[target.head]} 조금 움직여 그대로 유지해 주세요.`
-                          : "카메라를 정면으로 봐 주세요.";
+                    : stage === "lowering"
+                      ? "손을 화면 아래로 내리고 카메라를 정면으로 보며 2초 유지해 주세요."
+                      : stage === "pose" && !frontal
+                        ? "손은 그대로 두고 카메라를 정면으로 봐 주세요."
+                        : stage === "pose"
+                          ? "안내된 손 모양과 방향을 맞춰 주세요."
+                          : stage === "head"
+                            ? `고개를 ${HEAD_NAMES[target.head]} 조금 움직여 그대로 유지해 주세요.`
+                            : "카메라를 정면으로 봐 주세요.";
               onState({
                 stage,
                 stageIndex,
@@ -285,6 +301,7 @@ export async function prepareCaptureSession(
                   faceMatched: stage === "head" ? faceVisible : frontal,
                   handDetected: landmarks.length > 0,
                   handMatched,
+                  handsLowered,
                   handSide: visibleHandSide(handResult),
                   headStep: stage === "head" ? 1 : 0,
                   headDelta: Math.max(0, Math.round(delta || 0)),

@@ -142,17 +142,102 @@ test("face loss or a hand covering the face cannot complete the hand stage", asy
   assert.equal(run.closed, 2);
 });
 
-test("head movement starts after the hand stage and must itself be held for three seconds", async (t) => {
+for (const [head, pitch] of [
+  ["LOOK_UP", -20],
+  ["LOOK_DOWN", 20],
+]) {
+  test(`${head} starts only after two continuous seconds with hands lowered`, async (t) => {
+    let handLowered = false;
+    const run = await setup(t, {
+      target: { ...target, head },
+      face: (state) => neutral(state?.stage === "head" ? pitch : 0),
+      hands: () => (handLowered ? [] : [hand]),
+    });
+    await run.advance(75);
+    assert.equal(run.states.at(-1).stage, "lowering");
+    assert.equal(run.completed, false);
+    assert.equal(run.states.at(-1).progress, 0);
+    handLowered = true;
+    await run.advance(20);
+    assert.equal(run.states.at(-1).live.handDetected, false);
+    assert.equal(run.states.at(-1).stage, "lowering");
+    assert.equal(run.states.at(-1).remainingSeconds, 1);
+    assert.equal(run.completed, false);
+    await run.advance(2);
+    assert.equal(run.states.at(-1).stage, "head");
+    assert.deepEqual(run.states.at(-1).completedStages, [
+      "centering",
+      "pose",
+      "lowering",
+    ]);
+    await run.advance(33);
+    await run.waiting;
+    assert.equal(run.states.at(-1).live.headCompleted, true);
+  });
+}
+
+for (const interruption of [
+  "raised hand",
+  "missing face",
+  "non-frontal face",
+]) {
+  test(`lowering restarts its full two seconds immediately after ${interruption}`, async (t) => {
+    let lowered = false;
+    let interrupted = false;
+    const run = await setup(t, {
+      target: { ...target, head: "LOOK_UP" },
+      face: () =>
+        interrupted && interruption === "missing face"
+          ? { faceLandmarks: [] }
+          : neutral(
+              interrupted && interruption === "non-frontal face" ? -30 : 0,
+            ),
+      hands: () =>
+        !lowered || (interrupted && interruption === "raised hand")
+          ? [hand]
+          : [],
+    });
+    await run.advance(75);
+    lowered = true;
+    await run.advance(16);
+    assert.equal(run.states.at(-1).stage, "lowering");
+    assert.ok(run.states.at(-1).progress > 0.7);
+    interrupted = true;
+    await run.advance(1);
+    assert.equal(run.states.at(-1).progress, 0);
+    interrupted = false;
+    await run.advance(20);
+    assert.equal(run.states.at(-1).stage, "lowering");
+    await run.advance(2);
+    assert.equal(run.states.at(-1).stage, "head");
+    run.controller.abort();
+    await assert.rejects(run.waiting);
+  });
+}
+
+test("lowered hands can remain visible below the chin", async (t) => {
+  let lowered = false;
   const run = await setup(t, {
     target: { ...target, head: "LOOK_UP" },
-    face: (state) => neutral(state?.stage === "head" ? -20 : 0),
+    hands: () =>
+      lowered ? [hand.map((point) => ({ ...point, y: 0.85 }))] : [hand],
   });
   await run.advance(75);
+  lowered = true;
+  await run.advance(22);
   assert.equal(run.states.at(-1).stage, "head");
-  assert.equal(run.completed, false);
-  await run.advance(33);
+  assert.equal(run.states.at(-1).live.handDetected, true);
+  run.controller.abort();
+  await assert.rejects(run.waiting);
+});
+
+test("legacy frontal verification does not add hand stages or load a hand model", async (t) => {
+  const run = await setup(t, { target: { legacy: true } });
+  await run.advance(32);
   await run.waiting;
-  assert.equal(run.states.at(-1).live.headCompleted, true);
+  assert.deepEqual(run.loads, [1, 0]);
+  assert.equal(run.states.at(-1).stage, "centering");
+  assert.equal(run.states.at(-1).stageCount, 1);
 });
 
 test("brief detection loss pauses progress, long loss resets only the current hold", () => {

@@ -18,12 +18,12 @@ import { ActivityRegionPicker } from "../activity-region/ActivityRegionPicker.js
 import { useNotifications } from "../notifications/context.jsx";
 import { notificationBadge } from "../notifications/model.js";
 import { PagerIcon } from "../notifications/NotificationControls.jsx";
+import { getMyPersona } from "../persona/api.js";
+import { PERSONA_AREAS } from "../persona/model.js";
+import { PersonaConversationStyle } from "../persona/PersonaConversationStyle.jsx";
 import { savedPhotoItems } from "../profiletrust/model.js";
 import { ProfilePhotoEditor } from "../profiletrust/ProfilePhotoEditor.jsx";
-import {
-  nickname as checkNicknameAvailability,
-  onboarding as getOnboardingStatus,
-} from "../user/api.js";
+import { nickname as checkNicknameAvailability } from "../user/api.js";
 import {
   getMyProfile,
   profile as saveProfile,
@@ -800,38 +800,51 @@ export function MyProfile({ navigate, toast, returnTo = "/settings" }) {
 }
 
 export function Persona({ navigate }) {
-  const [state, setState] = useState({ status: "loading", complete: null });
+  const [state, setState] = useState({ status: "loading", persona: null });
   const [attempt, setAttempt] = useState(0);
 
-  // The public API exposes completion, but does not expose a saved summary.
-  // Never display example traits as the user's confirmed persona.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Retry explicitly reloads the server completion status.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Retry explicitly reloads the saved persona.
   useEffect(() => {
-    let active = true;
     const controller = new AbortController();
-    setState({ status: "loading", complete: null });
-    getOnboardingStatus({ signal: controller.signal, cache: "no-store" })
-      .then((response) => {
-        if (!active) return;
-        const complete = response?.requirements?.personaComplete;
-        if (typeof complete !== "boolean") {
-          setState({ status: "error", complete: null });
-          return;
-        }
-        setState({ status: "ready", complete });
+    setState({ status: "loading", persona: null });
+    getMyPersona({ signal: controller.signal })
+      .then((persona) => {
+        if (!controller.signal.aborted) setState({ status: "ready", persona });
       })
-      .catch(() => {
-        if (active) setState({ status: "error", complete: null });
+      .catch((error) => {
+        if (!controller.signal.aborted)
+          setState({
+            status: error?.code === "PERSONA_NOT_FOUND" ? "empty" : "error",
+            persona: null,
+            error,
+          });
       });
-    return () => {
-      active = false;
-      controller.abort();
-    };
+    return () => controller.abort();
   }, [attempt]);
 
   function retry() {
     setAttempt((current) => current + 1);
   }
+
+  const persona = state.persona;
+  const narrative = persona?.narrative;
+  const preferences = persona
+    ? [
+        { label: "관심사", icon: "spark", items: persona.interests },
+        { label: "일상과 루틴", icon: "chat", items: persona.routine },
+        { label: "편안한 데이트", icon: "heart", items: persona.datePrefer },
+        {
+          label: "피하고 싶은 데이트",
+          icon: "alert",
+          items: persona.dateAvoid,
+        },
+      ].filter(({ items }) => items.length)
+    : [];
+  const hasContent =
+    narrative ||
+    persona?.conversationStyle ||
+    persona?.summaries?.length ||
+    preferences.length;
 
   return (
     <>
@@ -847,44 +860,135 @@ export function Persona({ navigate }) {
         className="main-scroll persona-main"
         aria-busy={state.status === "loading"}
       >
-        <div className="persona-hero">
-          <AiAvatar size={64} />
-          <h2>나를 닮은 대화의 시작</h2>
-          <p>
-            가치관 문답에서 알아간 나의 생각과 표현을 AI 연습대화와 시뮬레이션에
-            반영해요.
-          </p>
-        </div>
         {state.status === "loading" ? (
-          <p className="persona-status" role="status">
-            가치관 설정 상태를 확인하고 있어요…
-          </p>
+          <div className="persona-loading" role="status">
+            <AiAvatar size={48} />
+            <p>대화에서 알아간 나의 모습을 불러오고 있어요.</p>
+            <div aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
+          </div>
         ) : state.status === "error" ? (
           <EmptyState
             icon="!"
-            title="가치관 설정 상태를 확인하지 못했어요"
-            description="잠시 후 다시 확인해 주세요. 저장된 답변은 변경되지 않아요."
+            title="페르소나를 불러오지 못했어요"
+            description={apiErrorMessage(
+              state.error,
+              "연결 상태를 확인한 뒤 다시 시도해 주세요.",
+            )}
             action={
               <PixelButton secondary onClick={retry}>
                 다시 확인
               </PixelButton>
             }
           />
+        ) : state.status === "empty" || !hasContent ? (
+          <EmptyState
+            title={
+              state.status === "empty"
+                ? "아직 확정된 페르소나가 없어요"
+                : "표시할 성향 요약이 아직 없어요"
+            }
+            description="가치관 문답에서 정리한 내용이 준비되면 이곳에서 볼 수 있어요."
+          />
         ) : (
-          <section
-            className="persona-summary-status"
-            aria-labelledby="persona-summary-title"
-          >
-            <span className="persona-completion-label">
-              {state.complete ? "가치관 설정 완료" : "가치관 설정 확인 필요"}
-            </span>
-            <h2 id="persona-summary-title">나의 성향 요약</h2>
-            <p>
-              {state.complete
-                ? "온보딩에서 정리한 성향을 여기서 다시 볼 수 있도록 준비 중이에요."
-                : "가치관 문답을 마친 후 나의 성향을 정리할 수 있어요."}
+          <>
+            <section
+              className="persona-overview"
+              aria-labelledby="persona-overview-title"
+            >
+              <div className="persona-overview-heading">
+                <AiAvatar size={44} />
+                <div>
+                  <span>하루가 이해한 나</span>
+                  <p>
+                    {["practice", "kakao", "reset"].includes(persona.source)
+                      ? "가치관 문답과 대화에서 알아간 모습이에요."
+                      : "온보딩에서 나눈 대화를 바탕으로 정리했어요."}
+                  </p>
+                </div>
+              </div>
+              <h2 id="persona-overview-title">
+                {narrative?.headline || "대화로 알아간 나의 모습"}
+              </h2>
+              {narrative && (
+                <p className="persona-narrative">{narrative.body}</p>
+              )}
+              {narrative?.traits?.length > 0 && (
+                <ul className="persona-keywords" aria-label="나의 성향 키워드">
+                  {narrative.traits.map((trait) => (
+                    <li key={trait}>{trait}</li>
+                  ))}
+                </ul>
+              )}
+              {persona.mbti && (
+                <span className="persona-mbti">
+                  내가 알려준 MBTI · {persona.mbti}
+                </span>
+              )}
+              {persona.conversationStyle && (
+                <a className="persona-style-jump" href="#persona-style-title">
+                  나의 말투 보기 <PixelIcon name="chev" scale={1.5} />
+                </a>
+              )}
+            </section>
+            <PersonaConversationStyle
+              style={persona.conversationStyle}
+              source={persona.source}
+            />
+            {persona.summaries.length > 0 && (
+              <section
+                className="persona-values"
+                aria-labelledby="persona-values-title"
+              >
+                <h2 id="persona-values-title">관계 속의 나</h2>
+                {persona.summaries.map((summary) => (
+                  <article className="persona-value" key={summary.category}>
+                    <span className="persona-value-icon" aria-hidden="true">
+                      <PixelIcon
+                        name={PERSONA_AREAS[summary.category].icon}
+                        scale={2.5}
+                      />
+                    </span>
+                    <div>
+                      <span className="persona-value-label">
+                        {PERSONA_AREAS[summary.category].label}
+                      </span>
+                      <h3>{summary.title}</h3>
+                      <p>{summary.content}</p>
+                    </div>
+                  </article>
+                ))}
+              </section>
+            )}
+            {preferences.length > 0 && (
+              <section
+                className="persona-preferences"
+                aria-labelledby="persona-preferences-title"
+              >
+                <h2 id="persona-preferences-title">내 일상과 취향</h2>
+                {preferences.map(({ label, icon, items }) => (
+                  <section className="persona-preference" key={label}>
+                    <h3>
+                      <PixelIcon name={icon} scale={1.5} />
+                      {label}
+                    </h3>
+                    <ul>
+                      {items.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+              </section>
+            )}
+            <p className="persona-use-note">
+              <PixelIcon name="chat" scale={2} />이 내용은 나를 닮은 AI의
+              연습대화와 시뮬레이션에 반영돼요.
             </p>
-          </section>
+          </>
         )}
       </main>
     </>

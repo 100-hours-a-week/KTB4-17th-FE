@@ -1,4 +1,18 @@
+import { HOLD_SECONDS } from "./hold.js";
 import { trustError } from "./model.js";
+
+export function captureStages(challenge) {
+  const stages = [{ id: "centering", label: "정면", seconds: HOLD_SECONDS }];
+  if (challenge?.legacy) return stages;
+  stages.push({ id: "pose", label: "손 포즈", seconds: HOLD_SECONDS });
+  if (challenge?.head) {
+    stages.push(
+      { id: "lowering", label: "손 내리기", seconds: 2 },
+      { id: "head", label: "고개 동작", seconds: HOLD_SECONDS },
+    );
+  }
+  return stages;
+}
 
 export const HAND_NAMES = Object.freeze({
   HAND_FIST: "주먹",
@@ -57,7 +71,7 @@ export function parseChallenge(codes) {
 export function challengeInstruction(challenge) {
   if (challenge.legacy) return "촬영하는 동안 정면을 유지해 주세요.";
   const head = challenge.head
-    ? `손 포즈 확인 후 고개를 ${HEAD_NAMES[challenge.head]} 움직여 3초 유지해 주세요.`
+    ? `손 포즈 확인 후 손을 내리고 정면을 보며 2초 유지해 주세요. 이어서 고개를 ${HEAD_NAMES[challenge.head]} 움직여 3초 유지해 주세요.`
     : "정면을 바라보며 손 모양을 3초 유지하면 자동으로 촬영을 마쳐요.";
   if (!requiresHandDirection(challenge.hand, challenge.direction))
     return `${HAND_NAMES[challenge.hand]} 모양은 방향에 상관없이 화면 안 편한 위치에 유지하세요. 왼손·오른손, 손바닥·손등 모두 괜찮아요. 얼굴은 가리지 마세요. ${head}`;
