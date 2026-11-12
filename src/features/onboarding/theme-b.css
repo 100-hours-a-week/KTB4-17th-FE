@@ -105,16 +105,26 @@
   margin-left: auto;
 }
 
+/* 왼쪽: 뒤로가기 + 로그아웃 아이콘. 뒤로가기가 없으면 로그아웃이 자리 표시자를 대신한다. */
+.onboarding-header-start {
+  display: flex;
+  align-items: center;
+}
+
+.onboarding-header-start > .onboarding-back-placeholder:not(:only-child) {
+  display: none;
+}
+
 .onboarding-logout-action {
-  min-height: 36px;
-  margin-right: 10px;
-  padding: 5px 8px;
-  border: 2px solid #9e315f;
-  background: #fff7fb;
-  color: #8d2b56;
-  font-size: 11px;
-  font-weight: 700;
-  white-space: nowrap;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 4px solid transparent;
+  background: transparent;
+  color: var(--purple-deep);
 }
 
 .onboarding-logout-action:disabled {
@@ -125,11 +135,6 @@
 .onboarding-logout-action:focus-visible {
   outline: 3px solid #7c5cfa;
   outline-offset: 2px;
-}
-
-.onboarding-logout-confirm {
-  flex: none;
-  margin: 8px 16px 0;
 }
 
 .brand-signal {

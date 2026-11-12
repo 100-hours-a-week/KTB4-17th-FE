@@ -136,6 +136,7 @@
 .like-confirm-dialog h2 {
   margin: 0;
   font-size: 17px;
+  word-break: keep-all;
 }
 
 .like-confirm-dialog p {
