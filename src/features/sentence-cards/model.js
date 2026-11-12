@@ -1,37 +1,31 @@
 export const PROFILES_BETWEEN_QUESTIONS = 5;
+export const FEEDBACK_ANSWERS = ["YES", "NO"];
+export const CORRECTION_MAX_LENGTH = 200;
 
 export function isSentenceCardExpired(card, now = Date.now()) {
   return !card || Date.parse(card.expiresAt) <= now;
 }
 
-export function parseSentenceCard(card) {
-  const choices = card?.choices;
+const text = (value, max) =>
+  typeof value === "string" && value.trim() !== "" && value.length <= max;
+
+export function parseFeedbackCard(card) {
   if (
-    typeof card?.cardId !== "string" ||
-    !card.cardId.trim() ||
-    typeof card.sentence !== "string" ||
-    !card.sentence.trim() ||
-    typeof card.question !== "string" ||
-    !card.question.trim() ||
-    (card.contextQuestion != null &&
-      (typeof card.contextQuestion !== "string" ||
-        !card.contextQuestion.trim())) ||
-    !Number.isFinite(Date.parse(card.expiresAt)) ||
-    !Array.isArray(choices) ||
-    choices.length < 3 ||
-    choices.length > 4 ||
-    choices.some(
-      (choice) =>
-        typeof choice?.choiceId !== "string" ||
-        !choice.choiceId.trim() ||
-        typeof choice.label !== "string" ||
-        !choice.label.trim(),
-    ) ||
-    new Set(choices.map((choice) => choice.choiceId)).size !== choices.length
+    !text(card?.cardId, 64) ||
+    !text(card.utterance, 300) ||
+    !text(card.question, 200) ||
+    (card.contextQuestion != null && !text(card.contextQuestion, 200)) ||
+    !Number.isFinite(Date.parse(card.expiresAt))
   ) {
     throw new Error("질문을 불러오지 못했어요. 다시 시도해 주세요.");
   }
   return card;
+}
+
+// Whitespace-only corrections are sent as null, per the feedback-card spec.
+export function normalizeCorrection(value) {
+  const trimmed = typeof value === "string" ? value.trim() : "";
+  return trimmed ? trimmed.slice(0, CORRECTION_MAX_LENGTH) : null;
 }
 
 export function shouldShowFeedQuestion(profileCount, card, skippedCardId) {
