@@ -12,19 +12,21 @@ export function CameraSilhouette({
     challenge &&
     !challenge.legacy &&
     ["pose", "head", "recording"].includes(progress?.stage);
+  const showHand = showPose && progress.stage !== "head";
   const live = progress?.live;
   const handMatched = Boolean(live?.handMatched);
+  const guideSide = handSide || "right";
   const headDone = Boolean(live?.headCompleted);
   const step = showPose
     ? headGuideStep(progress.stage, progress.clipProgress, live)
     : 0;
   const arrows = {
-    LOOK_UP: "M120 106V72m-10 10 10-10 10 10",
-    LOOK_DOWN: "M120 72v34m-10-10 10 10 10-10",
+    LOOK_UP: "M120 236V202m-10 10 10-10 10 10",
+    LOOK_DOWN: "M120 202v34m-10-10 10 10 10-10",
   };
   return (
     <div
-      className={`trust-camera-silhouette${ready || headDone ? " is-ready" : ""}${recording ? " is-recording" : ""}${showPose && !handSide ? " is-seeking-hand" : ""}${handMatched ? " is-hand-matched" : ""}`}
+      className={`trust-camera-silhouette${ready || headDone ? " is-ready" : ""}${recording ? " is-recording" : ""}${showHand && !handSide ? " is-seeking-hand" : ""}${handMatched ? " is-hand-matched" : ""}`}
       aria-hidden="true"
     >
       <svg
@@ -53,18 +55,16 @@ export function CameraSilhouette({
           />
         )}
       </svg>
-      {showPose &&
-        (handSide ? [handSide] : ["left", "right"]).map((side) => (
-          <HandGlyph
-            key={side}
-            className={`trust-silhouette-hand is-${side}`}
-            hand={challenge.hand}
-            direction={challenge.direction}
-            screenSide={side}
-            mirror={side === "left"}
-            outline
-          />
-        ))}
+      {showHand && (
+        <HandGlyph
+          className={`trust-silhouette-hand is-${guideSide}`}
+          hand={challenge.hand}
+          direction={challenge.direction}
+          screenSide={guideSide}
+          mirror={guideSide === "left"}
+          outline
+        />
+      )}
     </div>
   );
 }

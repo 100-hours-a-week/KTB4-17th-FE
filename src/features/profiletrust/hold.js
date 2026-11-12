@@ -35,6 +35,6 @@ export function holdProgress(
     paused: !matching && elapsed > 0,
     progress,
     done: Boolean(matching && elapsed + 1e-9 >= seconds),
-    remainingSeconds: Math.max(0, Math.ceil((1 - progress) * HOLD_SECONDS)),
+    remainingSeconds: Math.max(0, Math.ceil((1 - progress) * seconds)),
   };
 }
