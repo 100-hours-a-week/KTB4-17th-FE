@@ -192,6 +192,17 @@ export function MyPage({ navigate }) {
           </p>
         )}
         <div className="my-menu">
+          <button type="button" onClick={() => navigate("/my/questions")}>
+            <PixelIcon
+              name="chat"
+              scale={3}
+              colors={{ X: "var(--purple-deep)", p: "var(--pink)" }}
+            />
+            질문에 답하기
+            <span>
+              <PixelIcon name="chev" scale={1.5} />
+            </span>
+          </button>
           <button type="button" onClick={() => navigate("/my/persona")}>
             <img
               className="icon persona-menu-icon"

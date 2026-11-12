@@ -13,6 +13,8 @@ import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import { profilePhotoUrls } from "../../shared/utils.js";
 import * as matchingApi from "../matching/api.js";
 import { jobCategoryLabel } from "../profile/jobCategories.js";
+import { shouldShowFeedQuestion } from "../sentence-cards/model.js";
+import { FeedSentenceCard } from "../sentence-cards/SentenceCard.jsx";
 import { SwipeGuide, useSwipeGuide } from "./SwipeGuide.jsx";
 import { wheelNavigationIntent } from "./wheelNavigation.js";
 
@@ -23,9 +25,11 @@ const WHEEL_NEXT_DISTANCE = 80;
 const WHEEL_PREVIOUS_DISTANCE = 80;
 const WHEEL_REFRESH_DISTANCE = 360;
 const CARD_TRANSITION_MS = 180;
+const QUESTION_TRANSITION_MS = 320;
 const WHEEL_GESTURE_END_MS = 220;
 
 export function Home({
+  sentenceCards,
   navigate,
   toast,
   recommendations,
@@ -48,12 +52,19 @@ export function Home({
   onStartSimulation,
 }) {
   const [photoIndex, setPhotoIndex] = useState(0);
+  const [questionVisible, setQuestionVisible] = useState(false);
+  const profilesSinceQuestion = useRef(1);
+  const questionContinuing = useRef(false);
+  const displayedQuestion = useRef(null);
+  const showQuestion = questionVisible;
   const [actionBusy, setActionBusy] = useState("");
   const [isContinuing, setIsContinuing] = useState(false);
   const actionInFlight = useRef(false);
   const nextNavigationInFlight = useRef(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [isCardSettling, setIsCardSettling] = useState(false);
+  const [transitionDuration, setTransitionDuration] =
+    useState(CARD_TRANSITION_MS);
   const [previewDirection, setPreviewDirection] = useState("next");
   const gestureStart = useRef(null);
   const cardRef = useRef(null);
@@ -79,9 +90,18 @@ export function Home({
       : previewDirection === "next"
         ? nextPerson
         : null;
+  const showQuestionPreview =
+    !showQuestion &&
+    previewDirection === "next" &&
+    shouldShowFeedQuestion(
+      profilesSinceQuestion.current,
+      sentenceCards.card,
+      sentenceCards.skippedCardId,
+    );
   const showSwipeGuide = useSwipeGuide({
     enabled:
       Boolean(person) &&
+      !showQuestion &&
       recommendationStatus === "ready" &&
       !recommendationError &&
       !actionBusy &&
@@ -90,6 +110,11 @@ export function Home({
       !recommendationRefreshing,
     consumed: swipeGuideConsumed,
   });
+
+  const { load: loadSentenceCard, status: sentenceCardStatus } = sentenceCards;
+  useEffect(() => {
+    if (!showQuestion && sentenceCardStatus === "idle") void loadSentenceCard();
+  }, [loadSentenceCard, sentenceCardStatus, showQuestion]);
 
   useEffect(
     () => () => {
@@ -141,6 +166,7 @@ export function Home({
     }
   }
   function resetCardPosition() {
+    setTransitionDuration(CARD_TRANSITION_MS);
     setIsCardSettling(true);
     setDragOffset(0);
     if (cardTransitionTimer.current)
@@ -151,22 +177,26 @@ export function Home({
       cardTransitionTimer.current = null;
     }, CARD_TRANSITION_MS);
   }
-  const transitionCard = useCallback((direction, action) => {
-    if (cardTransitionTimer.current) return;
-    swipeGuideConsumed.current = true;
-    setPreviewDirection(direction);
-    setIsCardSettling(true);
-    setDragOffset(
-      direction === "next" ? -window.innerHeight : window.innerHeight,
-    );
-    cardTransitionTimer.current = window.setTimeout(() => {
-      action();
-      setIsCardSettling(false);
-      setDragOffset(0);
-      setPreviewDirection("next");
-      cardTransitionTimer.current = null;
-    }, CARD_TRANSITION_MS);
-  }, []);
+  const transitionCard = useCallback(
+    (direction, action, duration = CARD_TRANSITION_MS) => {
+      if (cardTransitionTimer.current) return;
+      swipeGuideConsumed.current = true;
+      setTransitionDuration(duration);
+      setPreviewDirection(direction);
+      setIsCardSettling(true);
+      setDragOffset(
+        direction === "next" ? -window.innerHeight : window.innerHeight,
+      );
+      cardTransitionTimer.current = window.setTimeout(() => {
+        action();
+        setIsCardSettling(false);
+        setDragOffset(0);
+        setPreviewDirection("next");
+        cardTransitionTimer.current = null;
+      }, duration);
+    },
+    [],
+  );
 
   const advanceToNextRecommendation = useCallback(async () => {
     if (
@@ -180,19 +210,44 @@ export function Home({
     )
       return;
 
+    if (
+      shouldShowFeedQuestion(
+        profilesSinceQuestion.current,
+        sentenceCards.card,
+        sentenceCards.skippedCardId,
+      )
+    ) {
+      transitionCard(
+        "next",
+        () => {
+          displayedQuestion.current = sentenceCards.card;
+          questionContinuing.current = false;
+          setQuestionVisible(true);
+        },
+        QUESTION_TRANSITION_MS,
+      );
+      return;
+    }
+
     nextNavigationInFlight.current = true;
     setIsContinuing(true);
     let transitionScheduled = false;
     const scheduleNextCard = (action) => {
-      transitionCard("next", () => {
-        try {
-          setPhotoIndex(0);
-          action();
-        } finally {
-          nextNavigationInFlight.current = false;
-          setIsContinuing(false);
-        }
-      });
+      transitionCard(
+        "next",
+        () => {
+          try {
+            setPhotoIndex(0);
+            profilesSinceQuestion.current += 1;
+            setQuestionVisible(false);
+            action();
+          } finally {
+            nextNavigationInFlight.current = false;
+            setIsContinuing(false);
+          }
+        },
+        questionVisible ? QUESTION_TRANSITION_MS : CARD_TRANSITION_MS,
+      );
       transitionScheduled = true;
     };
 
@@ -223,6 +278,7 @@ export function Home({
       if (await onPrepareNextBatch()) scheduleNextCard(onActivatePreparedBatch);
     } finally {
       if (!transitionScheduled) {
+        if (questionVisible) setQuestionVisible(false);
         nextNavigationInFlight.current = false;
         setIsContinuing(false);
         setIsCardSettling(false);
@@ -242,8 +298,21 @@ export function Home({
     person,
     recommendationRefreshing,
     recommendations.length,
+    questionVisible,
+    sentenceCards.card,
+    sentenceCards.skippedCardId,
     transitionCard,
   ]);
+  const continueAfterQuestion = useCallback(() => {
+    if (questionContinuing.current) return;
+    questionContinuing.current = true;
+    profilesSinceQuestion.current = 0;
+    void advanceToNextRecommendation();
+  }, [advanceToNextRecommendation]);
+
+  useEffect(() => {
+    if (questionVisible && !sentenceCards.card) continueAfterQuestion();
+  }, [continueAfterQuestion, questionVisible, sentenceCards.card]);
   function handleVerticalGesture(distance) {
     if (distance <= -NEXT_CARD_DISTANCE) {
       if (person) void advanceToNextRecommendation();
@@ -498,6 +567,7 @@ export function Home({
     function handleKeyDown(event) {
       if (
         event.defaultPrevented ||
+        showQuestion ||
         event.repeat ||
         event.isComposing ||
         event.altKey ||
@@ -545,6 +615,7 @@ export function Home({
     previousPerson,
     recommendationRefreshing,
     selectAdjacentPhoto,
+    showQuestion,
     transitionCard,
   ]);
 
@@ -558,7 +629,11 @@ export function Home({
           aria-label="TOP 10 인기 프로필 순위 보기"
           title="TOP 10 인기 프로필 순위"
         >
-          <span aria-hidden="true">TOP10</span>
+          <PixelIcon
+            name="crown"
+            scale={2}
+            colors={{ p: "#ffc6e7", d: "#5b3fd6" }}
+          />
         </button>
         <button
           className="home-preference-action"
@@ -577,7 +652,7 @@ export function Home({
         </button>
       </BrandHeader>
       <main id="main-content" tabIndex={-1} className="main-scroll home-main">
-        {!person && <h1 className="sr-only">오늘의 추천</h1>}
+        {(!person || showQuestion) && <h1 className="sr-only">오늘의 추천</h1>}
         {recommendationStatus === "loading" ? (
           <EmptyState
             icon={
@@ -608,6 +683,44 @@ export function Home({
               </PixelButton>
             }
           />
+        ) : showQuestion ? (
+          <div
+            className="recommendation-question-stage"
+            style={{ "--feed-transition-duration": `${transitionDuration}ms` }}
+          >
+            {(previewDirection === "previous" ? person : nextPerson) && (
+              <article
+                className="recommendation-card recommendation-card-preview"
+                aria-hidden="true"
+              >
+                <ProfilePhoto
+                  className="recommendation-photo"
+                  person={previewDirection === "previous" ? person : nextPerson}
+                />
+              </article>
+            )}
+            <div
+              className={`recommendation-question-current${isCardSettling ? " is-settling" : ""}`}
+              style={{ transform: `translate3d(0, ${dragOffset}px, 0)` }}
+            >
+              <FeedSentenceCard
+                session={{
+                  ...sentenceCards,
+                  card: sentenceCards.card ?? displayedQuestion.current,
+                }}
+                disabled={isContinuing || isCardSettling}
+                onContinue={continueAfterQuestion}
+                onReturn={() =>
+                  transitionCard(
+                    "previous",
+                    () => setQuestionVisible(false),
+                    QUESTION_TRANSITION_MS,
+                  )
+                }
+                navigate={navigate}
+              />
+            </div>
+          </div>
         ) : !person ? (
           <div
             ref={setCardElement}
@@ -665,17 +778,33 @@ export function Home({
             />
           </div>
         ) : (
-          <div className="recommendation-stack">
-            {previewPerson && (
-              <article
-                className={`recommendation-card recommendation-card-preview is-${previewDirection}`}
+          <div
+            className="recommendation-stack"
+            style={{ "--feed-transition-duration": `${transitionDuration}ms` }}
+          >
+            {showQuestionPreview ? (
+              <div
+                className={`recommendation-question-preview${isCardSettling ? " is-settling" : ""}`}
+                style={{
+                  transform: `translate3d(0, max(0px, calc(100% + ${dragOffset}px)), 0)`,
+                }}
+                inert
                 aria-hidden="true"
               >
-                <ProfilePhoto
-                  className="recommendation-photo"
-                  person={previewPerson}
-                />
-              </article>
+                <FeedSentenceCard session={sentenceCards} preview />
+              </div>
+            ) : (
+              previewPerson && (
+                <article
+                  className={`recommendation-card recommendation-card-preview is-${previewDirection}`}
+                  aria-hidden="true"
+                >
+                  <ProfilePhoto
+                    className="recommendation-photo"
+                    person={previewPerson}
+                  />
+                </article>
+              )
             )}
             <article
               ref={setCardElement}
