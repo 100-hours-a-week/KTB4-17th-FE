@@ -43,6 +43,8 @@ export const API_ERROR_MESSAGES = Object.freeze({
     "AI 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.",
   AI_SERVER_RESPONSE_INVALID:
     "AI 응답을 정상적으로 받지 못했어요. 잠시 후 다시 시도해 주세요.",
+  PERSONA_RESPONSE_INVALID:
+    "페르소나 정보를 확인하지 못했어요. 잠시 후 다시 시도해 주세요.",
 
   KAKAO_FILE_TOO_LARGE: "대화 파일은 최대 5MB까지 올릴 수 있어요.",
   KAKAO_FILE_TYPE_NOT_ALLOWED:
