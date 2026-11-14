@@ -89,15 +89,6 @@
   line-height: 1.5;
 }
 
-.sentence-card-choice[data-choice-id="unsure"] {
-  grid-column: 1 / -1;
-  justify-self: center;
-  min-width: 50%;
-  max-width: 100%;
-  padding-inline: 24px;
-  color: var(--muted);
-}
-
 .sentence-card-choice[aria-pressed="true"] {
   border-color: var(--purple-deep);
   background: var(--purple-deep);
@@ -119,6 +110,77 @@
     border-color: var(--purple);
     background: var(--soft-lavender);
   }
+}
+
+/* 아니오 → 실제 답변 입력 (선택) */
+.sentence-card-correction {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.sentence-card-correction label {
+  color: var(--purple-deep);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.sentence-card-correction textarea {
+  width: 100%;
+  min-height: 84px;
+  padding: 12px 14px;
+  border: 1px solid var(--lavender);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  touch-action: auto;
+}
+
+.sentence-card-correction textarea:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
+.sentence-card-correction-count {
+  justify-self: end;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.sentence-card-correction-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sentence-card-correction-actions button {
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid var(--lavender);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--purple-deep);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.sentence-card-correction-actions .sentence-card-correction-send {
+  border-color: var(--purple-deep);
+  background: var(--purple-deep);
+  color: var(--paper);
+}
+
+.sentence-card-correction-actions button:disabled {
+  opacity: 0.5;
+}
+
+.sentence-card-correction-actions button:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 3px;
 }
 
 .sentence-card-feedback {
@@ -331,16 +393,6 @@
     min-height: 48px;
     padding-block: 10px;
   }
-}
-
-.sentence-question-swipe {
-  touch-action: pan-y;
-}
-
-.sentence-question-swipe .sentence-card-context,
-.sentence-question-swipe .sentence-card-prompt,
-.sentence-question-swipe .sentence-card-swipe-hint {
-  touch-action: pan-x;
 }
 
 .sentence-question-page {
