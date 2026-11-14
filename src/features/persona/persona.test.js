@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { getMyPersona } from "./api.js";
-import { readPersona } from "./model.js";
+import { hasPersonaContent, readPersona } from "./model.js";
 
 const saved = {
+  userId: "7",
   personaId: "persona-1",
+  version: 3,
+  nickname: "하루",
+  mbti: "INFJ",
+  confirmedAt: "2026-11-10T12:34:56Z",
   narrative: {
     headline: "천천히 깊어지는 사람",
     body: "각자의 시간을 존중해요.",
@@ -18,7 +23,9 @@ const saved = {
     },
   ],
   interests: ["산책"],
+  routine: [],
   datePrefer: ["조용한 카페"],
+  dateAvoid: [],
 };
 
 test("saved onboarding narrative, summaries and preferences retain the AI content", () => {
@@ -33,14 +40,31 @@ test("saved onboarding narrative, summaries and preferences retain the AI conten
 
 test("missing narrative and empty extracted lists never create example traits", () => {
   const result = readPersona({
-    personaId: "persona-1",
+    ...saved,
     narrative: null,
     summaries: [],
+    interests: [],
+    datePrefer: [],
   });
   assert.equal(result.narrative, null);
   assert.deepEqual(result.interests, []);
   assert.deepEqual(result.summaries, []);
   assert.equal(result.conversationStyle, null);
+});
+
+test("MBTI remains displayable when the other persona sections are empty", () => {
+  const result = readPersona({
+    ...saved,
+    narrative: null,
+    summaries: [],
+    interests: [],
+    routine: [],
+    datePrefer: [],
+    dateAvoid: [],
+    conversationStyle: null,
+  });
+
+  assert.equal(hasPersonaContent(result), true);
 });
 
 test("Kakao conversation style preserves extracted phrases and normalizes optional observations", () => {

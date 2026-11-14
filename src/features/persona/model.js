@@ -1,3 +1,5 @@
+import { apiErrorMessage } from "../../shared/api/errorMessages.js";
+
 export const PERSONA_AREAS = {
   intimacy: { label: "친밀감과 거리", icon: "heart" },
   communication: { label: "마음을 나누는 방식", icon: "chat" },
@@ -5,6 +7,27 @@ export const PERSONA_AREAS = {
   ideal: { label: "내가 끌리는 사람", icon: "spark" },
   orientation: { label: "바라는 관계", icon: "send" },
 };
+
+const MBTI_TYPES = new Set([
+  "ISTJ",
+  "ISFJ",
+  "INFJ",
+  "INTJ",
+  "ISTP",
+  "ISFP",
+  "INFP",
+  "INTP",
+  "ESTP",
+  "ESFP",
+  "ENFP",
+  "ENTP",
+  "ESTJ",
+  "ESFJ",
+  "ENFJ",
+  "ENTJ",
+]);
+
+const INVALID_RESPONSE_CODE = "PERSONA_RESPONSE_INVALID";
 
 export const STYLE_LIST_LABELS = {
   frequentPhrases: "자주 쓰는 표현",
@@ -25,9 +48,20 @@ export const STYLE_DETAIL_LABELS = {
 };
 
 function invalidPersona() {
-  return Object.assign(new Error("PERSONA_RESPONSE_INVALID"), {
-    code: "PERSONA_RESPONSE_INVALID",
+  return Object.assign(new Error(apiErrorMessage(INVALID_RESPONSE_CODE)), {
+    code: INVALID_RESPONSE_CODE,
   });
+}
+
+function nonEmptyText(value) {
+  return typeof value === "string" && Boolean(value.trim());
+}
+
+function validConfirmedAt(value) {
+  return (
+    value == null ||
+    (typeof value === "string" && !Number.isNaN(Date.parse(value)))
+  );
 }
 
 function texts(value) {
@@ -61,10 +95,17 @@ function readConversationStyle(value) {
 export function readPersona(value) {
   if (
     !value ||
-    typeof value.personaId !== "string" ||
-    !value.personaId.trim() ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    !nonEmptyText(value.userId) ||
+    !nonEmptyText(value.personaId) ||
+    !Number.isInteger(value.version) ||
+    value.version < 1 ||
+    !nonEmptyText(value.nickname) ||
     !Array.isArray(value.summaries) ||
-    (value.mbti != null && typeof value.mbti !== "string")
+    value.summaries.length > Object.keys(PERSONA_AREAS).length ||
+    (value.mbti != null && !MBTI_TYPES.has(value.mbti)) ||
+    !validConfirmedAt(value.confirmedAt)
   )
     throw invalidPersona();
   const categories = new Set();
@@ -101,4 +142,18 @@ export function readPersona(value) {
     dateAvoid: texts(value.dateAvoid),
     conversationStyle: readConversationStyle(value.conversationStyle),
   };
+}
+
+export function hasPersonaContent(persona) {
+  if (!persona) return false;
+  return Boolean(
+    persona.narrative ||
+      persona.mbti ||
+      persona.conversationStyle ||
+      persona.summaries.length ||
+      persona.interests.length ||
+      persona.routine.length ||
+      persona.datePrefer.length ||
+      persona.dateAvoid.length,
+  );
 }
