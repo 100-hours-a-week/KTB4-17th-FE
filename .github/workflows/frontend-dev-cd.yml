@@ -4,104 +4,70 @@ on:
   push:
     branches:
       - dev
+  workflow_dispatch:
 
 concurrency:
   group: frontend-dev-deploy
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
   id-token: write
 
 env:
-  AWS_REGION: ap-northeast-2
-  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
-  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-northeast-2.amazonaws.com
-  IMAGE_TAG: ${{ github.sha }}
+  AWS_REGION: ${{ vars.AWS_REGION || 'ap-northeast-2' }}
+  S3_BUCKET: ${{ secrets.FRONTEND_S3_BUCKET }}
+  S3_PREFIX: dev
+  CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+  FRONTEND_BUILD_DIR: ${{ vars.FRONTEND_BUILD_DIR || 'dist' }}
 
 jobs:
-  build_image:
-    name: Build and Push DEV Image
+  deploy:
+    name: Deploy Frontend to DEV S3
+    if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
-      - name: Configure AWS credentials
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Frontend Build
+        env:
+          VITE_DEMO_MODE: 'false'
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+        run: |
+          npm ci
+          npm run build
+
+      # This role trusts the dev branch OIDC subject, without an environment subject.
+      - name: AWS OIDC Authentication
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN_DEV }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_DEV_S3 }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login to ECR
-        run: |
-          aws ecr get-login-password --region "$AWS_REGION" |
-            docker login \
-              --username AWS \
-              --password-stdin "$ECR_REGISTRY"
-
-      - name: Build Docker image
-        run: |
-          docker build \
-            -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" \
-            .
-
-      - name: Push image to ECR
-        run: |
-          docker push \
-            "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-
-  deploy:
-    name: Deploy Frontend to DEV
-    needs: build_image
-    runs-on: ubuntu-latest
-    environment: development
-
-    steps:
-      - name: Configure SSH
-        env:
-          EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
-          EC2_KNOWN_HOSTS: ${{ secrets.DEV_EC2_KNOWN_HOSTS }}
+      - name: Upload DEV assets to S3
         run: |
           set -euo pipefail
+          test -f "$FRONTEND_BUILD_DIR/index.html"
+          # Retain old assets so open browser sessions can finish loading them.
+          aws s3 sync "$FRONTEND_BUILD_DIR/" "s3://$S3_BUCKET/$S3_PREFIX/" \
+            --exclude 'index.html'
+          # Publish the entry point after every referenced asset is available.
+          aws s3 cp "$FRONTEND_BUILD_DIR/index.html" "s3://$S3_BUCKET/$S3_PREFIX/index.html" \
+            --cache-control 'no-cache'
 
-          mkdir -p "$RUNNER_TEMP/ssh"
-
-          printf '%s\n' "$EC2_SSH_PRIVATE_KEY" \
-            > "$RUNNER_TEMP/ssh/ec2_key"
-
-          printf '%s\n' "$EC2_KNOWN_HOSTS" \
-            > "$RUNNER_TEMP/ssh/known_hosts"
-
-          chmod 600 "$RUNNER_TEMP/ssh/ec2_key"
-          chmod 600 "$RUNNER_TEMP/ssh/known_hosts"
-
-      - name: Deploy to DEV EC2
-        env:
-          EC2_HOST: ${{ secrets.DEV_EC2_HOST }}
-          EC2_USER: ${{ secrets.DEV_EC2_USER }}
-          EC2_PORT: ${{ secrets.DEV_EC2_PORT }}
+      - name: Invalidate DEV CloudFront cache
         run: |
-          set -euo pipefail
-
-          IMAGE_URL="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-
-          ssh \
-            -i "$RUNNER_TEMP/ssh/ec2_key" \
-            -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known_hosts" \
-            -o StrictHostKeyChecking=yes \
-            -o ConnectTimeout=10 \
-            -p "${EC2_PORT:-22}" \
-            "$EC2_USER@$EC2_HOST" \
-            "cd /home/ubuntu/app && \
-             aws ecr get-login-password --region '$AWS_REGION' | \
-             docker login --username AWS --password-stdin '$ECR_REGISTRY' && \
-             df -h /var/lib/containerd && \
-             docker system df && \
-             docker image prune -af && \
-             df -h /var/lib/containerd && \
-             FRONTEND_IMAGE='$IMAGE_URL' docker compose pull nginx && \
-             sed -i 's|^FRONTEND_IMAGE=.*|FRONTEND_IMAGE=$IMAGE_URL|' .env && \
-             docker compose up -d --no-deps nginx && \
-             docker compose ps nginx"
+          aws cloudfront create-invalidation \
+            --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
+            --paths "/$S3_PREFIX/*"
