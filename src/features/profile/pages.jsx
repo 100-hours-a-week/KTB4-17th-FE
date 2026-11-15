@@ -19,7 +19,7 @@ import { useNotifications } from "../notifications/context.jsx";
 import { notificationBadge } from "../notifications/model.js";
 import { PagerIcon } from "../notifications/NotificationControls.jsx";
 import { getMyPersona } from "../persona/api.js";
-import { PERSONA_AREAS } from "../persona/model.js";
+import { hasPersonaContent, PERSONA_AREAS } from "../persona/model.js";
 import { PersonaConversationStyle } from "../persona/PersonaConversationStyle.jsx";
 import { savedPhotoItems } from "../profiletrust/model.js";
 import { ProfilePhotoEditor } from "../profiletrust/ProfilePhotoEditor.jsx";
@@ -840,11 +840,7 @@ export function Persona({ navigate }) {
         },
       ].filter(({ items }) => items.length)
     : [];
-  const hasContent =
-    narrative ||
-    persona?.conversationStyle ||
-    persona?.summaries?.length ||
-    preferences.length;
+  const hasContent = hasPersonaContent(persona);
 
   return (
     <>
@@ -874,10 +870,7 @@ export function Persona({ navigate }) {
           <EmptyState
             icon="!"
             title="페르소나를 불러오지 못했어요"
-            description={apiErrorMessage(
-              state.error,
-              "연결 상태를 확인한 뒤 다시 시도해 주세요.",
-            )}
+            description={apiErrorMessage(state.error)}
             action={
               <PixelButton secondary onClick={retry}>
                 다시 확인
@@ -904,7 +897,7 @@ export function Persona({ navigate }) {
                 <div>
                   <span>하루가 이해한 나</span>
                   <p>
-                    {["practice", "kakao", "reset"].includes(persona.source)
+                    {persona.conversationStyle
                       ? "가치관 문답과 대화에서 알아간 모습이에요."
                       : "온보딩에서 나눈 대화를 바탕으로 정리했어요."}
                   </p>
@@ -934,10 +927,7 @@ export function Persona({ navigate }) {
                 </a>
               )}
             </section>
-            <PersonaConversationStyle
-              style={persona.conversationStyle}
-              source={persona.source}
-            />
+            <PersonaConversationStyle style={persona.conversationStyle} />
             {persona.summaries.length > 0 && (
               <section
                 className="persona-values"
