@@ -2,6 +2,13 @@ export const PROFILES_BETWEEN_QUESTIONS = 5;
 export const FEEDBACK_ANSWERS = ["YES", "NO"];
 export const CORRECTION_MAX_LENGTH = 200;
 
+// Sentence-judgment cards bring their own choices; feedback cards are YES/NO.
+export function answerChoiceIds(card) {
+  return card?.choices
+    ? card.choices.map((choice) => choice.choiceId)
+    : FEEDBACK_ANSWERS;
+}
+
 export function isSentenceCardExpired(card, now = Date.now()) {
   return !card || Date.parse(card.expiresAt) <= now;
 }

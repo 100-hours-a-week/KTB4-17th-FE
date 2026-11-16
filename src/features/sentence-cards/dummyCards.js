@@ -1,117 +1,116 @@
-// Dummy feedback cards for demos while the persona utterance data is not loaded.
-// Answers stay in this tab's memory and are never sent to the server,
-// so dummy answers can't end up in the training data.
-export const DUMMY_FEEDBACK_QUESTION =
-  "내 페르소나가 다른 유저에게 한 말이에요. 나다운 대답인가요?";
+// Dummy sentence-judgment cards for demos while the real card data is not loaded.
+// Each card shows a sentence the tagging model tagged and asks whether it is
+// about that dimension. Answers stay in this tab's memory and are never sent
+// to the server, so dummy answers can't end up in the training data.
+// Dimension labels follow AI app/features/persona (Dimension.label).
+export const DUMMY_SENTENCE_CHOICES = [
+  { choiceId: "inferred", label: "짐작할 수 있어요" },
+  { choiceId: "none", label: "관련 없어요" },
+  { choiceId: "unsure", label: "판단하기 어려워요" },
+];
 
-export const DUMMY_FEEDBACK_ITEMS = [
+export const DUMMY_SENTENCE_ITEMS = [
   {
-    contextQuestion: "연인과 집에서 쉬는 날, 주로 뭘 하고 싶으세요?",
-    utterance: "각자 하고 싶은 일을 하다가 저녁에 같이 영화를 보면 좋겠어요.",
+    sentence: "답장은 생각날 때 몰아서 하는 편이에요.",
+    dimension: "연락 빈도",
   },
   {
-    contextQuestion: "좋아하는 사람에게 마음을 어떻게 전하시나요?",
-    utterance:
-      "고맙거나 서운한 게 있으면 혼자 담아두기보다 말로 전하는 편이에요.",
+    sentence: "점심에 뭘 먹었는지 같은 소소한 얘기도 자주 나누고 싶어요.",
+    dimension: "연락 빈도",
   },
   {
-    contextQuestion: "연인과 연락은 얼마나 자주 하는 게 좋으세요?",
-    utterance:
-      "점심에 뭘 먹었는지, 퇴근길에 뭘 봤는지 소소한 얘기를 자주 나누고 싶어요.",
+    sentence: "주말 중 하루는 꼭 혼자 보내는 시간이 필요해요.",
+    dimension: "거리 두기",
   },
   {
-    contextQuestion: "연인과 의견이 다를 때 어떻게 하시나요?",
-    utterance: "왜 생각이 다른지 들어보고, 둘 다 괜찮은 방법을 찾아봐요.",
+    sentence: "연인이 제 일상을 다 알 필요는 없다고 생각해요.",
+    dimension: "거리 두기",
   },
   {
-    contextQuestion: "지금 어떤 만남을 기대하고 계세요?",
-    utterance: "서로의 일상에 오래 함께할 사람을 만나고 싶어요.",
+    sentence: "답장이 늦으면 혹시 제가 뭘 잘못했나 생각하게 돼요.",
+    dimension: "관계 불안",
   },
   {
-    contextQuestion: "연인의 답장이 늦으면 어떤 생각이 드시나요?",
-    utterance: "바쁜 일이 있나 보다 하고, 제 할 일을 하면서 기다려요.",
+    sentence: "바쁜가 보다 하고 제 할 일 하면서 기다리는 편이에요.",
+    dimension: "관계 불안",
   },
   {
-    contextQuestion: "주말에는 보통 어떻게 시간을 보내세요?",
-    utterance:
-      "토요일엔 밖에서 사람들 만나고, 일요일엔 집에서 푹 쉬는 편이에요.",
+    sentence: "고맙거나 서운한 게 있으면 그때그때 말로 표현해요.",
+    dimension: "자기·감정 표현",
   },
   {
-    contextQuestion: "첫 데이트로 어디가 좋으세요?",
-    utterance:
-      "조용한 카페에서 이야기 나누다가 근처 공원을 같이 걸으면 좋겠어요.",
+    sentence: "힘든 일은 혼자 정리한 다음에 털어놓는 편이에요.",
+    dimension: "자기·감정 표현",
   },
   {
-    contextQuestion: "연인에게 서운할 때는 어떻게 하세요?",
-    utterance:
-      "바로 말하기보다는 조금 생각을 정리한 다음에 차분하게 얘기하는 편이에요.",
+    sentence: "우리 관계에서 아쉬운 점이 있으면 솔직하게 얘기 나누고 싶어요.",
+    dimension: "솔직한 관계 대화",
   },
   {
-    contextQuestion: "좋아하는 음식이 뭐예요?",
-    utterance: "매운 걸 좋아해서 떡볶이 맛집 찾아다니는 게 취미예요.",
+    sentence: "같이 있으면 사소한 일에도 많이 웃는 편이에요.",
+    dimension: "긍정적 상호작용",
   },
   {
-    contextQuestion: "연애할 때 가장 중요하게 생각하는 게 뭐예요?",
-    utterance: "서로 믿을 수 있는 게 제일 중요하다고 생각해요.",
+    sentence: "좋아하는 마음은 자주 말해 줘야 한다고 생각해요.",
+    dimension: "관계 확신 표현",
   },
   {
-    contextQuestion: "연인과 여행 계획은 어떻게 세우세요?",
-    utterance:
-      "숙소랑 큰 일정만 정해 두고 나머지는 가서 즉흥적으로 정하는 게 좋아요.",
+    sentence: "의견이 다르면 왜 그런지 들어보고 중간 지점을 찾아요.",
+    dimension: "문제 해결",
   },
   {
-    contextQuestion: "힘든 일이 있을 때 연인에게 기대는 편이세요?",
-    utterance: "혼자 해결해 보다가 도저히 안 될 때 털어놓는 편이에요.",
+    sentence: "다투면 일단 그 자리를 피하고 혼자 생각할 시간을 가져요.",
+    dimension: "회피·철수",
   },
   {
-    contextQuestion: "연인의 친구들과도 친해지고 싶으세요?",
-    utterance: "자연스럽게 기회가 되면 같이 어울리고 싶어요.",
+    sentence: "화가 나면 목소리가 커지는 편이라 조심하려고 해요.",
+    dimension: "감정적 맞대응",
   },
   {
-    contextQuestion: "기념일은 챙기는 편이세요?",
-    utterance: "큰 이벤트보다는 손편지 같은 작은 선물로 챙기는 걸 좋아해요.",
+    sentence: "싸우기 싫어서 웬만하면 상대 말에 맞춰 주는 편이에요.",
+    dimension: "일방적 수용",
   },
   {
-    contextQuestion: "연인과 다툰 뒤에는 먼저 연락하는 편이세요?",
-    utterance: "누가 잘못했든 오래 끌기 싫어서 제가 먼저 연락하는 편이에요.",
+    sentence: "서로 믿을 수 있는 사람이 제일 중요해요.",
+    dimension: "신뢰·배려",
   },
   {
-    contextQuestion: "요즘 빠져 있는 취미가 있나요?",
-    utterance:
-      "퇴근하고 러닝하는 재미에 빠졌어요. 같이 뛸 사람이면 더 좋겠어요.",
+    sentence: "같이 있으면 에너지가 넘치는 사람이 좋아요.",
+    dimension: "매력·활발함",
   },
   {
-    contextQuestion: "연인과 데이트 비용은 어떻게 나누는 게 좋으세요?",
-    utterance: "번갈아 가면서 내거나 데이트 통장을 만드는 게 편할 것 같아요.",
+    sentence: "자기 일을 꾸준히 해 나가는 사람에게 끌려요.",
+    dimension: "능력·안정성",
   },
   {
-    contextQuestion: "연인이 이성 친구와 단둘이 만나면 어떠세요?",
-    utterance: "미리 말해 주기만 하면 크게 신경 쓰지 않아요.",
+    sentence: "서로의 일상에 오래 함께할 사람을 만나고 싶어요.",
+    dimension: "관계 진지도",
   },
   {
-    contextQuestion: "10년 뒤 어떤 모습으로 살고 싶으세요?",
-    utterance:
-      "좋아하는 사람과 작은 집에서 강아지 키우면서 평범하게 살고 싶어요.",
+    sentence: "요즘 퇴근하고 러닝하는 재미에 빠졌어요.",
+    dimension: "연락 빈도",
   },
 ];
 
-export function dummyFeedbackCards(now = Date.now()) {
-  return DUMMY_FEEDBACK_ITEMS.map((item, index) => ({
-    cardId: `demo_feedback_${index + 1}`,
-    ...item,
-    question: DUMMY_FEEDBACK_QUESTION,
+export function dummySentenceCards(now = Date.now()) {
+  return DUMMY_SENTENCE_ITEMS.map((item, index) => ({
+    cardId: `demo_sentence_${index + 1}`,
+    sentence: item.sentence,
+    question: `보여드린 문장, '${item.dimension}' 이야기가 맞나요?`,
+    choices: DUMMY_SENTENCE_CHOICES,
     expiresAt: new Date(now + 86_400_000).toISOString(),
   }));
 }
 
-// Mirrors the BE contract: the same card until it is answered, then null (204).
-export function createDummyFeedbackStore(now = () => Date.now()) {
-  const cards = dummyFeedbackCards(now());
+// Same flow as the card API: the same card until it is answered, then null (204).
+export function createDummyCardStore(now = () => Date.now()) {
+  const cards = dummySentenceCards(now());
   const answered = new Set();
   return {
     next: () => cards.find((card) => !answered.has(card.cardId)) ?? null,
-    answer(cardId) {
-      if (!cards.some((card) => card.cardId === cardId)) {
+    answer(cardId, choiceId) {
+      const card = cards.find((item) => item.cardId === cardId);
+      if (!card?.choices.some((c) => c.choiceId === choiceId)) {
         const error = new Error("이 질문은 더 이상 답할 수 없어요.");
         error.code = "FEEDBACK_CARD_NOT_AVAILABLE";
         throw error;

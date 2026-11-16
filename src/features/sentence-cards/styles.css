@@ -77,6 +77,11 @@
   border: 0;
 }
 
+.sentence-card-choices-stack {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+
 .sentence-card-choice {
   min-height: 56px;
   padding: 14px 12px;
