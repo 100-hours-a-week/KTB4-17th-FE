@@ -1,55 +1,52 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { answerSentenceCard, getNextSentenceCard } from "./api.js";
+import {
+  answerFeedbackCard,
+  FEEDBACK_CARD_CONSENT_VERSION,
+  getNextFeedbackCard,
+} from "./api.js";
 import {
   isSentenceCardExpired,
-  parseSentenceCard,
+  normalizeCorrection,
+  parseFeedbackCard,
   shouldShowFeedQuestion,
 } from "./model.js";
 
 const card = {
-  cardId: "sc_example",
-  sentence: "주말엔 거의 집에서 혼자 쉬어요",
-  contextQuestion: "주말에는 주로 어떻게 쉬시나요?",
-  question: "이런 말을 하는 사람은 어느 쪽일까요?",
-  choices: [
-    { choiceId: "low", label: "함께 있는 시간을 선호해요" },
-    { choiceId: "high", label: "각자의 시간을 중시해요" },
-    { choiceId: "unsure", label: "판단하기 어려워요" },
-  ],
+  cardId: "fc_example",
+  contextQuestion: "빵 좋아하세요?",
+  utterance: "저는 소금빵을 좋아해요",
+  question: "내 페르소나가 다른 유저에게 한 말이에요. 나다운 대답인가요?",
   expiresAt: "2099-11-12T21:00:00+09:00",
 };
 
-test("card rendering retains the server's text and choice order", () => {
-  assert.equal(parseSentenceCard(card), card);
-  const { contextQuestion, ...legacyCard } = card;
-  assert.equal(parseSentenceCard(legacyCard), legacyCard);
-  const axis = {
-    ...card,
-    choices: [
-      { choiceId: "direct", label: "직접 말하고 있어요" },
-      { choiceId: "inferred", label: "짐작할 수 있어요" },
-      { choiceId: "none", label: "관련 없어요" },
-      { choiceId: "unsure", label: "판단하기 어려워요" },
-    ],
-  };
-  assert.equal(parseSentenceCard(axis), axis);
+test("card rendering retains the server's text, with an optional context question", () => {
+  assert.equal(parseFeedbackCard(card), card);
+  const withoutContext = { ...card, contextQuestion: null };
+  assert.equal(parseFeedbackCard(withoutContext), withoutContext);
+  const { contextQuestion, ...omitted } = card;
+  assert.equal(parseFeedbackCard(omitted), omitted);
 });
 
-test("malformed cards cannot expose unusable answer controls", () => {
+test("malformed cards are rejected", () => {
   for (const change of [
     { cardId: "" },
-    { sentence: null },
+    { cardId: "x".repeat(65) },
+    { utterance: null },
+    { utterance: "x".repeat(301) },
     { question: " " },
     { contextQuestion: 123 },
     { contextQuestion: " " },
     { expiresAt: "invalid" },
-    { choices: [] },
-    { choices: [card.choices[0], card.choices[0], card.choices[2]] },
-    { choices: [...card.choices.slice(0, 2), { choiceId: "unsure" }] },
   ]) {
-    assert.throws(() => parseSentenceCard({ ...card, ...change }));
+    assert.throws(() => parseFeedbackCard({ ...card, ...change }));
   }
+});
+
+test("whitespace-only corrections become null", () => {
+  assert.equal(normalizeCorrection("   "), null);
+  assert.equal(normalizeCorrection(null), null);
+  assert.equal(normalizeCorrection("  떡을 더 좋아해요 "), "떡을 더 좋아해요");
 });
 
 test("feed inserts after five profiles and excludes skipped or expired cards", () => {
@@ -68,58 +65,69 @@ test("feed inserts after five profiles and excludes skipped or expired cards", (
   assert.equal(isSentenceCardExpired(card, Date.parse(card.expiresAt)), true);
 });
 
-test("card API unwraps responses and treats 204 as no card", async (t) => {
+test("next card is a POST to the persona feedback-card API and 204 means no card", async (t) => {
   const responses = [
     Response.json({ data: card }),
     new Response(null, { status: 204 }),
   ];
   t.mock.method(globalThis, "fetch", async (path, options) => {
-    assert.equal(path, "/api/v1/users/me/sentence-cards/next");
+    assert.equal(path, "/api/v1/persona/feedback-cards/next");
+    assert.equal(options.method, "POST");
     assert.equal(options.cache, "no-store");
     assert.equal(options.credentials, "include");
+    assert.equal(options.body, undefined);
     return responses.shift();
   });
-  assert.deepEqual(await getNextSentenceCard(), card);
-  assert.equal(await getNextSentenceCard(), null);
+  assert.deepEqual(await getNextFeedbackCard(), card);
+  assert.equal(await getNextFeedbackCard(), null);
 });
 
-test("answer API encodes card IDs and sends only the selected choice", async (t) => {
+test("answer API encodes card IDs and sends the BE answer contract", async (t) => {
+  const bodies = [];
   t.mock.method(globalThis, "fetch", async (path, options) => {
-    assert.equal(path, "/api/v1/users/me/sentence-cards/sc%2F1/answer");
+    assert.equal(path, "/api/v1/persona/feedback-cards/fc%2F1/answer");
     assert.equal(options.method, "POST");
-    assert.deepEqual(JSON.parse(options.body), { choiceId: "unsure" });
-    return Response.json({ data: { cardId: "sc/1", status: "ANSWERED" } });
+    bodies.push(JSON.parse(options.body));
+    return Response.json({ data: { cardId: "fc/1", status: "ANSWERED" } });
   });
-  assert.equal((await answerSentenceCard("sc/1", "unsure")).status, "ANSWERED");
-});
-
-test("browsing past unanswered cards excludes their IDs through GET without saving an answer", async (t) => {
-  t.mock.method(globalThis, "fetch", async (path, options) => {
-    const url = new URL(path, "http://localhost");
-    assert.equal(url.pathname, "/api/v1/users/me/sentence-cards/next");
-    assert.deepEqual(url.searchParams.getAll("excludeCardIds"), [
-      "sc/1",
-      "sc&2",
-    ]);
-    assert.equal(options.method, "GET");
-    assert.equal(options.body, undefined);
-    return Response.json({ data: card });
+  const answeredAt = "2026-11-12T09:00:00.000Z";
+  await answerFeedbackCard("fc/1", {
+    answer: "NO",
+    correctionText: "떡을 더 좋아해요",
+    answeredAt,
   });
-  assert.deepEqual(
-    await getNextSentenceCard({ excludeCardIds: ["sc/1", "sc&2", "sc/1"] }),
-    card,
-  );
+  // A stray correction on YES is never sent: BE rejects it with 400.
+  await answerFeedbackCard("fc/1", {
+    answer: "YES",
+    correctionText: "무시",
+    answeredAt,
+  });
+  assert.deepEqual(bodies, [
+    {
+      answer: "NO",
+      correctionText: "떡을 더 좋아해요",
+      answeredAt,
+      consentVersion: FEEDBACK_CARD_CONSENT_VERSION,
+    },
+    {
+      answer: "YES",
+      correctionText: null,
+      answeredAt,
+      consentVersion: FEEDBACK_CARD_CONSENT_VERSION,
+    },
+  ]);
 });
 
 test("invalid answer acknowledgements remain failures and server conflicts retain their codes", async (t) => {
   const responses = [
     Response.json({ data: { cardId: "other", status: "ANSWERED" } }),
-    Response.json({ errorCode: "SENTENCE_CARD_EXPIRED" }, { status: 409 }),
+    Response.json({ errorCode: "FEEDBACK_CARD_EXPIRED" }, { status: 409 }),
   ];
   t.mock.method(globalThis, "fetch", async () => responses.shift());
-  await assert.rejects(answerSentenceCard(card.cardId, "high"));
-  await assert.rejects(answerSentenceCard(card.cardId, "high"), {
-    code: "SENTENCE_CARD_EXPIRED",
+  const body = { answer: "YES", answeredAt: "2026-11-12T09:00:00.000Z" };
+  await assert.rejects(answerFeedbackCard(card.cardId, body));
+  await assert.rejects(answerFeedbackCard(card.cardId, body), {
+    code: "FEEDBACK_CARD_EXPIRED",
     status: 409,
   });
 });

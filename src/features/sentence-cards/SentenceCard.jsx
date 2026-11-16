@@ -1,5 +1,6 @@
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { PixelIcon } from "../../shared/ui/pixel.jsx";
+import { CORRECTION_MAX_LENGTH, normalizeCorrection } from "./model.js";
 import { useCardSwipe } from "./useCardSwipe.js";
 
 export function SentenceCard({
@@ -13,19 +14,16 @@ export function SentenceCard({
 }) {
   const titleId = useId();
   const errorId = useId();
+  const correctionId = useId();
+  const correctionInputId = useId();
+  const counterId = useId();
   const heading = useRef(null);
   const sending = useRef(false);
   const mounted = useRef(false);
-  const {
-    card,
-    selectedChoice,
-    submitting,
-    loadingNext,
-    error,
-    select,
-    answer,
-  } = session;
-  const busy = submitting || loadingNext || disabled || preview;
+  const [correction, setCorrection] = useState("");
+  const { card, selectedChoice, submitting, error, select, answer } = session;
+  const busy = submitting || disabled || preview;
+  const cardId = card?.cardId;
 
   useEffect(() => {
     mounted.current = true;
@@ -35,15 +33,16 @@ export function SentenceCard({
   }, []);
 
   useEffect(() => {
-    if (card && !preview) heading.current?.focus({ preventScroll: true });
-  }, [card, preview]);
+    if (cardId && !preview) heading.current?.focus({ preventScroll: true });
+    setCorrection("");
+  }, [cardId, preview]);
 
-  async function handleAnswer(choiceId) {
+  async function submit(choice, correctionText = null) {
     if (busy || sending.current) return;
     sending.current = true;
-    select(choiceId);
+    select(choice);
     try {
-      if ((await answer()) && mounted.current) onAnswered();
+      if ((await answer(correctionText)) && mounted.current) onAnswered();
     } finally {
       sending.current = false;
     }
@@ -73,7 +72,7 @@ export function SentenceCard({
             A.
           </span>
           <p className="sentence-card-context-answer">
-            <span className="sr-only">답변 </span>“{card.sentence}”
+            <span className="sr-only">답변 </span>“{card.utterance}”
           </p>
         </div>
       </div>
@@ -91,25 +90,74 @@ export function SentenceCard({
         aria-labelledby={titleId}
         aria-describedby={error ? errorId : undefined}
       >
-        {card.choices.map(({ choiceId, label }) => (
-          <button
-            type="button"
-            className="sentence-card-choice"
-            key={choiceId}
-            data-choice-id={choiceId}
-            aria-pressed={selectedChoice === choiceId}
-            disabled={busy}
-            onClick={() => {
-              void handleAnswer(choiceId);
-            }}
-          >
-            {label}
-          </button>
-        ))}
+        {/* 순서 고정: 예 → 아니오 (순서가 바뀌면 응답 분포가 달라진다) */}
+        <button
+          type="button"
+          className="sentence-card-choice"
+          data-choice-id="YES"
+          aria-pressed={selectedChoice === "YES"}
+          disabled={busy}
+          onClick={() => {
+            void submit("YES");
+          }}
+        >
+          예
+        </button>
+        <button
+          type="button"
+          className="sentence-card-choice"
+          data-choice-id="NO"
+          aria-pressed={selectedChoice === "NO"}
+          aria-expanded={selectedChoice === "NO"}
+          aria-controls={correctionId}
+          disabled={busy}
+          onClick={() => select("NO")}
+        >
+          아니오
+        </button>
       </fieldset>
+      {selectedChoice === "NO" && (
+        <div className="sentence-card-correction" id={correctionId}>
+          <label htmlFor={correctionInputId}>실제 당신의 답변은?</label>
+          <textarea
+            id={correctionInputId}
+            rows={3}
+            maxLength={CORRECTION_MAX_LENGTH}
+            value={correction}
+            placeholder="선택 사항이에요"
+            aria-describedby={counterId}
+            disabled={busy}
+            onChange={(event) => setCorrection(event.target.value)}
+          />
+          <small id={counterId} className="sentence-card-correction-count">
+            {correction.length}/{CORRECTION_MAX_LENGTH}
+          </small>
+          <div className="sentence-card-correction-actions">
+            <button
+              type="button"
+              className="sentence-card-correction-skip"
+              disabled={busy}
+              onClick={() => {
+                void submit("NO", null);
+              }}
+            >
+              건너뛰고 보내기
+            </button>
+            <button
+              type="button"
+              className="sentence-card-correction-send"
+              disabled={busy || !normalizeCorrection(correction)}
+              onClick={() => {
+                void submit("NO", correction);
+              }}
+            >
+              보내기
+            </button>
+          </div>
+        </div>
+      )}
       <div className="sentence-card-feedback">
         {submitting && <p role="status">답변을 저장하고 있어요…</p>}
-        {loadingNext && <p role="status">다음 질문을 불러오고 있어요…</p>}
         {error && (
           <p className="sentence-card-error" id={errorId} role="alert">
             {error}
@@ -150,32 +198,20 @@ export function FeedSentenceCard({
 }) {
   const leaving = useRef(false);
   function skip() {
-    if (
-      disabled ||
-      session.submitting ||
-      session.loadingNext ||
-      leaving.current
-    )
-      return;
+    if (disabled || session.submitting || leaving.current) return;
     leaving.current = true;
     session.skipInFeed();
     onContinue();
   }
   function returnToProfile() {
-    if (
-      disabled ||
-      session.submitting ||
-      session.loadingNext ||
-      leaving.current
-    )
-      return;
+    if (disabled || session.submitting || leaving.current) return;
     leaving.current = true;
     onReturn();
   }
   const swipe = useCardSwipe({
     onNext: skip,
     onPrevious: returnToProfile,
-    disabled: disabled || session.submitting || session.loadingNext,
+    disabled: disabled || session.submitting,
     enabled: !preview,
   });
 
