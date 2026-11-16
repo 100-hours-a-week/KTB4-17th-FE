@@ -40,7 +40,7 @@ jobs:
 
       - name: Frontend Build
         env:
-          VITE_DEMO_MODE: "false"
+          VITE_DEMO_MODE: "true" # 문장 판정 더미 카드 (src/features/sentence-cards/dummyCards.js)
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
         run: |
           npm ci
