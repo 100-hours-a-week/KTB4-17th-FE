@@ -5,6 +5,7 @@ import {
   FEEDBACK_CARD_CONSENT_VERSION,
   getNextFeedbackCard,
 } from "./api.js";
+import { createDummyFeedbackStore } from "./dummyCards.js";
 import {
   isSentenceCardExpired,
   normalizeCorrection,
@@ -130,4 +131,29 @@ test("invalid answer acknowledgements remain failures and server conflicts retai
     code: "FEEDBACK_CARD_EXPIRED",
     status: 409,
   });
+});
+
+test("all 20 dummy cards pass card validation and follow the one-card-until-answered contract", () => {
+  const store = createDummyFeedbackStore(() =>
+    Date.parse("2026-11-16T00:00:00Z"),
+  );
+  const first = store.next();
+  assert.equal(parseFeedbackCard(first), first);
+  assert.equal(store.next(), first);
+  assert.deepEqual(store.answer(first.cardId), {
+    cardId: first.cardId,
+    status: "ANSWERED",
+  });
+  assert.notEqual(store.next().cardId, first.cardId);
+  assert.throws(() => store.answer("unknown"), {
+    code: "FEEDBACK_CARD_NOT_AVAILABLE",
+  });
+  let count = 1;
+  for (let card = store.next(); card; card = store.next()) {
+    assert.equal(parseFeedbackCard(card), card);
+    store.answer(card.cardId);
+    count += 1;
+  }
+  assert.equal(count, 20);
+  assert.equal(store.next(), null);
 });
