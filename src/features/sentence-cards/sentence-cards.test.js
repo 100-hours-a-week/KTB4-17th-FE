@@ -5,8 +5,9 @@ import {
   FEEDBACK_CARD_CONSENT_VERSION,
   getNextFeedbackCard,
 } from "./api.js";
-import { createDummyFeedbackStore } from "./dummyCards.js";
+import { createDummyCardStore } from "./dummyCards.js";
 import {
+  answerChoiceIds,
   isSentenceCardExpired,
   normalizeCorrection,
   parseFeedbackCard,
@@ -133,27 +134,43 @@ test("invalid answer acknowledgements remain failures and server conflicts retai
   });
 });
 
-test("all 20 dummy cards pass card validation and follow the one-card-until-answered contract", () => {
-  const store = createDummyFeedbackStore(() =>
-    Date.parse("2026-11-16T00:00:00Z"),
-  );
+test("20 dummy sentence-judgment cards offer the four AXIS choices and stay until answered", () => {
+  const store = createDummyCardStore(() => Date.parse("2026-11-16T00:00:00Z"));
   const first = store.next();
-  assert.equal(parseFeedbackCard(first), first);
+  assert.match(first.question, /^보여드린 문장, '.+' 이야기가 맞나요\?$/);
+  assert.deepEqual(answerChoiceIds(first), [
+    "direct",
+    "inferred",
+    "none",
+    "unsure",
+  ]);
+  assert.deepEqual(
+    first.choices.map((choice) => choice.label),
+    [
+      "직접 말하고 있어요",
+      "짐작할 수 있어요",
+      "관련 없어요",
+      "판단하기 어려워요",
+    ],
+  );
   assert.equal(store.next(), first);
-  assert.deepEqual(store.answer(first.cardId), {
+  assert.throws(() => store.answer(first.cardId, "YES"), {
+    code: "FEEDBACK_CARD_NOT_AVAILABLE",
+  });
+  assert.deepEqual(store.answer(first.cardId, "none"), {
     cardId: first.cardId,
     status: "ANSWERED",
   });
-  assert.notEqual(store.next().cardId, first.cardId);
-  assert.throws(() => store.answer("unknown"), {
-    code: "FEEDBACK_CARD_NOT_AVAILABLE",
-  });
   let count = 1;
   for (let card = store.next(); card; card = store.next()) {
-    assert.equal(parseFeedbackCard(card), card);
-    store.answer(card.cardId);
+    assert.ok(card.sentence.length > 0 && card.sentence.length <= 200);
+    store.answer(card.cardId, "inferred");
     count += 1;
   }
   assert.equal(count, 20);
   assert.equal(store.next(), null);
+});
+
+test("feedback cards without choices keep the YES/NO answers", () => {
+  assert.deepEqual(answerChoiceIds(card), ["YES", "NO"]);
 });

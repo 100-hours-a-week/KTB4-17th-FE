@@ -3,7 +3,7 @@ import { AUTH_SESSION_CLEARED_EVENT } from "../../shared/api/authToken.js";
 import { apiErrorMessage } from "../../shared/api/errorMessages.js";
 import { answerFeedbackCard, getNextFeedbackCard } from "./api.js";
 import {
-  FEEDBACK_ANSWERS,
+  answerChoiceIds,
   isSentenceCardExpired,
   normalizeCorrection,
 } from "./model.js";
@@ -109,7 +109,7 @@ export function useSentenceCards({ enabled }) {
       if (
         submitting ||
         isSentenceCardExpired(card) ||
-        !FEEDBACK_ANSWERS.includes(choice)
+        !answerChoiceIds(card).includes(choice)
       )
         return;
       update({ selectedChoice: choice, error: "" });
@@ -121,7 +121,7 @@ export function useSentenceCards({ enabled }) {
     (correctionText = null) => {
       if (submission.current) return submission.current;
       const { card, selectedChoice } = stateRef.current;
-      if (!enabled || !card || !FEEDBACK_ANSWERS.includes(selectedChoice))
+      if (!enabled || !card || !answerChoiceIds(card).includes(selectedChoice))
         return Promise.resolve(false);
       if (isSentenceCardExpired(card)) {
         update({

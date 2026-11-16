@@ -55,27 +55,35 @@ export function SentenceCard({
       aria-labelledby={titleId}
       aria-busy={submitting}
     >
-      <div className="sentence-card-context">
-        {card.contextQuestion && (
-          <div className="sentence-card-context-row">
-            <span className="sentence-card-context-label" aria-hidden="true">
-              Q.
-            </span>
-            <p>
-              <span className="sr-only">원래 질문 </span>
-              {card.contextQuestion}
-            </p>
-          </div>
-        )}
-        <div className="sentence-card-context-row">
-          <span className="sentence-card-context-label" aria-hidden="true">
-            A.
-          </span>
+      {card.choices ? (
+        <div className="sentence-card-context">
           <p className="sentence-card-context-answer">
-            <span className="sr-only">답변 </span>“{card.utterance}”
+            <span className="sr-only">판정할 문장 </span>“{card.sentence}”
           </p>
         </div>
-      </div>
+      ) : (
+        <div className="sentence-card-context">
+          {card.contextQuestion && (
+            <div className="sentence-card-context-row">
+              <span className="sentence-card-context-label" aria-hidden="true">
+                Q.
+              </span>
+              <p>
+                <span className="sr-only">원래 질문 </span>
+                {card.contextQuestion}
+              </p>
+            </div>
+          )}
+          <div className="sentence-card-context-row">
+            <span className="sentence-card-context-label" aria-hidden="true">
+              A.
+            </span>
+            <p className="sentence-card-context-answer">
+              <span className="sr-only">답변 </span>“{card.utterance}”
+            </p>
+          </div>
+        </div>
+      )}
       <h2
         className="sentence-card-prompt"
         id={titleId}
@@ -84,38 +92,64 @@ export function SentenceCard({
       >
         {card.question}
       </h2>
-      <fieldset
-        className="sentence-card-choices"
-        disabled={busy}
-        aria-labelledby={titleId}
-        aria-describedby={error ? errorId : undefined}
-      >
-        {/* 순서 고정: 예 → 아니오 (순서가 바뀌면 응답 분포가 달라진다) */}
-        <button
-          type="button"
-          className="sentence-card-choice"
-          data-choice-id="YES"
-          aria-pressed={selectedChoice === "YES"}
+      {card.choices ? (
+        <fieldset
+          className="sentence-card-choices sentence-card-choices-stack"
           disabled={busy}
-          onClick={() => {
-            void submit("YES");
-          }}
+          aria-labelledby={titleId}
+          aria-describedby={error ? errorId : undefined}
         >
-          예
-        </button>
-        <button
-          type="button"
-          className="sentence-card-choice"
-          data-choice-id="NO"
-          aria-pressed={selectedChoice === "NO"}
-          aria-expanded={selectedChoice === "NO"}
-          aria-controls={correctionId}
+          {/* 순서는 카드가 준 choices 그대로 (순서가 바뀌면 응답 분포가 달라진다) */}
+          {card.choices.map((choice) => (
+            <button
+              key={choice.choiceId}
+              type="button"
+              className="sentence-card-choice"
+              data-choice-id={choice.choiceId}
+              aria-pressed={selectedChoice === choice.choiceId}
+              disabled={busy}
+              onClick={() => {
+                void submit(choice.choiceId);
+              }}
+            >
+              {choice.label}
+            </button>
+          ))}
+        </fieldset>
+      ) : (
+        <fieldset
+          className="sentence-card-choices"
           disabled={busy}
-          onClick={() => select("NO")}
+          aria-labelledby={titleId}
+          aria-describedby={error ? errorId : undefined}
         >
-          아니오
-        </button>
-      </fieldset>
+          {/* 순서 고정: 예 → 아니오 (순서가 바뀌면 응답 분포가 달라진다) */}
+          <button
+            type="button"
+            className="sentence-card-choice"
+            data-choice-id="YES"
+            aria-pressed={selectedChoice === "YES"}
+            disabled={busy}
+            onClick={() => {
+              void submit("YES");
+            }}
+          >
+            예
+          </button>
+          <button
+            type="button"
+            className="sentence-card-choice"
+            data-choice-id="NO"
+            aria-pressed={selectedChoice === "NO"}
+            aria-expanded={selectedChoice === "NO"}
+            aria-controls={correctionId}
+            disabled={busy}
+            onClick={() => select("NO")}
+          >
+            아니오
+          </button>
+        </fieldset>
+      )}
       {selectedChoice === "NO" && (
         <div className="sentence-card-correction" id={correctionId}>
           <label htmlFor={correctionInputId}>실제 당신의 답변은?</label>
