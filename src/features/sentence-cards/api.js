@@ -1,11 +1,20 @@
 import { apiRequest } from "../../shared/api/client.js";
+import { createDummyFeedbackStore } from "./dummyCards.js";
 import { parseFeedbackCard } from "./model.js";
 
 // BE requires the consent version the user agreed to for feedback-card use.
 // Replace with the real terms version once the consent flow exists.
 export const FEEDBACK_CARD_CONSENT_VERSION = "feedback-card-2026-11";
 
+// VITE_DEMO_MODE=true serves built-in dummy cards and never calls the
+// feedback-card API, so demo answers stay out of BE and the training data.
+const dummyStore =
+  import.meta.env?.VITE_DEMO_MODE === "true"
+    ? createDummyFeedbackStore()
+    : null;
+
 export async function getNextFeedbackCard({ signal } = {}) {
+  if (dummyStore) return dummyStore.next();
   const card = await apiRequest("/api/v1/persona/feedback-cards/next", {
     method: "POST",
     cache: "no-store",
@@ -21,6 +30,7 @@ export async function answerFeedbackCard(
   { answer, correctionText = null, answeredAt },
   { signal } = {},
 ) {
+  if (dummyStore) return dummyStore.answer(cardId);
   const result = await apiRequest(
     `/api/v1/persona/feedback-cards/${encodeURIComponent(cardId)}/answer`,
     {
