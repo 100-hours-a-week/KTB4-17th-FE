@@ -1,7 +1,7 @@
 import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import { STYLE_DETAIL_LABELS, STYLE_LIST_LABELS } from "./model.js";
 
-export function PersonaConversationStyle({ style, source }) {
+export function PersonaConversationStyle({ style }) {
   if (!style) return null;
   const expressions = Object.entries(STYLE_LIST_LABELS).filter(
     ([field]) => style[field].length,
@@ -17,11 +17,7 @@ export function PersonaConversationStyle({ style, source }) {
           <h2 id="persona-style-title" tabIndex={-1}>
             나의 말투와 대화 습관
           </h2>
-          <p>
-            {source === "kakao"
-              ? "카카오톡 대화에서 반영된 말투예요."
-              : "실제 대화에서 관찰된 표현과 습관이에요."}
-          </p>
+          <p>실제 대화에서 관찰된 표현과 습관이에요.</p>
         </div>
       </div>
       {style.summary && (
