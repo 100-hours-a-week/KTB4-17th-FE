@@ -1,9 +1,12 @@
 // Dummy sentence-judgment cards for demos while the real card data is not loaded.
-// Each card shows a sentence the tagging model tagged and asks whether it is
-// about that dimension. Answers stay in this tab's memory and are never sent
-// to the server, so dummy answers can't end up in the training data.
-// Dimension labels follow AI app/features/persona (Dimension.label).
+// Each card shows a tagged sentence and asks whether it is about that dimension.
+// Sentences come from AI data/사람검수표_csv/02_태깅검수_60문항.csv; the dimensions
+// are hand-picked dummy tags (labels follow AI persona Dimension.label).
+// Answers stay in this tab's memory and are never sent to the server,
+// so dummy answers can't end up in the training data.
+// Choices and their order follow the AI sentence-card AXIS question.
 export const DUMMY_SENTENCE_CHOICES = [
+  { choiceId: "direct", label: "직접 말하고 있어요" },
   { choiceId: "inferred", label: "짐작할 수 있어요" },
   { choiceId: "none", label: "관련 없어요" },
   { choiceId: "unsure", label: "판단하기 어려워요" },
@@ -11,84 +14,85 @@ export const DUMMY_SENTENCE_CHOICES = [
 
 export const DUMMY_SENTENCE_ITEMS = [
   {
-    sentence: "답장은 생각날 때 몰아서 하는 편이에요.",
-    dimension: "연락 빈도",
-  },
-  {
-    sentence: "점심에 뭘 먹었는지 같은 소소한 얘기도 자주 나누고 싶어요.",
-    dimension: "연락 빈도",
-  },
-  {
-    sentence: "주말 중 하루는 꼭 혼자 보내는 시간이 필요해요.",
+    sentence: "휴일에도 제 작업실에서 혼자 보내는 시간을 꼭 남겨 두고 싶어요.",
     dimension: "거리 두기",
   },
   {
-    sentence: "연인이 제 일상을 다 알 필요는 없다고 생각해요.",
-    dimension: "거리 두기",
-  },
-  {
-    sentence: "답장이 늦으면 혹시 제가 뭘 잘못했나 생각하게 돼요.",
+    sentence: "답이 오지 않으면 제가 싫어진 건가 싶어 대화창을 계속 확인해요.",
     dimension: "관계 불안",
   },
   {
-    sentence: "바쁜가 보다 하고 제 할 일 하면서 기다리는 편이에요.",
+    sentence: "답이 늦으면 바쁜가 보다 하고 제 할 일을 하며 기다려요.",
     dimension: "관계 불안",
   },
   {
-    sentence: "고맙거나 서운한 게 있으면 그때그때 말로 표현해요.",
+    sentence: "기쁘거나 속상한 일이 생기면 어떤 기분인지 바로 말로 전해요.",
     dimension: "자기·감정 표현",
   },
   {
-    sentence: "힘든 일은 혼자 정리한 다음에 털어놓는 편이에요.",
+    sentence: "기분이 어땠는지는 말하지 않고 혼자 일기에만 적어 둬요.",
     dimension: "자기·감정 표현",
   },
   {
-    sentence: "우리 관계에서 아쉬운 점이 있으면 솔직하게 얘기 나누고 싶어요.",
-    dimension: "솔직한 관계 대화",
-  },
-  {
-    sentence: "같이 있으면 사소한 일에도 많이 웃는 편이에요.",
+    sentence: "사소한 얘기에도 웃으며 반갑다고 하고 다정한 말을 자주 건네요.",
     dimension: "긍정적 상호작용",
   },
   {
-    sentence: "좋아하는 마음은 자주 말해 줘야 한다고 생각해요.",
+    sentence: "다음 계절에도 함께하고 싶다고 제 마음을 먼저 자주 말해요.",
     dimension: "관계 확신 표현",
   },
   {
-    sentence: "의견이 다르면 왜 그런지 들어보고 중간 지점을 찾아요.",
+    sentence: "식사할 때나 이동할 때마다 짧게라도 종일 소식을 나누고 싶어요.",
+    dimension: "연락 빈도",
+  },
+  {
+    sentence: "용건이 생겼을 때만 연락하고 일상 보고는 안 하는 게 편해요.",
+    dimension: "연락 빈도",
+  },
+  {
+    sentence: "서로 이유를 적어 보고 둘 다 받아들일 수 있는 해결책을 정해요.",
     dimension: "문제 해결",
   },
   {
-    sentence: "다투면 일단 그 자리를 피하고 혼자 생각할 시간을 가져요.",
-    dimension: "회피·철수",
+    sentence:
+      "서랍에서 예전에 둘이 적은 종이를 찾았어요. 서로 불편했던 점 옆에 바꿀 수 있는 것들이 화살표로 이어져 있더라고요.",
+    dimension: "문제 해결",
   },
   {
-    sentence: "화가 나면 목소리가 커지는 편이라 조심하려고 해요.",
+    sentence: "화가 나면 목소리가 커지고 상대 말에 날카롭게 받아치게 돼요.",
     dimension: "감정적 맞대응",
   },
   {
-    sentence: "싸우기 싫어서 웬만하면 상대 말에 맞춰 주는 편이에요.",
+    sentence: "제 생각이 달라도 다툼을 끝내려고 상대 말이 전부 맞다고 해요.",
     dimension: "일방적 수용",
   },
   {
-    sentence: "서로 믿을 수 있는 사람이 제일 중요해요.",
+    sentence: "아무리 끌려도 약속을 어기고 남을 함부로 대하면 만나기 어려워요.",
     dimension: "신뢰·배려",
   },
   {
-    sentence: "같이 있으면 에너지가 넘치는 사람이 좋아요.",
+    sentence: "밝게 웃고 에너지 넘치는 분위기에 가장 먼저 끌려요.",
     dimension: "매력·활발함",
   },
   {
-    sentence: "자기 일을 꾸준히 해 나가는 사람에게 끌려요.",
-    dimension: "능력·안정성",
-  },
-  {
-    sentence: "서로의 일상에 오래 함께할 사람을 만나고 싶어요.",
+    sentence: "처음부터 오래 함께할 사람을 찾고 있고 장기적인 관계를 원해요.",
     dimension: "관계 진지도",
   },
   {
-    sentence: "요즘 퇴근하고 러닝하는 재미에 빠졌어요.",
-    dimension: "연락 빈도",
+    sentence: "작은 종이로 새 모양을 접는 데 푹 빠졌어요.",
+    dimension: "관심사",
+  },
+  {
+    sentence: "저녁 식사 뒤에는 식물에 물을 주고 책을 읽어요.",
+    dimension: "일상",
+  },
+  {
+    sentence: "도자기 공방에서 함께 컵을 만들어 보고 싶어요.",
+    dimension: "선호 데이트",
+  },
+  {
+    sentence: "주중 개인 일정은 지키고 싶지만 중요한 고민은 꼭 말로 나눠요.",
+    dimension: "거리 두기",
   },
 ];
 

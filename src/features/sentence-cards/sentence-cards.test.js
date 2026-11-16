@@ -134,14 +134,24 @@ test("invalid answer acknowledgements remain failures and server conflicts retai
   });
 });
 
-test("20 dummy sentence-judgment cards offer three choices and stay until answered", () => {
+test("20 dummy sentence-judgment cards offer the four AXIS choices and stay until answered", () => {
   const store = createDummyCardStore(() => Date.parse("2026-11-16T00:00:00Z"));
   const first = store.next();
   assert.match(first.question, /^보여드린 문장, '.+' 이야기가 맞나요\?$/);
-  assert.deepEqual(answerChoiceIds(first), ["inferred", "none", "unsure"]);
+  assert.deepEqual(answerChoiceIds(first), [
+    "direct",
+    "inferred",
+    "none",
+    "unsure",
+  ]);
   assert.deepEqual(
     first.choices.map((choice) => choice.label),
-    ["짐작할 수 있어요", "관련 없어요", "판단하기 어려워요"],
+    [
+      "직접 말하고 있어요",
+      "짐작할 수 있어요",
+      "관련 없어요",
+      "판단하기 어려워요",
+    ],
   );
   assert.equal(store.next(), first);
   assert.throws(() => store.answer(first.cardId, "YES"), {
