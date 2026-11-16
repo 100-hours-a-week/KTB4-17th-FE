@@ -107,11 +107,12 @@ const passed = new Set();
 function reset() {
   answers.clear();
   passed.clear();
+  // Feedback-card shape served by BE POST /api/v1/persona/feedback-cards/next.
   cards = questions.map((item, index) => ({
-    ...item,
-    cardId: `demo_sentence_${index + 1}`,
-    question: "위 질문의 답변을 보고 어떻게 느끼시나요?",
-    choices: [...item.choices, { choiceId: "unsure", label: "잘 모르겠어요" }],
+    cardId: `demo_feedback_${index + 1}`,
+    contextQuestion: item.contextQuestion,
+    utterance: item.sentence,
+    question: "내 페르소나가 다른 유저에게 한 말이에요. 나다운 대답인가요?",
     expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
   }));
 }
@@ -175,36 +176,43 @@ async function handleApi(request, response, next) {
       pageInfo: { hasNext: false, nextCursor: null },
     });
   }
-  if (path === "/api/v1/users/me/sentence-cards/next") {
-    const excluded = new Set(url.searchParams.getAll("excludeCardIds"));
-    const card = cards.find(
-      (item) => !answers.has(item.cardId) && !excluded.has(item.cardId),
-    );
+  // Like AI, the same card is returned until it is answered.
+  if (
+    path === "/api/v1/persona/feedback-cards/next" &&
+    request.method === "POST"
+  ) {
+    const card = cards.find((item) => !answers.has(item.cardId));
     if (card) return json(response, card);
     response.writeHead(204);
     response.end();
     return;
   }
   const answerRoute = path.match(
-    /^\/api\/v1\/users\/me\/sentence-cards\/([^/]+)\/answer$/,
+    /^\/api\/v1\/persona\/feedback-cards\/([^/]+)\/answer$/,
   );
   if (answerRoute && request.method === "POST") {
     const cardId = decodeURIComponent(answerRoute[1]);
     const card = cards.find((item) => item.cardId === cardId);
-    if (!card) return fail(response, 404, "SENTENCE_CARD_NOT_FOUND");
+    if (!card) return fail(response, 404, "FEEDBACK_CARD_NOT_AVAILABLE");
     let body = "";
     for await (const chunk of request) body += chunk;
-    let choiceId;
+    let answer;
     try {
-      ({ choiceId } = JSON.parse(body));
+      answer = JSON.parse(body);
     } catch {
-      return fail(response, 400, "INVALID_SENTENCE_CARD_ANSWER");
+      return fail(response, 400, "INVALID_REQUEST");
     }
-    if (!card.choices.some((choice) => choice.choiceId === choiceId))
-      return fail(response, 400, "INVALID_SENTENCE_CARD_ANSWER");
-    if (answers.has(cardId) && answers.get(cardId) !== choiceId)
-      return fail(response, 409, "SENTENCE_CARD_ALREADY_ANSWERED");
-    answers.set(cardId, choiceId);
+    if (
+      !["YES", "NO"].includes(answer.answer) ||
+      (answer.answer === "YES" && answer.correctionText != null) ||
+      !answer.answeredAt ||
+      !answer.consentVersion
+    )
+      return fail(response, 400, "INVALID_REQUEST");
+    const key = JSON.stringify(answer);
+    if (answers.has(cardId) && answers.get(cardId) !== key)
+      return fail(response, 409, "FEEDBACK_CARD_ALREADY_ANSWERED");
+    answers.set(cardId, key);
     await new Promise((resolve) => setTimeout(resolve, 300));
     return json(response, { cardId, status: "ANSWERED" });
   }

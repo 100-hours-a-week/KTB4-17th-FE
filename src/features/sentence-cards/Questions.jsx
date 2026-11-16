@@ -6,22 +6,14 @@ import {
 } from "../../shared/ui/components.jsx";
 import { PixelIcon } from "../../shared/ui/pixel.jsx";
 import { SentenceCard } from "./SentenceCard.jsx";
-import { useCardSwipe } from "./useCardSwipe.js";
 
+// The server returns the same card until it is answered, so this page has no
+// "next question" gesture: answering is the only way forward.
 export function Questions({ session, navigate }) {
-  const { card, status, error, load, submitting, loadingNext, skipQuestion } =
-    session;
+  const { card, status, error, load } = session;
   const [saved, setSaved] = useState(false);
   const firstVisit = useRef(true);
   const main = useRef(null);
-  const swipe = useCardSwipe({
-    onNext: () => {
-      setSaved(false);
-      void skipQuestion();
-    },
-    disabled: submitting || loadingNext,
-    enabled: Boolean(card),
-  });
 
   useEffect(() => {
     if (firstVisit.current || (status === "idle" && !error)) {
@@ -55,15 +47,8 @@ export function Questions({ session, navigate }) {
           </p>
         )}
         {card ? (
-          <div className="sentence-question-swipe" {...swipe}>
-            <div className="sentence-question-page" key={card.cardId}>
-              <SentenceCard
-                session={session}
-                onAnswered={handleAnswered}
-                showSwipeHint
-                swipeHint="아래로 넘겨 다음 질문 보기"
-              />
-            </div>
+          <div className="sentence-question-page" key={card.cardId}>
+            <SentenceCard session={session} onAnswered={handleAnswered} />
           </div>
         ) : status === "loading" || (status === "idle" && !error) ? (
           <EmptyState title="질문을 불러오고 있어요…" role="status" />

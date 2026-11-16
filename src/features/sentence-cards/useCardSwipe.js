@@ -88,7 +88,7 @@ export function useCardSwipe({
         callbacks.current.disabled ||
         event.isPrimary === false ||
         event.button !== 0 ||
-        event.target.closest?.("button, input, label, a")
+        event.target.closest?.("button, input, textarea, label, a")
       )
         return;
       pointer.current = {
